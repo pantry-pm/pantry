@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { publicBinaryMetadata, sortVersionsNewestFirst } from './binary-publishing'
 import {
+  compareVersions,
   isCompleteBinaryRecord,
   isPrereleaseVersion,
   latestPublishedVersion,
@@ -176,4 +177,14 @@ describe('served binary metadata', () => {
     })
     expect(served.latestVersion).toBe('3.15.0')
   })
+})
+
+it('a Pantry .pantryN build revision of a prerelease sits between it and the next release', () => {
+  expect(compareVersions('3.15.0rc1.pantry1', '3.15.0rc1')).toBeGreaterThan(0)
+  expect(compareVersions('3.15.0rc1.pantry1', '3.15.0rc2')).toBeLessThan(0)
+  expect(compareVersions('3.15.0rc1.pantry1', '3.15.0')).toBeLessThan(0)
+  expect(compareVersions('3.6a.pantry1', '3.6b')).toBeLessThan(0)
+  expect(isPrereleaseVersion('3.15.0rc1.pantry1')).toBe(true)
+  expect(isPrereleaseVersion('1.1.1w.pantry1')).toBe(false)
+  expect(pickLatestVersion(['3.15.0rc1', '3.15.0rc1.pantry1', '3.14.1'])).toBe('3.14.1')
 })

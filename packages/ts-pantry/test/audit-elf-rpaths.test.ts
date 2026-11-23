@@ -161,3 +161,12 @@ describe('artifact selection', () => {
     expect(selectArtifacts('facebook.com/zstd', metadata, 'all-before', cutoff, ['linux-x86-64']).map(s => s.version)).toEqual(['1.5.7', '1.5.6'])
   })
 })
+
+test('a dashless prerelease is older than its release when choosing the newest artifact', async () => {
+  const { compareVersionStrings } = await import('../scripts/audit-elf-rpaths')
+  expect(compareVersionStrings('3.15.0', '3.15.0rc1')).toBeGreaterThan(0)
+  expect(compareVersionStrings('3.15.0rc1', '3.14.1')).toBeGreaterThan(0)
+  expect(compareVersionStrings('3.15.0rc1.pantry1', '3.15.0rc1')).toBeGreaterThan(0)
+  expect(compareVersionStrings('1.5.7.2', '1.5.7')).toBeGreaterThan(0)
+  expect(compareVersionStrings('1.10.0', '1.9.9')).toBeGreaterThan(0)
+})

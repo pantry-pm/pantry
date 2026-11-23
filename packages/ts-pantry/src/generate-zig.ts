@@ -108,7 +108,19 @@ function comparePrerelease(a: string, b: string): number {
  * Compare versions for sorting (newest to oldest)
  * Handles semantic versions like "1.2.3", "1.2.3-beta", "0.17.0-dev.263+sha", etc.
  */
+const pantryRevision = /^(.*)\.pantry(\d+)$/
+
 export function compareVersions(a: string, b: string): number {
+  // A Pantry build revision of a prerelease or lettered release (3.15.0rc1.pantry1)
+  // sorts right after its release: compare the releases, then the revisions.
+  const revA = pantryRevision.exec(a)
+  const revB = pantryRevision.exec(b)
+  if (revA || revB) {
+    const baseA = revA ? revA[1]! : a
+    const baseB = revB ? revB[1]! : b
+    if (baseA === baseB) return Number(revB?.[2] ?? 0) - Number(revA?.[2] ?? 0)
+    return compareVersions(baseA, baseB)
+  }
   // Remove 'v' prefix if present, then drop SemVer build metadata (`+sha`),
   // which carries no precedence and must not leak into the prerelease compare.
   const cleanA = (a.startsWith('v') ? a.slice(1) : a).replace(/_(?=[0-9a-f]+$)/i, '+').split('+')[0]
@@ -214,7 +226,8 @@ export function zigBuildRevisions(revisions?: Readonly<Record<string, number>>):
   const entries = Object.entries(revisions ?? {}).sort(([a], [b]) => compareVersions(a, b))
   if (!entries.length) return ''
   for (const [release, revision] of entries) {
-    if (!/^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))+$/.test(release) || !Number.isSafeInteger(revision) || revision <= 0 || revision > 0xFFFFFFFF)
+    // Numeric tuples, and prerelease/lettered releases revised as `.pantryN`.
+    if (!/^\d[\w.-]*$/.test(release) || release.includes('.pantry') || !Number.isSafeInteger(revision) || revision <= 0 || revision > 0xFFFFFFFF)
       throw new Error(`Invalid package build revision: ${release}@${revision}`)
   }
   const items = entries.map(([release, revision]) => `.{ .release = "${escapeZigString(release)}", .revision = ${revision} }`).join(', ')

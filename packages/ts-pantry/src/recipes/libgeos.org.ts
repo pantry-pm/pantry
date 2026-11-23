@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'libgeos.org',
   name: 'geos-config',
+  revisions: { '3.15.0rc1': 1 },
+  revisionReasons: { '3.15.0rc1': 'elf-loader-paths' },
   description: 'Geometry Engine, Open Source',
   homepage: 'https://libgeos.org/',
   github: 'https://github.com/libgeos/geos',

@@ -600,12 +600,34 @@ pub const BuildPosition = struct {
 pub fn buildPosition(revisions: []const generated.BuildRevision, version: []const u8) ?BuildPosition {
     for (revisions) |entry| {
         if (std.mem.eql(u8, version, entry.release)) return .{ .release = entry.release, .build = 0, .newest = entry.revision };
-        if (version.len <= entry.release.len + 1 or !std.mem.startsWith(u8, version, entry.release) or version[entry.release.len] != '.') continue;
-        const build = std.fmt.parseInt(u32, version[entry.release.len + 1 ..], 10) catch continue;
-        if (build == 0 or build > entry.revision) continue;
+        const separator = revisionSeparator(entry.release);
+        if (version.len <= entry.release.len + separator.len or !std.mem.startsWith(u8, version, entry.release)) continue;
+        if (!std.mem.startsWith(u8, version[entry.release.len..], separator)) continue;
+        const digits = version[entry.release.len + separator.len ..];
+        if (digits.len == 0 or digits[0] == '0') continue;
+        const build = std.fmt.parseInt(u32, digits, 10) catch continue;
+        if (build > entry.revision) continue;
         return .{ .release = entry.release, .build = build, .newest = entry.revision };
     }
     return null;
+}
+
+/// A numeric tuple (1.5.7) is revised as 1.5.7.2; any other release
+/// (3.15.0rc1, 3.6a) as 3.15.0rc1.pantry1, which no vendor writes and which
+/// compareVersions orders after its release and before the next one.
+fn isNumericRelease(release: []const u8) bool {
+    if (release.len == 0 or release[0] == '.' or release[release.len - 1] == '.') return false;
+    for (release) |c| if (!std.ascii.isDigit(c) and c != '.') return false;
+    return true;
+}
+
+fn revisionSeparator(release: []const u8) []const u8 {
+    return if (isNumericRelease(release)) "." else ".pantry";
+}
+
+/// The identity of build `revision` of `release`, written into `buf`.
+pub fn formatBuildRevision(buf: []u8, release: []const u8, revision: u32) ![]const u8 {
+    return std.fmt.bufPrint(buf, "{s}{s}{d}", .{ release, revisionSeparator(release), revision });
 }
 
 /// True when a later build of `version`'s upstream release exists that
@@ -615,7 +637,7 @@ pub fn hasNewerBuildRevision(revisions: []const generated.BuildRevision, version
     var build = position.newest;
     var buf: [128]u8 = undefined;
     while (build > position.build) : (build -= 1) {
-        const candidate = std.fmt.bufPrint(&buf, "{s}.{d}", .{ position.release, build }) catch return false;
+        const candidate = formatBuildRevision(&buf, position.release, build) catch return false;
         if (constraint) |bound| if (!satisfiesConstraint(candidate, bound)) continue;
         return true;
     }
@@ -629,7 +651,9 @@ pub fn hasNewerBuildRevision(revisions: []const generated.BuildRevision, version
 pub fn revisionRange(allocator: std.mem.Allocator, revisions: []const generated.BuildRevision, version: []const u8) !?[]u8 {
     const position = buildPosition(revisions, version) orelse return null;
     if (position.build >= position.newest) return null;
-    return try std.fmt.allocPrint(allocator, ">{s} <={s}.{d}", .{ version, position.release, position.newest });
+    var buf: [160]u8 = undefined;
+    const newest = try formatBuildRevision(&buf, position.release, position.newest);
+    return try std.fmt.allocPrint(allocator, ">{s} <={s}", .{ version, newest });
 }
 
 /// The catalog's build revisions for `domain` (empty when it has none).
@@ -676,6 +700,40 @@ test "a revision range admits only later builds of the same upstream release" {
     defer a.free(chrome_range);
     try std.testing.expect(satisfiesConstraint("155.0.8059.84.2", try parseConstraint(chrome_range)));
     try std.testing.expect(!satisfiesConstraint("155.0.8059.85", try parseConstraint(chrome_range)));
+}
+
+test "a prerelease release is revised as .pantryN and ordered between it and the next release" {
+    const a = std.testing.allocator;
+    const libgeos = [_]generated.BuildRevision{ .{ .release = "3.15.0rc1", .revision = 1 }, .{ .release = "3.14.1", .revision = 1 } };
+    var buf: [64]u8 = undefined;
+    try std.testing.expectEqualStrings("3.15.0rc1.pantry1", try formatBuildRevision(&buf, "3.15.0rc1", 1));
+    try std.testing.expectEqualStrings("3.14.1.1", try formatBuildRevision(&buf, "3.14.1", 1));
+
+    try std.testing.expectEqual(std.math.Order.gt, compareVersions("3.15.0rc1.pantry1", "3.15.0rc1"));
+    try std.testing.expectEqual(std.math.Order.lt, compareVersions("3.15.0rc1.pantry1", "3.15.0rc2"));
+    try std.testing.expectEqual(std.math.Order.lt, compareVersions("3.15.0rc1.pantry1", "3.15.0"));
+    try std.testing.expect(isPrerelease("3.15.0rc1.pantry1"));
+    try std.testing.expect(!isPrerelease("1.1.1w.pantry1"));
+    try std.testing.expectEqual(std.math.Order.lt, compareVersions("3.6a.pantry1", "3.6b"));
+
+    try std.testing.expect(hasNewerBuildRevision(&libgeos, "3.15.0rc1", null));
+    try std.testing.expect(!hasNewerBuildRevision(&libgeos, "3.15.0rc1.pantry1", null));
+    try std.testing.expect(!hasNewerBuildRevision(&libgeos, "3.15.0rc10", null));
+    try std.testing.expect(!hasNewerBuildRevision(&libgeos, "3.15.0rc1", try parseConstraint("3.15.0rc1")));
+    // A stable range never reaches into the prerelease's revision.
+    try std.testing.expect(!hasNewerBuildRevision(&libgeos, "3.15.0rc1", try parseConstraint("^3.14")));
+    try std.testing.expect(hasNewerBuildRevision(&libgeos, "3.14.1", try parseConstraint("^3.14")));
+
+    const range = (try revisionRange(a, &libgeos, "3.15.0rc1")).?;
+    defer a.free(range);
+    try std.testing.expectEqualStrings(">3.15.0rc1 <=3.15.0rc1.pantry1", range);
+    const bound = try parseConstraint(range);
+    try std.testing.expect(satisfiesConstraint("3.15.0rc1.pantry1", bound));
+    try std.testing.expect(!satisfiesConstraint("3.15.0rc1", bound));
+    try std.testing.expect(!satisfiesConstraint("3.15.0rc2", bound));
+    try std.testing.expect(!satisfiesConstraint("3.15.0", bound));
+    // The exact revision resolves as itself.
+    try std.testing.expect(satisfiesConstraint("3.15.0rc1.pantry1", try parseConstraint("3.15.0rc1.pantry1")));
 }
 
 test "the catalog knows zstd 1.5.7 was rebuilt" {

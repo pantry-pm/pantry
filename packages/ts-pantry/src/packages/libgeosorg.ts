@@ -68,6 +68,7 @@ export const libgeosorgPackage = {
   */
   versions: [
     '3.15.0',
+    '3.15.0rc1.pantry1',
     '3.15.0rc1',
     '3.15.0beta3',
     '3.15.0beta2',

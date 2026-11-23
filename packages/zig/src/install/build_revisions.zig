@@ -228,12 +228,13 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
 const TestHooks = struct {
     /// What the registry has for this platform, newest first.
     published: []const []const u8 = &.{"1.5.7.2"},
+    domain: ?[]const u8 = "facebook.com/zstd",
     root: []const u8,
     installs: std.ArrayList([]const u8) = .empty,
 
     fn newestPublished(context: *anyopaque, allocator: std.mem.Allocator, domain: []const u8, range: []const u8) anyerror!?[]u8 {
         const self: *TestHooks = @ptrCast(@alignCast(context));
-        try std.testing.expectEqualStrings("facebook.com/zstd", domain);
+        if (self.domain) |expected| try std.testing.expectEqualStrings(expected, domain);
         const bound = try semver.parseConstraint(range);
         for (self.published) |version| {
             if (semver.satisfiesConstraint(version, bound)) return try allocator.dupe(u8, version);
@@ -369,4 +370,31 @@ test "build revisions: an exact pin, an unpublished revision and no-save are res
     defer freeChanges(std.testing.allocator, moved);
     try std.testing.expectEqual(@as(usize, 1), moved.len);
     try std.testing.expectEqualStrings("1.5.7", (try lockedVersion(root, "facebook.com/zstd")).?);
+}
+
+test "build revisions: a locked prerelease moves to its .pantryN revision, and a stable release does not" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buf[0..try tmp.dir.realPath(io_helper.io, &buf)];
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.lock", .data =
+        \\{"version":"1.0.0","lockfileVersion":2,"packages":{
+        \\"libgeos.org@3.15.0rc1":{"name":"libgeos.org","version":"3.15.0rc1","source":"pantry"}}}
+    });
+    try tmp.dir.createDirPath(io_helper.io, "pantry/libgeos.org/v3.15.0rc1/lib");
+
+    var hooks = TestHooks{ .root = root, .domain = "libgeos.org", .published = &.{ "3.15.0", "3.15.0rc2", "3.15.0rc1.pantry1" } };
+    defer hooks.deinit();
+    const changes = try reconcile(std.testing.allocator, .{ .project_root = root }, hooks.hooks());
+    defer freeChanges(std.testing.allocator, changes);
+    // Only the revision of the same release qualifies: never 3.15.0 or rc2.
+    try std.testing.expectEqual(@as(usize, 1), changes.len);
+    try std.testing.expectEqualStrings("3.15.0rc1.pantry1", changes[0].to);
+
+    const path = try std.fs.path.join(std.testing.allocator, &.{ root, "pantry.lock" });
+    defer std.testing.allocator.free(path);
+    var lock = try lockfile_io.readLockfile(std.testing.allocator, path);
+    defer lock.deinit(std.testing.allocator);
+    try std.testing.expect(lock.packages.get("libgeos.org@3.15.0rc1.pantry1") != null);
+    try std.testing.expect(lock.packages.get("libgeos.org@3.15.0rc1") == null);
 }

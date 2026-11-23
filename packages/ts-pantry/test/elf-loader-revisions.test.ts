@@ -48,8 +48,9 @@ describe('ELF loader-path revisions', () => {
   })
 
   test('versions that cannot carry a revision, and other repairs, are reported rather than edited', () => {
-    const target = { domain: 'x', version: '3.6a', platforms: [], issues: [], members: [] }
-    expect(planRevision(target, recipe, pkg)).toEqual({ blocked: 'version 3.6a is not a numeric tuple, so it cannot carry a build revision' })
+    const target = { domain: 'x', version: '0.8.0rc1', platforms: [], issues: [], members: [] }
+    const prerelease = planRevision(target, recipe, pkg.replace(`'0.8.0',`, `'0.8.0rc1',`))
+    expect('revision' in prerelease && prerelease.revision).toBe('0.8.0rc1.pantry1')
     const patched = recipe.replace(`  name: 'git-crypt',`, `  name: 'git-crypt',\n  revisions: { '0.8.0': 1 },`)
     expect('blocked' in planRevision({ ...target, version: '0.8.0' }, patched, pkg)).toBe(true)
   })

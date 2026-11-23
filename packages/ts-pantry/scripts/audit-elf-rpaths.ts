@@ -377,18 +377,32 @@ async function fetchWithRetry(url: string, attempts = 6, pace = false): Promise<
   throw last
 }
 
-function numericParts(version: string): number[] {
-  return version.replace(/^v/, '').split(/[.+_-]/).map(part => Number.parseInt(part, 10)).map(n => Number.isFinite(n) ? n : -1)
-}
-
+/**
+ * Positive when `a` is newer, as the registry orders versions
+ * (packages/registry/src/version-precedence.ts): numeric core first, a
+ * release above its own prereleases even without a dash (libgeos 3.15.0rc1 <
+ * 3.15.0), then suffixes with digit runs compared as numbers.
+ */
 export function compareVersionStrings(a: string, b: string): number {
-  const left = numericParts(a)
-  const right = numericParts(b)
-  for (let i = 0; i < Math.max(left.length, right.length); i++) {
-    const diff = (left[i] ?? 0) - (right[i] ?? 0)
+  const split = (version: string): { numeric: number[], tail: string, prerelease: boolean } => {
+    const v = version.startsWith('v') ? version.slice(1) : version
+    const core = (/^[\d.]*/.exec(v)?.[0] || '').replace(/\.+$/, '')
+    const rest = v.slice(core.length)
+    const tail = rest.replace(/^[-+_.]/, '')
+    return {
+      numeric: core ? core.split('.').map(part => Number.parseInt(part, 10) || 0) : [0],
+      tail,
+      prerelease: rest.startsWith('-') || /^(?:alpha|beta|rc|dev|pre)/i.test(tail),
+    }
+  }
+  const left = split(a)
+  const right = split(b)
+  for (let i = 0; i < Math.max(left.numeric.length, right.numeric.length); i++) {
+    const diff = (left.numeric[i] ?? 0) - (right.numeric[i] ?? 0)
     if (diff) return diff
   }
-  return a.localeCompare(b)
+  if (left.prerelease !== right.prerelease) return left.prerelease ? -1 : 1
+  return left.tail.localeCompare(right.tail, undefined, { numeric: true, sensitivity: 'base' })
 }
 
 /** Which artifacts of one package to audit. */

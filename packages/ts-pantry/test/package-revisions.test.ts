@@ -176,7 +176,8 @@ test('the native catalog names every recipe build revision, so installs can repl
   const { zigBuildRevisions } = await import('../src/generate-zig')
   expect(zigBuildRevisions(undefined)).toBe('')
   expect(zigBuildRevisions({ '1.5.7': 2 })).toBe('\n        .build_revisions = &[_]BuildRevision{ .{ .release = "1.5.7", .revision = 2 } },')
-  expect(() => zigBuildRevisions({ '1.5.7-rc1': 1 })).toThrow('Invalid package build revision')
+  expect(zigBuildRevisions({ '3.15.0rc1': 1 })).toContain('.release = "3.15.0rc1", .revision = 1')
+  expect(() => zigBuildRevisions({ '1.0.0+abc': 1 })).toThrow('Invalid package build revision')
 
   const { readdirSync, statSync } = await import('node:fs')
   const recipesDir = resolve(import.meta.dir, '../src/recipes')
@@ -262,4 +263,39 @@ test('a corrupt published archive is repaired by mirroring the vendor release ag
   expect(recipeAllowsMirror('1.9.5.1', recipeBuildVersion('1.9.5.1', revisions), false, 'corrupt-archive')).toBe(true)
   expect(revisionAppliesTo('corrupt-archive', 'darwin-arm64')).toBe(true)
   expect(selectRevisionVersions(['1.9.5.1', '1.9.5'], revisions, reasons, 'darwin-arm64')).toEqual(['1.9.5.1'])
+})
+
+test('a prerelease or lettered release takes a .pantryN revision that cannot collide with vendor versions', async () => {
+  const { revisionIdentity } = await import('../scripts/package-revisions')
+  expect(revisionIdentity('1.5.7', 2)).toBe('1.5.7.2')
+  expect(revisionIdentity('3.15.0rc1', 1)).toBe('3.15.0rc1.pantry1')
+  expect(revisionIdentity('3.6a', 1)).toBe('3.6a.pantry1')
+  const revisions = { '3.15.0rc1': 1 }
+  expect(revisedPackageVersions(['3.15.0rc1', '3.14.1'], revisions)).toEqual(['3.15.0rc1.pantry1', '3.14.1'])
+  expect(recipeBuildVersion('3.15.0rc1.pantry1', revisions)).toEqual({ upstream: '3.15.0rc1', current: '3.15.0rc1.pantry1' })
+  expect(recipeBuildVersion('3.15.0rc1', revisions)).toEqual({ upstream: '3.15.0rc1', current: '3.15.0rc1.pantry1' })
+  // rc10 is a different vendor release, not a revision of rc1.
+  expect(recipeBuildVersion('3.15.0rc10', revisions)).toEqual({ upstream: '3.15.0rc10', current: '3.15.0rc10' })
+  expect(() => recipeBuildVersion('3.15.0rc1.pantry2', revisions)).toThrow('Undeclared package build revision')
+  // Numeric and prerelease repairs can sit in one recipe.
+  expect(revisedPackageVersions(['3.15.0rc1', '3.14.1'], { '3.15.0rc1': 1, '3.14.1': 1 })).toEqual(['3.15.0rc1.pantry1', '3.14.1.1'])
+  expect(() => revisedPackageVersions(['1.0.0+abc'], { '1.0.0+abc': 1 })).toThrow('Invalid package build revision')
+  // The vendor ordering puts the revision between its release and the next one.
+  const { compareVersions } = await import('../src/generate-zig')
+  // (generate-zig's catalog sort: newest first, a revision just ahead of its release.)
+  expect(['3.15.0rc1', '3.15.0rc1.pantry1', '3.14.1', '3.14.1.1'].sort(compareVersions)).toEqual(['3.15.0rc1.pantry1', '3.15.0rc1', '3.14.1.1', '3.14.1'])
+  expect(['3.6a', '3.6a.pantry2', '3.6a.pantry1'].sort(compareVersions)).toEqual(['3.6a.pantry2', '3.6a.pantry1', '3.6a'])
+  expect(compareVersions('3.15.0rc1.pantry1', '3.14.1')).toBeLessThan(0)
+})
+
+test('the publish pipeline selects a prerelease loader-path revision on Linux and keeps the base on macOS', async () => {
+  const { selectRevisionVersions, recipeAllowsMirror: allows } = await import('../scripts/package-revisions')
+  const versions = ['3.15.0', '3.15.0rc1.pantry1', '3.15.0rc1', '3.14.1']
+  const revisions = { '3.15.0rc1': 1 }
+  const reasons = { '3.15.0rc1': 'elf-loader-paths' } as const
+  expect(selectRevisionVersions(versions, revisions, reasons, 'linux-arm64')).toEqual(['3.15.0', '3.15.0rc1.pantry1', '3.14.1'])
+  expect(selectRevisionVersions(versions, revisions, reasons, 'darwin-arm64')).toEqual(['3.15.0', '3.15.0rc1', '3.14.1'])
+  // It mirrors pkgx's v3.15.0rc1 and publishes it as 3.15.0rc1.pantry1.
+  expect(allows('3.15.0rc1.pantry1', recipeBuildVersion('3.15.0rc1.pantry1', revisions), false, 'elf-loader-paths')).toBe(true)
+  expect(recipeBuildVersion('3.15.0rc1.pantry1', revisions).upstream).toBe('3.15.0rc1')
 })

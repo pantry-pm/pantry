@@ -18,7 +18,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from '
 import { join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 import { compareVersions } from '../src/generate-zig'
-import { recipeBuildVersion, revisedPackageVersions, type PackageRevisions } from './package-revisions'
+import { recipeBuildVersion, revisedPackageVersions, revisionIdentity, type PackageRevisions } from './package-revisions'
 
 const tsPantry = resolve(import.meta.dir, '..')
 const recipesDir = join(tsPantry, 'src', 'recipes')
@@ -164,23 +164,20 @@ export function orderTargets(targets: readonly Target[], counts: ReadonlyMap<str
     || a.domain.localeCompare(b.domain))
 }
 
-const numericTuple = /^(?:0|[1-9]\d*)(?:\.(?:0|[1-9]\d*))+$/
-
 /** The revision a target gets, or why it cannot get one. */
 export function planRevision(target: Target, recipeSource: string, packageSource: string): { revision: string, revisions: PackageRevisions } | { blocked: string } {
-  if (!numericTuple.test(target.version)) return { blocked: `version ${target.version} is not a numeric tuple, so it cannot carry a build revision` }
   const existing = parseRevisions(recipeSource)
   const current = existing[target.version] ?? 0
   if (current > 0 && !recipeSource.includes(`'${target.version}': 'elf-loader-paths'`))
-    return { blocked: `revision ${target.version}.${current} already exists for another repair; a further one needs that recipe's own review` }
+    return { blocked: `revision ${revisionIdentity(target.version, current)} already exists for another repair; a further one needs that recipe's own review` }
   const revisions = { ...existing, [target.version]: current + 1 }
   const versions = arrayItems(packageSource, 'versions')
   const upstream = [...new Set(versions.map(v => recipeBuildVersion(v, existing).upstream))]
   try { revisedPackageVersions(upstream, revisions) }
   catch (error) { return { blocked: (error as Error).message } }
-  if (!versions.includes(target.version) && !versions.includes(`${target.version}.${current}`))
+  if (!versions.includes(target.version) && !(current > 0 && versions.includes(revisionIdentity(target.version, current))))
     return { blocked: `${target.version} is no longer in the catalog's version list` }
-  return { revision: `${target.version}.${current + 1}`, revisions }
+  return { revision: revisionIdentity(target.version, current + 1), revisions }
 }
 
 export function parseRevisions(recipeSource: string): Record<string, number> {
@@ -330,9 +327,15 @@ async function main(): Promise<void> {
 
   if (command === 'apply') {
     const batch = Number(values.batch)
-    for (const domain of positionals) {
-      const target = targets.find(t => t.domain === domain)
-      if (!target) throw new Error(`${domain} has no broken newest Linux artifact in the audit`)
+    const rows = readAudit(values.audit)
+    for (const selector of positionals) {
+      // `domain@version` repairs that release even when it is not the newest,
+      // such as a broken newest prerelease beside a sound stable release.
+      const [domain, version] = selector.includes('@') ? [selector.slice(0, selector.lastIndexOf('@')), selector.slice(selector.lastIndexOf('@') + 1)] : [selector, undefined]
+      const target = version
+        ? brokenTargets(rows.filter(r => r.domain === domain && r.version === version).map(r => ({ ...r, newestOnPlatform: true })))[0]
+        : targets.find(t => t.domain === domain)
+      if (!target) throw new Error(`${selector} has no broken Linux artifact in the audit`)
       const recipe = recipeFile(domain)
       const pkg = packageFile(domain)
       if (!recipe || !pkg) throw new Error(`${domain}: recipe or package metadata missing`)

@@ -244,3 +244,22 @@ test "zig dev builds stay reachable through a dev range, and latest is stable" {
     try std.testing.expectEqualStrings("0.17.0-dev.1422+e863bf3be", selectFrom(parsed, "0.17.0-dev", "linux-x86-64").?);
     try std.testing.expectEqualStrings("0.17.0-dev.1422+e863bf3be", selectFrom(parsed, "^0.17.0-dev", "linux-x86-64").?);
 }
+
+test "a .pantryN build revision of a prerelease resolves through its revision range, and latest stays stable" {
+    const parsed = try parseFixture(
+        \\{"versions":{
+        \\  "3.14.1":{"platforms":{"linux-x86-64":{"tarball":"t","sha256":"a","size":1}}},
+        \\  "3.15.0rc1":{"platforms":{"linux-x86-64":{"tarball":"t","sha256":"b","size":1}}},
+        \\  "3.15.0rc1.pantry1":{"platforms":{"linux-x86-64":{"tarball":"t","sha256":"c","size":1}}},
+        \\  "3.15.0":{"platforms":{"linux-x86-64":{"tarball":"t","sha256":"d","size":1}}}
+        \\}}
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqualStrings("3.15.0rc1.pantry1", selectFrom(parsed, ">3.15.0rc1 <=3.15.0rc1.pantry1", "linux-x86-64").?);
+    try std.testing.expectEqualStrings("3.15.0rc1", selectFrom(parsed, "3.15.0rc1", "linux-x86-64").?);
+    try std.testing.expectEqualStrings("3.15.0rc1.pantry1", selectFrom(parsed, "3.15.0rc1.pantry1", "linux-x86-64").?);
+    try std.testing.expectEqualStrings("3.15.0", selectFrom(parsed, "latest", "linux-x86-64").?);
+    try std.testing.expectEqualStrings("3.15.0", selectFrom(parsed, "^3.14", "linux-x86-64").?);
+    try std.testing.expect(selectFrom(parsed, ">3.15.0rc1 <=3.15.0rc1.pantry1", "darwin-arm64") == null);
+}
