@@ -32,9 +32,9 @@ async function main(): Promise<void> {
       headers: { 'authorization': `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ domain, version, reason: values.reason }),
     })
-    const body = await response.json().catch(() => ({})) as Record<string, unknown>
+    const body: { platforms?: string[], latestVersion?: string, code?: string, error?: string } = await response.json().catch(() => ({}))
     if (response.ok) {
-      console.log(`retired ${domain}@${version} (${(body.platforms as string[] | undefined)?.join(', ')}); latest is now ${body.latestVersion}`)
+      console.log(`retired ${domain}@${version} (${body.platforms?.join(', ')}); latest is now ${body.latestVersion}`)
     }
     else {
       failed++

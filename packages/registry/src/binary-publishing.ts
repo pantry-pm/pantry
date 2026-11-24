@@ -1174,7 +1174,8 @@ export class BinaryArtifactPublisher {
     const domain = typeof body.domain === 'string' ? body.domain.trim() : ''
     const version = typeof body.version === 'string' ? body.version.trim() : ''
     const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
-    if (!/^[a-z0-9][a-z0-9.-]*(?:\/[A-Za-z0-9._-]+)*$/.test(domain) || !/^\d[\w.+-]*$/.test(version) || !reason || reason.length > 500)
+    const domainShaped = domain.split('/').every((part, index) => index === 0 ? /^[a-z0-9][a-z0-9.-]*$/.test(part) : /^[\w.-]+$/.test(part))
+    if (!domainShaped || !/^\d[\w.+-]*$/.test(version) || !reason || reason.length > 500)
       throw new BinaryPublishError('retire needs a domain, a version and a reason', 400, 'BINARY_RETIRE_INVALID')
     return await this.withDomainLock(domain, async () => {
       const metadataKey = `binaries/${domain}/metadata.json`
