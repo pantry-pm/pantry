@@ -1,3 +1,42 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.227...v0.11.228)
+
+## ✨ Features
+
+- **registry**: retire a published binary version ([3394163](https://github.com/pantry-pm/pantry/commit/3394163)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **native-runtime**: leave package-manager prebuilts' unresolvable needs to the host ([9870204](https://github.com/pantry-pm/pantry/commit/9870204)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **native-runtime**: GPU driver libraries come from the host ([17358c6](https://github.com/pantry-pm/pantry/commit/17358c6)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **native-runtime**: resolve a vendored binary's siblings through its own $ORIGIN path ([345c32f](https://github.com/pantry-pm/pantry/commit/345c32f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: satisfy lint in the retire endpoint and script ([e3850d5](https://github.com/pantry-pm/pantry/commit/e3850d5)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **libatomic**: configure out of tree, two levels below the GCC source ([aa983a6](https://github.com/pantry-pm/pantry/commit/aa983a6)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **libatomic**: configure with GCC itself, not the build's clang wrapper ([24072aa](https://github.com/pantry-pm/pantry/commit/24072aa)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recipes**: repair sed, re2c and postgres in place and drop their colliding revisions ([08ede1a](https://github.com/pantry-pm/pantry/commit/08ede1a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **revisions**: never spell a revision as its vendor's next patch release ([c8efb23](https://github.com/pantry-pm/pantry/commit/c8efb23)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **mupdf**: resolve the mesa the registry publishes ([8952448](https://github.com/pantry-pm/pantry/commit/8952448)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recipes**: let whisper and surya resolve dependencies the registry publishes ([0105843](https://github.com/pantry-pm/pantry/commit/0105843)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: sed and re2c repaired in place, their colliding revisions retired ([4856efa](https://github.com/pantry-pm/pantry/commit/4856efa)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: surya's vendored binaries replaced in place and verified ([cfdb853](https://github.com/pantry-pm/pantry/commit/cfdb853)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: whisper's vendored wheels replaced in place and verified ([68f26ee](https://github.com/pantry-pm/pantry/commit/68f26ee)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: request surya and whisper in place again ([e88a2aa](https://github.com/pantry-pm/pantry/commit/e88a2aa)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- show the first Stacks release published to Pantry ([75e74b4](https://github.com/pantry-pm/pantry/commit/75e74b4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **elf-repair**: every repaired base build replaced in place and verified ([3624086](https://github.com/pantry-pm/pantry/commit/3624086)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: 131 in-place replacements verified, coqui TTS's vendored wheels included ([f46a5ad](https://github.com/pantry-pm/pantry/commit/f46a5ad)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.228 ([009634d](https://github.com/pantry-pm/pantry/commit/009634d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.537 ([cadb1a2](https://github.com/pantry-pm/pantry/commit/cadb1a2)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.226...v0.11.227)
 
 ## 🐛 Bug Fixes
