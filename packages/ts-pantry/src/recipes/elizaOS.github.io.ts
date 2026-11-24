@@ -20,7 +20,7 @@ export const recipe: Recipe = {
     'python.org': '>=2.7',
     'nodejs.org': '>=24<25',
     'pnpm.io': '*', // prior to 1.0.5
-    'bun.sh': '^1.2', // since 1.0.5
+    'bun.com': '^1.2', // since 1.0.5 (bun.sh is its alias; the recipe lives under bun.com)
     // companions (runtime helpers)
     'git-scm.org': '*',
     'ffmpeg.org': '*',
