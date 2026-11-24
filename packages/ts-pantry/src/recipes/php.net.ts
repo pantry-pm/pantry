@@ -3,8 +3,6 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'php.net',
   name: 'php',
-  revisions: { '8.5.10': 1 },
-  revisionReasons: { '8.5.10': 'elf-loader-paths' },
   description: 'General-purpose scripting language',
   homepage: 'https://www.php.net/',
   github: 'https://github.com/php/php-src',
@@ -74,7 +72,13 @@ export const recipe: Recipe = {
       {
         run: [
           'sed -i -e\'s|{{prefix}}|${prefix}|g\' -e\'s|^prefix=.*|prefix="$(dirname "$(dirname "$0")")"|\' -e\'s|^SED=.*|SED=sed|\' php-config phpize',
-          'sed -i \'1s|^#!.*|#!/usr/bin/env php|\' phar',
+          // bin/phar is a signed phar archive (a link to phar.phar): any
+          // edit, even to its shebang, breaks the signature and `phar` dies
+          // with "SHA1 signature could not be verified". Run the untouched
+          // archive through this prefix's php instead.
+          'rm -f phar',
+          'printf \'%s\\n\' \'#!/bin/sh\' \'here=$(cd "$(dirname "$0")" && pwd)\' \'exec "$here/php" "$here/phar.phar" "$@"\' > phar',
+          'chmod 755 phar',
         ],
         'working-directory': '{{prefix}}/bin',
       },

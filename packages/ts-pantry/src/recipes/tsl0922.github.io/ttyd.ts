@@ -3,8 +3,6 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'tsl0922.github.io/ttyd',
   name: 'ttyd',
-  revisions: { '1.7.7': 1 },
-  revisionReasons: { '1.7.7': 'elf-loader-paths' },
   programs: [
     'ttyd',
   ],

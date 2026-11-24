@@ -2,8 +2,9 @@
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
     "verified": 102,
-    "pending": 31,
-    "published": 1
+    "published": 12,
+    "next-release": 5,
+    "pending": 15
   },
   "packages": [
     {
@@ -18,7 +19,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -34,7 +35,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -51,7 +52,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -67,7 +68,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -83,7 +84,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -95,7 +96,7 @@
         "linux-x86-64"
       ],
       "batch": 1,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "gnu.org/tar",
@@ -109,7 +110,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -125,7 +126,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -156,7 +157,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -173,7 +174,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -190,7 +191,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -207,7 +208,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -224,7 +225,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -241,7 +242,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -257,7 +258,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -273,7 +274,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -289,7 +290,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -305,7 +306,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -321,7 +322,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -337,7 +338,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -353,7 +354,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -369,7 +370,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -385,7 +386,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -401,7 +402,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -417,7 +418,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -433,7 +434,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T02:42:08Z"
       }
     },
@@ -445,7 +446,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "kernel.org/libcap",
@@ -455,7 +462,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "openjpeg.org",
@@ -465,7 +478,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "oracle.com/berkeley-db",
@@ -475,7 +494,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "savannah.nongnu.org/acl",
@@ -485,7 +510,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "savannah.nongnu.org/attr",
@@ -495,7 +526,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "wayland.freedesktop.org",
@@ -505,7 +542,13 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "darwinsys.com/file",
@@ -516,7 +559,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "elfutils.org",
@@ -527,7 +576,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "giflib.sourceforge.io",
@@ -538,7 +593,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "github.com/jasper-software/jasper",
@@ -549,7 +610,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "github.com/westes/flex",
@@ -560,7 +627,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "gnome.org/gdk-pixbuf",
@@ -570,7 +643,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "gnome.org/libsecret",
@@ -581,7 +654,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "gnu.org/fribidi",
@@ -592,7 +671,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "gnu.org/which",
@@ -602,7 +687,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "gnupg.org/gpgme",
@@ -612,7 +703,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "gnupg.org/pinentry",
@@ -622,7 +719,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "hboehm.info/gc",
@@ -632,7 +735,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "info-zip.org/unzip",
@@ -642,7 +751,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "info-zip.org/zip",
@@ -652,7 +767,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "jpeg.org/jpegxl",
@@ -662,7 +783,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "libimobiledevice.org/libplist",
@@ -672,7 +793,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "lua.org",
@@ -682,7 +809,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "mozilla.org/nss",
@@ -692,7 +825,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "openldap.org",
@@ -702,7 +841,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "openprinting.github.io/cups",
@@ -712,7 +857,13 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:00:14Z"
+      }
     },
     {
       "domain": "pcsclite.apdu.fr",
@@ -727,12 +878,14 @@
     {
       "domain": "php.net",
       "oldBuild": "8.5.10",
-      "revision": "8.5.10.1",
+      "revision": "",
       "platforms": [
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "next-release",
+      "note": "fixed on next release (revision 8.5.10.1 withdrawn unpublished)",
+      "reason": "not popular: 90-day registry downloads 2-4 (only this repair's own audit reads), no catalog fan-out, not in our installs"
     },
     {
       "domain": "rust-lang.org/cargo",
@@ -989,7 +1142,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "tcl.tk/tcl",
@@ -1039,7 +1192,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "bcrypt.sourceforge.net",
@@ -1115,7 +1268,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "github.com/google/shaderc",
@@ -1280,7 +1433,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "virtualsquare.org/vde",
@@ -1305,13 +1458,15 @@
     {
       "domain": "apache.org/arrow",
       "oldBuild": "23.0.1",
-      "revision": "23.0.1.1",
+      "revision": "",
       "platforms": [
         "linux-arm64",
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "next-release",
+      "note": "fixed on next release (revision 23.0.1.1 withdrawn unpublished)",
+      "reason": "not popular: 90-day registry downloads 2-4 (only this repair's own audit reads), no catalog fan-out, not in our installs"
     },
     {
       "domain": "cscope.sourceforge.io",
@@ -1355,7 +1510,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "gnome.org/libgsf",
@@ -1366,7 +1521,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "gnu.org/source-highlight",
@@ -1377,7 +1532,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "google.com/fullycapable",
@@ -1399,7 +1554,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "graphicsmagick.org",
@@ -1437,13 +1592,15 @@
     {
       "domain": "ladspa.org",
       "oldBuild": "1.17.0",
-      "revision": "1.17.0.1",
+      "revision": "",
       "platforms": [
         "linux-arm64",
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "next-release",
+      "note": "fixed on next release (revision 1.17.0.1 withdrawn unpublished)",
+      "reason": "not popular: 90-day registry downloads 2-4 (only this repair's own audit reads), no catalog fan-out, not in our installs"
     },
     {
       "domain": "libimobiledevice.org/libusbmuxd",
@@ -1524,24 +1681,28 @@
     {
       "domain": "tsl0922.github.io/ttyd",
       "oldBuild": "1.7.7",
-      "revision": "1.7.7.1",
+      "revision": "",
       "platforms": [
         "linux-arm64",
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "next-release",
+      "note": "fixed on next release (revision 1.7.7.1 withdrawn unpublished)",
+      "reason": "not popular: 90-day registry downloads 2-4 (only this repair's own audit reads), no catalog fan-out, not in our installs"
     },
     {
       "domain": "vamp-plugins.org",
       "oldBuild": "2.10.0",
-      "revision": "2.10.0.1",
+      "revision": "",
       "platforms": [
         "linux-arm64",
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "next-release",
+      "note": "fixed on next release (revision 2.10.0.1 withdrawn unpublished)",
+      "reason": "not popular: 90-day registry downloads 2-4 (only this repair's own audit reads), no catalog fan-out, not in our installs"
     },
     {
       "domain": "videolan.org/x264",

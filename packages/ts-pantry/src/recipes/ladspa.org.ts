@@ -3,8 +3,6 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'ladspa.org',
   name: 'ladspa',
-  revisions: { '1.17.0': 1 },
-  revisionReasons: { '1.17.0': 'elf-loader-paths' },
   description: 'Linux Audio Developer Simple Plugin API',
   homepage: 'https://www.ladspa.org',
   programs: ['analyseplugin', 'applyplugin', 'listplugins'],

@@ -98,7 +98,6 @@ export const apacheorgarrowPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
-    '23.0.1.1',
     '23.0.1',
     '23.0.0',
     '22.0.0',

@@ -52,7 +52,8 @@ export const recipe: Recipe = {
     script: [
       'test "$(printf \'puts [info patchlevel]\\n\' | {{prefix}}/bin/tclsh)" = "{{version}}"',
       'test -x {{prefix}}/bin/wish',
-      'test -n "$(find {{prefix}}/lib -name \'libtk*.so\' -o -name \'libtk*.dylib\')"',
+      // Tk 9 names its library libtcl9tk9.0.so (Tk 8: libtk8.6.so).
+      'test -n "$(find {{prefix}}/lib -name \'lib*tk[0-9]*.so\' -o -name \'lib*tk[0-9]*.dylib\')"',
     ],
   },
 }

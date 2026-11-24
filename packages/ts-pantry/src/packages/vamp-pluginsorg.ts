@@ -78,7 +78,6 @@ export const vamppluginsorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
-    '2.10.0.1',
     '2.10.0',
   ] as const,
   aliases: [] as const,

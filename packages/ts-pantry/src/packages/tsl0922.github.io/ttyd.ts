@@ -77,7 +77,6 @@ export const tsl0922githubiottydPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
-    '1.7.7.1',
     '1.7.7',
     '1.7.6',
     '1.7.5',

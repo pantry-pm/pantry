@@ -3,8 +3,6 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'vamp-plugins.org',
   name: 'vamp',
-  revisions: { '2.10.0': 1 },
-  revisionReasons: { '2.10.0': 'elf-loader-paths' },
   description: 'Audio processing plugin system sdk',
   homepage: 'https://www.vamp-plugins.org/',
   github: 'vamp-plugins/vamp-plugin-sdk',

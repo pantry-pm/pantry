@@ -298,8 +298,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "github.com/aws/aws-sdk-cpp", "github.com/google/brotli", "sourceware.org/bzip2", "google.com/glog", "grpc.io", "lz4.org", "openssl.org", "rapidjson.org", "github.com/google/re2", "google.github.io/snappy", "apache.org/thrift", "github.com/JuliaStrings/utf8proc", "facebook.com/zstd", "darwin:c-ares.org@1", "darwin:libcxx.llvm.org~17", "linux:protobuf.dev@30.0.0", "linux:gnu.org/gcc/libstdcxx@14" },
     .build_dependencies = &[_][]const u8{ "boost.org", "cmake.org@3", "python.org@<3.12", "llvm.org@~17", "linux:gnu.org/gcc@14" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "23.0.1.1", "23.0.1", "23.0.0", "22.0.0", "21.0.0", "20.0.0", "19.0.1", "19.0.0", "18.1.0", "18.0.0", "16.1.0", "16.0.0", "15.0.2", "15.0.1", "15.0.0", "14.0.2", "14.0.1", "14.0.0", "13.0.0" },
-    .build_revisions = &[_]BuildRevision{.{ .release = "23.0.1", .revision = 1 }},
+    .versions = &[_][]const u8{ "23.0.1", "23.0.0", "22.0.0", "21.0.0", "20.0.0", "19.0.1", "19.0.0", "18.1.0", "18.0.0", "16.1.0", "16.0.0", "15.0.2", "15.0.1", "15.0.0", "14.0.2", "14.0.1", "14.0.0", "13.0.0" },
 }, .{
     .name = "avro",
     .domain = "apache.org/avro",
@@ -12579,8 +12578,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"github.com/libsndfile/libsndfile^1.2"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.17.0.1", "1.17.0" },
-    .build_revisions = &[_]BuildRevision{.{ .release = "1.17.0", .revision = 1 }},
+    .versions = &[_][]const u8{"1.17.0"},
 }, .{
     .name = "lame",
     .domain = "lame.sourceforge.io",
@@ -15397,8 +15395,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "gnu.org/bison^3", "re2c.org^3", "apache.org/apr^1", "apache.org/apr-util^1", "bcrypt.sourceforge.net^1", "gnu.org/autoconf^2", "curl.se^8", "nghttp2.org", "gnu.org/gettext^0", "gnu.org/gmp^6", "libsodium.org<1.0.19", "libzip.org^1.9", "github.com/kkos/oniguruma^6", "openssl.org^3", "pcre.org/v2>=10.30", "sqlite.org^3", "postgresql.org^17", "unicode.org^71", "gnu.org/libiconv^1", "kerberos.org^1", "gnome.org/libxml2", "thrysoee.dk/editline^3", "sourceware.org/libffi>=3.4.7", "gnome.org/libxslt>=1.1.0", "libpng.org^1", "google.com/webp^1", "ijg.org^9", "gnu.org/sed^4", "openldap.org^2", "gnu.org/gcc/libstdcxx^14", "darwin:sourceware.org/bzip2^1", "darwin:zlib.net^1" },
     .build_dependencies = &[_][]const u8{ "freetype.org", "gnu.org/libtool", "darwin:tukaani.org/xz" },
     .aliases = &[_][]const u8{"php"},
-    .versions = &[_][]const u8{ "8.5.12", "8.5.11", "8.5.10.1", "8.5.10", "8.5.9", "8.5.8", "8.5.7", "8.5.7RC2", "8.5.7RC1", "8.5.6", "8.5.6RC3", "8.5.6RC2", "8.5.6RC1", "8.5.5", "8.5.5RC1", "8.5.4", "8.5.4RC1", "8.5.3", "8.5.3RC1", "8.5.2", "8.5.2RC1", "8.5.1", "8.5.1RC2", "8.5.1RC1", "8.5.0", "8.5.0beta3", "8.5.0beta2", "8.5.0beta1", "8.5.0alpha4", "8.5.0alpha3", "8.5.0alpha2", "8.5.0alpha1", "8.5.0RC5", "8.5.0RC4", "8.5.0RC3", "8.5.0RC2", "8.5.0RC1", "8.4.27", "8.4.26", "8.4.25", "8.4.24", "8.4.23", "8.4.22", "8.4.22RC1", "8.4.21", "8.4.21RC1", "8.4.20", "8.4.20RC1", "8.4.19", "8.4.19RC1", "8.4.18", "8.4.18RC1", "8.4.17", "8.4.17RC1", "8.4.16", "8.4.16RC1", "8.4.15", "8.4.15RC1", "8.4.14", "8.4.14RC1", "8.4.13", "8.4.12", "8.4.11", "8.4.10", "8.4.9", "8.4.8", "8.4.7", "8.4.6", "8.4.5", "8.4.4", "8.4.3", "8.4.2", "8.4.1", "8.4.0", "8.3.31", "8.3.30", "8.3.29", "8.3.28", "8.3.27", "8.3.26", "8.3.25", "8.3.24", "8.3.23", "8.3.22", "8.3.21", "8.3.20", "8.3.19", "8.3.18", "8.3.17", "8.3.16", "8.3.15", "8.3.14", "8.3.13", "8.3.12", "8.3.11", "8.3.10", "8.3.9", "8.3.8", "8.3.7", "8.3.6", "8.3.5", "8.3.4", "8.3.3", "8.3.2", "8.3.1", "8.3.0", "8.2.31", "8.2.30", "8.2.29", "8.2.28", "8.2.27", "8.2.26", "8.2.25", "8.2.24", "8.2.23", "8.2.22", "8.2.21", "8.2.20", "8.2.19", "8.2.18", "8.2.17", "8.2.16", "8.2.15", "8.2.14", "8.2.13", "8.2.12", "8.2.11", "8.2.10", "8.2.9", "8.2.8", "8.2.7", "8.2.6", "8.2.5", "8.1.34", "8.1.33", "8.1.32", "8.1.31", "8.1.30", "8.1.29", "8.1.28", "8.1.27", "8.1.26", "8.1.25", "8.1.24", "8.1.23", "8.1.22", "8.1.21", "8.1.20", "8.1.18", "8.0.30", "8.0.28", "7.4.33" },
-    .build_revisions = &[_]BuildRevision{.{ .release = "8.5.10", .revision = 1 }},
+    .versions = &[_][]const u8{ "8.5.12", "8.5.11", "8.5.10", "8.5.9", "8.5.8", "8.5.7", "8.5.7RC2", "8.5.7RC1", "8.5.6", "8.5.6RC3", "8.5.6RC2", "8.5.6RC1", "8.5.5", "8.5.5RC1", "8.5.4", "8.5.4RC1", "8.5.3", "8.5.3RC1", "8.5.2", "8.5.2RC1", "8.5.1", "8.5.1RC2", "8.5.1RC1", "8.5.0", "8.5.0beta3", "8.5.0beta2", "8.5.0beta1", "8.5.0alpha4", "8.5.0alpha3", "8.5.0alpha2", "8.5.0alpha1", "8.5.0RC5", "8.5.0RC4", "8.5.0RC3", "8.5.0RC2", "8.5.0RC1", "8.4.27", "8.4.26", "8.4.25", "8.4.24", "8.4.23", "8.4.22", "8.4.22RC1", "8.4.21", "8.4.21RC1", "8.4.20", "8.4.20RC1", "8.4.19", "8.4.19RC1", "8.4.18", "8.4.18RC1", "8.4.17", "8.4.17RC1", "8.4.16", "8.4.16RC1", "8.4.15", "8.4.15RC1", "8.4.14", "8.4.14RC1", "8.4.13", "8.4.12", "8.4.11", "8.4.10", "8.4.9", "8.4.8", "8.4.7", "8.4.6", "8.4.5", "8.4.4", "8.4.3", "8.4.2", "8.4.1", "8.4.0", "8.3.31", "8.3.30", "8.3.29", "8.3.28", "8.3.27", "8.3.26", "8.3.25", "8.3.24", "8.3.23", "8.3.22", "8.3.21", "8.3.20", "8.3.19", "8.3.18", "8.3.17", "8.3.16", "8.3.15", "8.3.14", "8.3.13", "8.3.12", "8.3.11", "8.3.10", "8.3.9", "8.3.8", "8.3.7", "8.3.6", "8.3.5", "8.3.4", "8.3.3", "8.3.2", "8.3.1", "8.3.0", "8.2.31", "8.2.30", "8.2.29", "8.2.28", "8.2.27", "8.2.26", "8.2.25", "8.2.24", "8.2.23", "8.2.22", "8.2.21", "8.2.20", "8.2.19", "8.2.18", "8.2.17", "8.2.16", "8.2.15", "8.2.14", "8.2.13", "8.2.12", "8.2.11", "8.2.10", "8.2.9", "8.2.8", "8.2.7", "8.2.6", "8.2.5", "8.1.34", "8.1.33", "8.1.32", "8.1.31", "8.1.30", "8.1.29", "8.1.28", "8.1.27", "8.1.26", "8.1.25", "8.1.24", "8.1.23", "8.1.22", "8.1.21", "8.1.20", "8.1.18", "8.0.30", "8.0.28", "7.4.33" },
 }, .{
     .name = "phpMyAdmin",
     .domain = "phpmyadmin.net",
@@ -18224,8 +18221,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "libuv.org@1", "github.com/json-c/json-c^0.16", "libwebsockets.org~4.3", "zlib.net@1" },
     .build_dependencies = &[_][]const u8{"cmake.org@3"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.7.7.1", "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.2" },
-    .build_revisions = &[_]BuildRevision{.{ .release = "1.7.7", .revision = 1 }},
+    .versions = &[_][]const u8{ "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.2" },
 }, .{
     .name = "xcbeautify",
     .domain = "tuist.io/xcbeautify",
@@ -18436,8 +18432,7 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "xiph.org/flac^1.4", "xiph.org/ogg^1.3", "github.com/libsndfile/libsndfile^1.2" },
     .build_dependencies = &[_][]const u8{ "gnu.org/automake", "curl.se" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.10.0.1", "2.10.0" },
-    .build_revisions = &[_]BuildRevision{.{ .release = "2.10.0", .revision = 1 }},
+    .versions = &[_][]const u8{"2.10.0"},
 }, .{
     .name = "Vanna",
     .domain = "vanna.ai",
