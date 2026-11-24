@@ -7585,7 +7585,7 @@
 - **recipes**: glaros.dtc.umn.edu/metis guard missing graphs/ before mv ([ac5f5db](https://github.com/pantry-pm/pantry/commit/ac5f5db)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: x.org/sm disable docs/specs so configure skips xorg-sgml-doctools ([30b7ff8](https://github.com/pantry-pm/pantry/commit/30b7ff8)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: x.org/xfixes build via autotools not meson ([7f60e9a](https://github.com/pantry-pm/pantry/commit/7f60e9a)) _(by Chris <chrisbreuer93@gmail.com>)_
-- **fleet**: inject PANTRY_REGISTRY_TOKEN into box env on configure ([20df539](https://github.com/pantry-pm/pantry/commit/20df539)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **fleet**: inject PANTRY_TOKEN into box env on configure ([20df539](https://github.com/pantry-pm/pantry/commit/20df539)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **fleet**: make primary box optional (it gets torn down for cost saving) ([49b34a6](https://github.com/pantry-pm/pantry/commit/49b34a6)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: open-mpi.org guard *.mod install glob against no matches ([08cfac8](https://github.com/pantry-pm/pantry/commit/08cfac8)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: coder.com/code-server pin node ^22 (postinstall requires v22, resolved to 26) ([8d81271](https://github.com/pantry-pm/pantry/commit/8d81271)) _(by Chris <chrisbreuer93@gmail.com>)_
@@ -7642,7 +7642,7 @@
 - **recipes**: khanacademy.org/genqlient bump x/tools for modern Go ([1f698e1](https://github.com/pantry-pm/pantry/commit/1f698e1)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: go.uber.org/mock/mockgen check out tag for goreleaser ([51a6472](https://github.com/pantry-pm/pantry/commit/51a6472)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: libimobiledevice guard Homebrew libtool block to darwin ([3c521fe](https://github.com/pantry-pm/pantry/commit/3c521fe)) _(by Chris <chrisbreuer93@gmail.com>)_
-- **ci**: export PANTRY_REGISTRY_TOKEN in build workflows so dashboard reporting stops 401ing ([5b54c1a](https://github.com/pantry-pm/pantry/commit/5b54c1a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **ci**: export PANTRY_TOKEN in build workflows so dashboard reporting stops 401ing ([5b54c1a](https://github.com/pantry-pm/pantry/commit/5b54c1a)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: apple.com/remote_cmds restrict to darwin (xcodebuild, macOS-only) ([2a43935](https://github.com/pantry-pm/pantry/commit/2a43935)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: micro-editor.github.io real go build (was placeholder echo) ([cecad2f](https://github.com/pantry-pm/pantry/commit/cecad2f)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **recipes**: openslide use meson build; libtiff disable lerc/libdeflate ([f0aec88](https://github.com/pantry-pm/pantry/commit/f0aec88)) _(by Chris <chrisbreuer93@gmail.com>)_
@@ -9357,7 +9357,7 @@
 - **zig**: drop io_helper from core/string.zig so 'zig test' works standalone ([24064ea](https://github.com/home-lang/pantry/commit/24064ea)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **registry**: update last PHP test assertion for quoted composer cmd ([7304671](https://github.com/home-lang/pantry/commit/7304671)) _(by Chris <chrisbreuer93@gmail.com>)_
 - lazy PHP auth token, 40-char test SHAs, bump vuln phpunit ([26de6f0](https://github.com/home-lang/pantry/commit/26de6f0)) _(by Chris <chrisbreuer93@gmail.com>)_
-- **registry**: read PANTRY_REGISTRY_TOKEN lazily so tests can set it ([da69daf](https://github.com/home-lang/pantry/commit/da69daf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: read PANTRY_TOKEN lazily so tests can set it ([da69daf](https://github.com/home-lang/pantry/commit/da69daf)) _(by Chris <chrisbreuer93@gmail.com>)_
 - resolve 4 pickier errors blocking CI lint step ([8661187](https://github.com/home-lang/pantry/commit/8661187)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **action**: validate workspace deps on cache hit, heal stale caches ([bcc364e](https://github.com/home-lang/pantry/commit/bcc364e)) _(by Chris <chrisbreuer93@gmail.com>)_
 - clean up install logs — merge resuming/installing, friendly errors, dedup by name ([f2cb48c](https://github.com/home-lang/pantry/commit/f2cb48c)) _(by Chris <chrisbreuer93@gmail.com>)_
@@ -9728,7 +9728,7 @@
 - **zig**: drop io_helper from core/string.zig so 'zig test' works standalone ([24064ea](https://github.com/home-lang/pantry/commit/24064ea)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **registry**: update last PHP test assertion for quoted composer cmd ([7304671](https://github.com/home-lang/pantry/commit/7304671)) _(by Chris <chrisbreuer93@gmail.com>)_
 - lazy PHP auth token, 40-char test SHAs, bump vuln phpunit ([26de6f0](https://github.com/home-lang/pantry/commit/26de6f0)) _(by Chris <chrisbreuer93@gmail.com>)_
-- **registry**: read PANTRY_REGISTRY_TOKEN lazily so tests can set it ([da69daf](https://github.com/home-lang/pantry/commit/da69daf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: read PANTRY_TOKEN lazily so tests can set it ([da69daf](https://github.com/home-lang/pantry/commit/da69daf)) _(by Chris <chrisbreuer93@gmail.com>)_
 - resolve 4 pickier errors blocking CI lint step ([8661187](https://github.com/home-lang/pantry/commit/8661187)) _(by Chris <chrisbreuer93@gmail.com>)_
 - **action**: validate workspace deps on cache hit, heal stale caches ([bcc364e](https://github.com/home-lang/pantry/commit/bcc364e)) _(by Chris <chrisbreuer93@gmail.com>)_
 - clean up install logs — merge resuming/installing, friendly errors, dedup by name ([f2cb48c](https://github.com/home-lang/pantry/commit/f2cb48c)) _(by Chris <chrisbreuer93@gmail.com>)_

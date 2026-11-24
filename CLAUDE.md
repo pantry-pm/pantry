@@ -32,8 +32,8 @@
 There are two distinct publish targets:
 
 - **`pantry publish --npm --access public`**— publishes JS/TS packages to**npm** (npmjs.org). Used by monorepo release workflows for public packages (skips `"private": true`). Authenticates with OIDC in CI (set up with `pantry login` + `pantry publisher:add`), else `NPM_TOKEN` / `NODE_AUTH_TOKEN` / `BUN_AUTH_TOKEN` or an npmrc token.
-- **`pantry publish:commit './packages/*'`**— publishes packages to the**pantry registry** (registry.pantry.dev) under a commit SHA. Used in CI continuous-release for commit-based installs (like pkg-pr-new). Auth: AWS credentials (direct S3 upload) or `PANTRY_REGISTRY_TOKEN` (HTTP upload to registry API).
-- **`pantry publish --zig [dir]`** — publishes a `build.zig.zon` package to the registry's Zig endpoint (`/zig/publish`), the same request the action's `publish: zig` makes, then reads the tarball back and checks its `zig fetch` hash. It is the default for a directory with build.zig.zon and no package.json; `--dry-run` lists every tarball entry. Auth: the stored `pantry token` (or `PANTRY_TOKEN`/`PANTRY_REGISTRY_TOKEN`), so no GitHub Actions run is needed.
+- **`pantry publish:commit './packages/*'`**— publishes packages to the**pantry registry** (registry.pantry.dev) under a commit SHA. Used in CI continuous-release for commit-based installs (like pkg-pr-new). Auth: AWS credentials (direct S3 upload) or `PANTRY_TOKEN` (HTTP upload to registry API).
+- **`pantry publish --zig [dir]`** — publishes a `build.zig.zon` package to the registry's Zig endpoint (`/zig/publish`), the same request the action's `publish: zig` makes, then reads the tarball back and checks its `zig fetch` hash. It is the default for a directory with build.zig.zon and no package.json; `--dry-run` lists every tarball entry. Auth: the stored `pantry token` (or `PANTRY_TOKEN`/`PANTRY_TOKEN`), so no GitHub Actions run is needed.
 
 ## Registry Operations
 
@@ -86,10 +86,10 @@ In a GitHub Actions workflow:
 
   run: pantry publish:commit './packages/my-pkg'
   env:
-    PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+    PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
 ```
 
-The Pantry action exports `PANTRY_TOKEN` and `PANTRY_REGISTRY_TOKEN` as env vars for subsequent steps. The `publish:commit` command checks `PANTRY_REGISTRY_TOKEN` first, then `PANTRY_TOKEN`.
+The Pantry action exports `PANTRY_TOKEN` as an env var for subsequent steps, and `publish:commit` reads it from there. `PANTRY_TOKEN` is the only name the token goes by.
 
 The pantry S3 registry (`registry.pantry.dev/binaries/`) hosts **system packages**(pre-built binaries like zig, curl, redis, bun) and**apps** (GUI applications like VS Code, Discord, Obsidian) uploaded via the `build.yml` / `sync-binaries.yml` workflows. JS/TS packages go to npm, not S3.
 
@@ -233,11 +233,11 @@ place darwin source builds run.
 
 ## Build-status dashboard reporting (authenticated — the same token)
 
-The live build dashboard at **pantry.dev/packages** is fed by builders POSTing `building`/`built`/`failed` events to `registry.pantry.dev/api/build-events` (and log lines to `/api/build-logs`). These endpoints are **authenticated** — the server (`packages/registry/src/server.ts`, `isAuthorizedRequest`) returns **401** without a valid `Authorization: Bearer <token>`. The reporter (`packages/ts-pantry/scripts/report-build.ts`) reads the token from `PANTRY_REGISTRY_TOKEN` → `PANTRY_TOKEN` → `PANTRY_BUILD_REPORT_TOKEN`, and **silently skips** reporting if none is set (a 401 never fails the build — reporting is fire-and-forget). The token is the **same `ptry_` registry token** used for publishing.
+The live build dashboard at **pantry.dev/packages** is fed by builders POSTing `building`/`built`/`failed` events to `registry.pantry.dev/api/build-events` (and log lines to `/api/build-logs`). These endpoints are **authenticated** — the server (`packages/registry/src/server.ts`, `isAuthorizedRequest`) returns **401** without a valid `Authorization: Bearer <token>`. The reporter (`packages/ts-pantry/scripts/report-build.ts`) reads the token from `PANTRY_TOKEN` → `PANTRY_TOKEN` → `PANTRY_BUILD_REPORT_TOKEN`, and **silently skips** reporting if none is set (a 401 never fails the build — reporting is fire-and-forget). The token is the **same `ptry_` registry token** used for publishing.
 
 **The failure mode:** a build channel with no token compiles fine but is **invisible on the dashboard** (every POST 401s). So every channel that runs `build-all-packages.ts` MUST have the token in its environment — which channel gets it from where is recorded in [pantry-pm/ops](https://github.com/pantry-pm/ops).
 
-**Rule going forward: any new build workflow or build host must export `PANTRY_REGISTRY_TOKEN` (= `secrets.PANTRY_TOKEN` in CI) or its builds won't show on the dashboard.** `report-build.ts` tags each event with a `hostKind` (`github` / `hetzner` / `local`), so a channel that has silently stopped reporting shows up as a missing `hostKind` in `GET /api/build-status` — the quickest way to detect a token/reporting regression. Set `PANTRY_BUILD_REPORT=0` only to intentionally disable reporting. `build-zig.yml` does not report (it doesn't run `build-all-packages.ts`), so it needs no token.
+**Rule going forward: any new build workflow or build host must export `PANTRY_TOKEN` (= `secrets.PANTRY_TOKEN` in CI) or its builds won't show on the dashboard.** `report-build.ts` tags each event with a `hostKind` (`github` / `hetzner` / `local`), so a channel that has silently stopped reporting shows up as a missing `hostKind` in `GET /api/build-status` — the quickest way to detect a token/reporting regression. Set `PANTRY_BUILD_REPORT=0` only to intentionally disable reporting. `build-zig.yml` does not report (it doesn't run `build-all-packages.ts`), so it needs no token.
 
 ## Object storage provider (Hetzner / Backblaze / S3)
 

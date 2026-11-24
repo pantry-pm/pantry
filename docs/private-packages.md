@@ -263,10 +263,10 @@ curl -X POST https://registry.pantry.dev/packages/%40acme%2Fplatform/tokens \
 
 The token is shown once, and the registry keeps only a hash. Hand it to the
 client, who stores it like any other registry token: `pantry token set`, or
-`PANTRY_REGISTRY_TOKEN` in CI secrets:
+`PANTRY_TOKEN` in CI secrets:
 
 ```bash
-echo 'ptry_…' | gh secret set PANTRY_REGISTRY_TOKEN --repo client/app
+echo 'ptry_…' | gh secret set PANTRY_TOKEN --repo client/app
 ```
 
 A package token:
@@ -301,7 +301,7 @@ expire, so prefer setting one.
 ### Who can manage access
 
 Every `pantry access` command authenticates the way `pantry publish` does:
-`--token`, then `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN`, then the credential
+`--token`, then `PANTRY_TOKEN`, then the credential
 `pantry token set` stored for the registry. The registry is `--registry`, else
 `PANTRY_REGISTRY_URL`, else registry.pantry.dev.
 
@@ -323,7 +323,7 @@ In the consuming project:
 ```
 
 ```bash
-PANTRY_REGISTRY_TOKEN=ptry_… pantry install
+PANTRY_TOKEN=ptry_… pantry install
 ```
 
 The scope's value is `"pantry"`, meaning the Pantry registry this machine uses
@@ -350,7 +350,7 @@ For every package in a pinned scope:
 
   ```
   - @acme/platform@1.4.0 (@acme/platform@1.4.0 is not available from
-    registry.pantry.dev (404). It is private: set PANTRY_REGISTRY_TOKEN to a
+    registry.pantry.dev (404). It is private: set PANTRY_TOKEN to a
     token with access. @acme is pinned to registry.pantry.dev in "scopes";
     no other registry was tried.)
   ```
@@ -369,7 +369,7 @@ When `scopes` names a URL, requests to that registry carry, in this order:
 
 1. a credential stored for exactly that registry:
    `pantry token set --registry https://registry.acme.example`
-2. `PANTRY_REGISTRY_TOKEN`, then `PANTRY_TOKEN`, from the environment
+2. `PANTRY_TOKEN` from the environment
 
 The global (unscoped) entry in `~/.pantry/credentials` is never sent to a URL
 that came from a project's manifest. Over plain `http://`, a token is only sent

@@ -455,7 +455,7 @@ resolve from that registry only, whatever the resolution order says:
 - Exact versions, ranges and `latest` all resolve from the registry's version
   list. Pantry never asks npm, pkgx or GitHub about a pinned name, even when the
   name appears deep in the dependency tree.
-- Authentication comes from `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN` or the
+- Authentication comes from `PANTRY_TOKEN` or the
   credential stored for the registry (`pantry token set --registry <url>`).
 - Any failure (no token, no access, not found, unreachable) stops the install
   with a message that says what to fix. Nothing else is tried.

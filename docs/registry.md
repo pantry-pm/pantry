@@ -91,7 +91,7 @@ source repository, checksum, and test evidence.
 | `GET` | `/zig/packages/{name}/versions` | Public | Version list sorted by registry storage. |
 | `GET` | `/zig/packages/{name}/{version}/tarball` | Public | Download exact bytes and record analytics. |
 | `GET` | `/zig/hash/{hash}` | Public | Resolve an opaque native Zig package hash to metadata. |
-| `POST` | `/zig/publish` | Current `PANTRY_REGISTRY_TOKEN` or `PANTRY_TOKEN` | Publish multipart tarball plus optional `build.zig.zon`; reject duplicate version. |
+| `POST` | `/zig/publish` | Current `PANTRY_TOKEN` | Publish multipart tarball plus optional `build.zig.zon`; reject duplicate version. |
 | `DELETE` | `/zig/packages/{name}` | Current registry token | Delete all versions of the named Zig package. |
 
 Zig publication scans the received bytes before storage, then computes the
@@ -164,7 +164,7 @@ remains private.
 
 The registry supports:
 
-- a legacy operator token from `PANTRY_REGISTRY_TOKEN` or `PANTRY_TOKEN`;
+- a legacy operator token from `PANTRY_TOKEN`;
 - account API tokens prefixed `ptry_`, stored only as hashes and scoped with
   `publish` and/or `read` permissions;
 - package tokens: `ptry_` tokens with `read` only and a package scope, minted
@@ -242,7 +242,7 @@ Do not mix independently restored generations of these stores.
 Important variables include `BASE_URL`, `REGISTRY_INTERNAL_URL`, `S3_BUCKET`,
 `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`,
 `METADATA_BACKEND`, `DYNAMODB_TABLE`, `DYNAMODB_ANALYTICS_TABLE`,
-`PANTRY_REGISTRY_TOKEN`, `PANTRY_TOKEN`, and `NPM_FALLBACK`. `NPM_FALLBACK=false`
+`PANTRY_TOKEN`, and `NPM_FALLBACK`. `NPM_FALLBACK=false`
 turns missing Pantry metadata into a local miss instead of querying npm. Prefer
 the `S3_*` names for portable object storage; legacy `AWS_*` credentials remain
 relevant to the AWS-specific backends.

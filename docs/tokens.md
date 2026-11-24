@@ -67,11 +67,11 @@ that is what encrypts the secret before upload. The equivalent by hand:
 pantry token get | gh secret set PANTRY_TOKEN --repo owner/name
 ```
 
-In a workflow, both names are read everywhere, `PANTRY_REGISTRY_TOKEN` first:
+In a workflow, both names are read everywhere, `PANTRY_TOKEN` first:
 
 ```yaml
 env:
-  PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+  PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
 ```
 
 Any job running `build-all-packages.ts` needs this, or its builds compile fine
@@ -86,7 +86,7 @@ reporting is deliberately fire-and-forget, so nothing fails loudly.
 | Read-only token | same, permissions `read` | Download from a private registry |
 | Package token | `POST /packages/{name}/tokens` | Read exactly one package, nothing else |
 | Native grant | `pantry registry token issue --publish --binary-domain` | Publish binaries for named domains |
-| Operator token | the registry's own `PANTRY_REGISTRY_TOKEN` | Everything, including `/admin` |
+| Operator token | the registry's own `PANTRY_TOKEN` | Everything, including `/admin` |
 
 The distinction that catches people: **an account token publishes packages, not
 binaries.** `POST /api/v1/binaries/uploads` admits the operator token or a token
@@ -148,5 +148,5 @@ Without `--repos` it rotates and prints the new value, updating no secrets.
   fine and still cannot publish. A publish token still cannot upload binaries
   without a native grant.
 - In CI, is the secret present under a name the tooling reads —
-  `PANTRY_REGISTRY_TOKEN`, `PANTRY_TOKEN`, or `PANTRY_BUILD_REPORT_TOKEN` for
+  `PANTRY_TOKEN`, or `PANTRY_BUILD_REPORT_TOKEN` for
   build reporting alone?

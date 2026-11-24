@@ -9,7 +9,7 @@ This page is about the Pantry registry. For npm (`pantry publish --npm`, `pantry
 The pantry registry supports two authentication methods:
 
 1. **User API Tokens** — Created through your pantry.dev account, prefixed with `ptry_`. Used for publishing packages from the CLI or CI.
-2. **Legacy Admin Token** — A single shared token set via the `PANTRY_REGISTRY_TOKEN` environment variable. Used for backward compatibility with existing CI workflows.
+2. **Legacy Admin Token** — A single shared token set via the `PANTRY_TOKEN` environment variable. Used for backward compatibility with existing CI workflows.
 
 ## Getting Started
 
@@ -123,7 +123,7 @@ stdin, so it isn't visible in the process table.
 When publishing, the token is resolved in this order:
 
 1. `--token` on the command line
-2. `PANTRY_REGISTRY_TOKEN`, then `PANTRY_TOKEN`, from the environment
+2. `PANTRY_TOKEN` from the environment
 3. A `~/.pantry/credentials` entry scoped to the target registry
 4. An unscoped `~/.pantry/credentials` entry
 
@@ -300,8 +300,7 @@ HTTP/1.1 201 Created
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PANTRY_REGISTRY_TOKEN` | Legacy admin token for CI | `ABCD1234` |
-| `PANTRY_TOKEN` | Alias for `PANTRY_REGISTRY_TOKEN` | — |
+| `PANTRY_TOKEN` | Legacy admin token for CI | `ABCD1234` |
 | `DYNAMODB_TABLE` | DynamoDB table (auth uses same table as packages) | `local` |
 
 ## CI/CD Integration
@@ -327,9 +326,9 @@ Store your `ptry_` token as a secret in your CI provider:
 
 ## Migration from Legacy Token
 
-If you're currently using `PANTRY_REGISTRY_TOKEN` for publishing:
+If you're currently publishing with the legacy admin token:
 
 1. Create an account at [pantry.dev/signup](https://pantry.dev/signup)
 2. Create a personal API token at [pantry.dev/account](https://pantry.dev/account)
-3. Replace `PANTRY_REGISTRY_TOKEN` with your new `ptry_` token in CI secrets
+3. Store your new `ptry_` token as the `PANTRY_TOKEN` CI secret in place of the admin token
 4. The legacy token continues to work — no rush to migrate

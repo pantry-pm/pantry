@@ -46,7 +46,7 @@ The package's owner, a member of the owner's [team](paid-packages.md#teams),
 or a registry admin. The registry checks this, not the CLI.
 
 `pantry deprecate` authenticates the way `pantry publish` and `pantry access`
-do: `--token`, then `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN`, then the
+do: `--token`, then `PANTRY_TOKEN`, then the
 credential `pantry token set` stored. The token needs `publish` permission. A
 read-only token or a [package token](private-packages.md#package-tokens-for-ci)
 can install the package but can't deprecate it.

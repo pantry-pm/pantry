@@ -76,7 +76,7 @@ A credential is any of:
 - a **user API token** (`ptry_…`) with `read` or `publish` permission —
   `publish` implies `read`, so one CI token can both upload a version and ask
   which versions exist;
-- the **shared registry token** (`PANTRY_REGISTRY_TOKEN`), which is also the
+- the **shared registry token** (`PANTRY_TOKEN`), which is also the
   admin credential;
 - a **logged-in browser session**, so the web UI works for signed-in humans.
 
@@ -194,7 +194,7 @@ In CI, the token is a secret and the URL is a plain variable:
 - run: pantry install
   env:
     PANTRY_REGISTRY_URL: https://registry.example.com
-    PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+    PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
 ```
 
 `pantry token sync --repo you/app --registry https://registry.example.com`
@@ -366,7 +366,7 @@ Everything below lives in the registry's environment file.
 | `REGISTRY_ALLOW_SIGNUP` | follows visibility | Self-serve account creation |
 | `REGISTRY_SIGNUP_DOMAINS` | — | Comma-separated email domains allowed to sign up |
 | `REGISTRY_PLUGINS` | — | Comma-separated plugin module specifiers |
-| `PANTRY_REGISTRY_TOKEN` | — | Shared publish/admin token |
+| `PANTRY_TOKEN` | — | Shared publish/admin token |
 | `PORT` | `3000` | Port the Bun process listens on |
 | `BASE_URL` | `http://localhost:$PORT` | Public URL, used in generated links |
 | `STORAGE_PROVIDER` | `aws` | `aws`, `hetzner`, `backblaze`, or any S3-compatible endpoint |
@@ -401,7 +401,7 @@ A green `/health` only proves the process is up. Confirm a real round trip, and
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' https://registry.example.com/packages/any   # 401
 pantry publish --registry https://registry.example.com                               # from a test package
-curl -fsS -H "Authorization: Bearer $PANTRY_REGISTRY_TOKEN" \
+curl -fsS -H "Authorization: Bearer $PANTRY_TOKEN" \
   https://registry.example.com/api/packages/<name>
 ```
 
