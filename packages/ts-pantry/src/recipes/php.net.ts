@@ -109,7 +109,8 @@ $processor->importStylesheet($style);
 if ($processor->transformToXML($source) !== 'PantryNativeXSLT') exit(1);
 PANTRY_PHP`,
       'php transform.php',
-      'phar help > /dev/null',
+      // PHP reports a fatal error on stdout; keep it when the check fails.
+      'phar help > phar-help.txt || { tail -20 phar-help.txt >&2; exit 1; }',
       '{{prefix}}/sbin/php-fpm -v | grep -F "{{version}}"',
     ],
   },

@@ -13,11 +13,14 @@ export const recipe: Recipe = {
   dependencies: {
     'github.com/google/brotli': '^1',
     'littlecms.com': '^2.13',
-    'google.com/highway': '^1',
+    // jpegxl 0.11 does not compile against highway 1.3's x86 targets.
+    'google.com/highway': '~1.2',
     'google.com/webp': '^1',
     'giflib.sourceforge.io': '^5',
     // cjxl/djxl link libOpenEXR-3_3.so.32: OpenEXR's soname changes with every minor.
     'openexr.com': '~3.3',
+    // ... and its OpenEXR 3.3 links Imath 3.1 (libImath-3_1.so.29).
+    'openexr.com/imath': '~3.1',
     'libpng.org': '^1',
   },
   buildDependencies: {
