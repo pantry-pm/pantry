@@ -1,0 +1,41 @@
+name: Retire Binary Versions
+
+# Withdraw published binary versions from resolution: the registry moves their
+# artifacts under .pantry-retired/ and records the reason in the package
+# metadata. For build identities that should never have existed, such as a
+# revision spelled as a vendor patch release. Republishing a version (the
+# vendor's real release) replaces the record.
+on:
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: 'domain@version entries to retire (space separated)'
+        required: true
+        type: string
+      reason:
+        description: 'Why they are retired (stored in the package metadata)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - name: Retire
+        working-directory: packages/ts-pantry
+        env:
+          PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+          VERSIONS: ${{ inputs.versions }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          read -r -a selectors <<< "$VERSIONS"
+          bun scripts/retire-binary-versions.ts --reason "$REASON" "${selectors[@]}"

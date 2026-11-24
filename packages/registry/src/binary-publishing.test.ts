@@ -1786,3 +1786,45 @@ it('server drain keeps native metadata readable while a detached completion sett
     await draining
   }
 })
+
+describe('retiring a published version', () => {
+  async function publish(publisher: BinaryArtifactPublisher, store: MemoryArtifactStore, version: string, body: string) {
+    const bytes = Buffer.from(body)
+    const initiated = publisher.initiate({ ...request(bytes, ['linux-x86-64']), version, filename: `example.com-tool-${version}.tar.gz` })
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+    return await publisher.complete(initiated.uploadId)
+  }
+
+  it('withdraws a mis-spelled build identity, keeps its bytes under .pantry-retired, and lets the real release take its place', async () => {
+    const store = new MemoryArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), { tokenSecret: 'test-secret-that-is-long-enough' })
+    await publish(publisher, store, '4.10', 'base build')
+    await publish(publisher, store, '4.10.1', 'revision of 4.10')
+
+    const retired = await publisher.retire({ domain: 'example.com/tool', version: '4.10.1', reason: 'a revision of 4.10 spelled as a vendor patch release' })
+    expect(retired).toMatchObject({ version: '4.10.1', platforms: ['linux-x86-64'], latestVersion: '4.10' })
+    const metadata = JSON.parse((await store.getObject('binaries/example.com/tool/metadata.json')).toString('utf8'))
+    expect(metadata.versions['4.10.1']).toBeUndefined()
+    expect(metadata.latestVersion).toBe('4.10')
+    expect(metadata.retiredVersions['4.10.1'].reason).toContain('vendor patch release')
+    const tarball = 'binaries/example.com/tool/4.10.1/linux-x86-64/example.com-tool-4.10.1.tar.gz'
+    expect(store.files.has(tarball)).toBe(false)
+    expect((await store.getObject(`.pantry-retired/${tarball}`)).toString()).toBe('revision of 4.10')
+
+    // The vendor's real 4.10.1 publishes normally and clears the record.
+    await publish(publisher, store, '4.10.1', 'the real 4.10.1')
+    const after = JSON.parse((await store.getObject('binaries/example.com/tool/metadata.json')).toString('utf8'))
+    expect(after.versions['4.10.1']).toBeDefined()
+    expect(after.retiredVersions['4.10.1']).toBeUndefined()
+    expect(after.latestVersion).toBe('4.10.1')
+  })
+
+  it('refuses an unknown version, the only version and a missing reason', async () => {
+    const store = new MemoryArtifactStore()
+    const publisher = new BinaryArtifactPublisher(store, new TestScanner(), { tokenSecret: 'test-secret-that-is-long-enough' })
+    await publish(publisher, store, '1.0.0', 'only')
+    await expect(publisher.retire({ domain: 'example.com/tool', version: '9.9.9', reason: 'x' })).rejects.toMatchObject({ code: 'BINARY_RETIRE_NOT_FOUND' })
+    await expect(publisher.retire({ domain: 'example.com/tool', version: '1.0.0', reason: 'x' })).rejects.toMatchObject({ code: 'BINARY_RETIRE_LAST_VERSION' })
+    await expect(publisher.retire({ domain: 'example.com/tool', version: '1.0.0' })).rejects.toMatchObject({ code: 'BINARY_RETIRE_INVALID' })
+  })
+})

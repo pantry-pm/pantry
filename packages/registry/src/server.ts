@@ -432,6 +432,7 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  * Binary proxy (pantry CLI install):
  * POST /api/v1/binaries/uploads                              - Create untrusted staged upload
  * POST /api/v1/binaries/uploads/complete                     - Scan and promote staged upload
+ * POST /api/v1/binaries/retire          - Withdraw a published version (operator)
  * POST /api/v1/binaries/rescan                               - Attest or quarantine a retained artifact
  * POST /api/v1/binaries/quarantine/rescan/prepare             - Prepare an operator quarantine review
  * POST /api/v1/binaries/quarantine/rescan/attest              - Apply a digest-bound quarantine review
@@ -802,6 +803,10 @@ export function createHandler(
 
       if (path === '/api/v1/binaries/uploads/complete' && req.method === 'POST') {
         return handleBinaryUploadComplete(req, getBinaryPublisher, corsHeaders)
+      }
+
+      if (path === '/api/v1/binaries/retire' && req.method === 'POST') {
+        return handleBinaryRetire(req, getBinaryPublisher, corsHeaders)
       }
 
       if (path === '/api/v1/binaries/rescan' && req.method === 'POST') {
@@ -2120,6 +2125,7 @@ export function createServer(
     console.log('Binary proxy (pantry CLI):')
     console.log('  POST /api/v1/binaries/uploads          - Stage native artifact')
     console.log('  POST /api/v1/binaries/uploads/complete - Scan and promote native artifact')
+    console.log('  POST /api/v1/binaries/retire          - Withdraw a published version (operator)')
     console.log('  POST /api/v1/binaries/rescan          - Attest or quarantine retained artifact')
     console.log('  POST /api/v1/binaries/quarantine/rescan/* - Review quarantined artifact')
     console.log('  GET  /binaries/{domain}/metadata.json  - Package metadata')
@@ -3803,6 +3809,29 @@ async function handleBinaryUploadComplete(
       code: 'BINARY_PUBLISH_FAILED',
       retryable: true,
     }, { status: 503, headers: { ...corsHeaders, 'Retry-After': '60' } })
+  }
+}
+
+async function handleBinaryRetire(
+  req: Request,
+  getPublisher: () => BinaryArtifactPublisher,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const denied = await authorizeBinaryPublisher(req, corsHeaders)
+  if (denied) return denied
+  const body = await req.json().catch(() => null)
+  if (!body)
+    return Response.json({ error: 'Invalid JSON body' }, { status: 400, headers: corsHeaders })
+  try {
+    const retired = await getPublisher().retire(body)
+    invalidateBinaryMetadata(retired.domain)
+    return Response.json({ success: true, ...retired }, { headers: { ...corsHeaders, 'Cache-Control': 'no-store' } })
+  }
+  catch (error) {
+    if (error instanceof BinaryPublishError)
+      return binaryPublishErrorResponse(error, corsHeaders)
+    console.error('Binary retire failed:', (error as Error).message)
+    return Response.json({ error: 'Binary retire failed', code: 'BINARY_RETIRE_FAILED', retryable: true }, { status: 503, headers: corsHeaders })
   }
 }
 

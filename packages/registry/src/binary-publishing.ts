@@ -140,6 +140,26 @@ export interface BinaryPackageMetadata {
   }>
   updatedAt: string
   malwareQuarantines?: BinaryMalwareQuarantine[]
+  /**
+   * Versions withdrawn from resolution (`retire`), kept as a record: their
+   * artifacts move under `.pantry-retired/`, nothing resolves or serves them,
+   * and a later publication of the same version (the vendor's real release)
+   * replaces the record.
+   */
+  retiredVersions?: Record<string, BinaryRetiredVersion>
+}
+
+export interface BinaryRetiredVersion {
+  retiredAt: string
+  reason: string
+  platforms: Record<string, { sha256: string, size: number, retiredTarball: string }>
+}
+
+export interface BinaryRetireCompleted {
+  domain: string
+  version: string
+  platforms: string[]
+  latestVersion: string
 }
 
 export interface BinaryMalwareQuarantine {
@@ -1139,6 +1159,69 @@ export class BinaryArtifactPublisher {
     await this.store.putObject(claim.stagingKey, bytes, 'application/gzip')
     // In-process: nothing here can poll a 425, so wait for the verdict.
     return this.completeAwaitingScan(initiated.uploadId, publisher, surface)
+  }
+
+  /**
+   * Withdraw one published version from resolution: a build identity that
+   * should never have existed (a revision spelled as a vendor patch release,
+   * gnu.org/sed 4.10.1 for a rebuild of 4.10). Its artifacts, checksums and
+   * attestations move under `.pantry-retired/` (nothing is deleted), the
+   * version leaves `versions`, and a `retiredVersions` record says when, why
+   * and which bytes. Operator only; refuses to retire the only version.
+   */
+  async retire(input: unknown): Promise<BinaryRetireCompleted> {
+    const body = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+    const domain = typeof body.domain === 'string' ? body.domain.trim() : ''
+    const version = typeof body.version === 'string' ? body.version.trim() : ''
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (!/^[a-z0-9][a-z0-9.-]*(?:\/[A-Za-z0-9._-]+)*$/.test(domain) || !/^\d[\w.+-]*$/.test(version) || !reason || reason.length > 500)
+      throw new BinaryPublishError('retire needs a domain, a version and a reason', 400, 'BINARY_RETIRE_INVALID')
+    return await this.withDomainLock(domain, async () => {
+      const metadataKey = `binaries/${domain}/metadata.json`
+      let metadata: BinaryPackageMetadata
+      try {
+        metadata = JSON.parse((await this.store.getObject(metadataKey)).toString('utf8')) as BinaryPackageMetadata
+      }
+      catch {
+        throw new BinaryPublishError(`${domain} has no published metadata`, 404, 'BINARY_RETIRE_NOT_FOUND')
+      }
+      const entry = metadata.versions?.[version]
+      if (!entry) throw new BinaryPublishError(`${domain}@${version} is not published`, 404, 'BINARY_RETIRE_NOT_FOUND')
+      if (Object.keys(metadata.versions).length < 2)
+        throw new BinaryPublishError(`${domain}@${version} is its only version`, 409, 'BINARY_RETIRE_LAST_VERSION')
+      const retiredAt = new Date(this.now()).toISOString()
+      const platforms: BinaryRetiredVersion['platforms'] = {}
+      for (const [platform, record] of Object.entries(entry.platforms ?? {})) {
+        const retiredTarball = `.pantry-retired/${record.tarball}`
+        for (const [from, to] of [
+          [record.tarball, retiredTarball],
+          [`${record.tarball}.sha256`, `.pantry-retired/${record.tarball}.sha256`],
+          [binaryAttestationKey(record.tarball), `.pantry-retired/${binaryAttestationKey(record.tarball)}`],
+        ] as const) {
+          try {
+            await this.store.copyObject(from, to)
+          }
+          catch {
+            // A checksum or attestation an older publisher never wrote.
+            if (from === record.tarball) throw new BinaryPublishError(`${record.tarball} could not be moved`, 503, 'BINARY_RETIRE_STORAGE')
+            continue
+          }
+        }
+        platforms[platform] = { sha256: record.sha256, size: record.size, retiredTarball }
+      }
+      // Metadata first: once it no longer lists the version nothing resolves
+      // it, and a failure after this leaves only unserved copies behind.
+      delete metadata.versions[version]
+      metadata.retiredVersions = { ...metadata.retiredVersions, [version]: { retiredAt, reason, platforms } }
+      metadata.latestVersion = latestPublishedVersion(metadata.versions) || metadata.latestVersion
+      metadata.updatedAt = retiredAt
+      await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
+      for (const record of Object.values(entry.platforms ?? {})) {
+        for (const key of [record.tarball, `${record.tarball}.sha256`, binaryAttestationKey(record.tarball)])
+          await this.store.deleteObject(key).catch(() => {})
+      }
+      return { domain, version, platforms: Object.keys(platforms).sort(), latestVersion: metadata.latestVersion }
+    })
   }
 
   async rescanExisting(input: unknown, publisher?: string): Promise<BinaryRescanCompleted> {
@@ -2162,6 +2245,8 @@ export class BinaryArtifactPublisher {
     metadata.versions[claim.version] ||= { platforms: {} }
     metadata.versions[claim.version].platforms ||= {}
     Object.assign(metadata.versions[claim.version].platforms, records)
+    // A retired identity published again is the vendor's real release now.
+    if (metadata.retiredVersions?.[claim.version]) delete metadata.retiredVersions[claim.version]
     metadata.latestVersion = latestPublishedVersion(metadata.versions) || claim.version
     metadata.updatedAt = uploadedAt
     await this.store.putObject(metadataKey, JSON.stringify(metadata, null, 2), 'application/json')
