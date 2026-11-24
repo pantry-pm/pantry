@@ -69,6 +69,7 @@ export const khronosorgglslangPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '16.2.0.1',
     '16.2.0',
     '16.1.0',
     '16.0.0',

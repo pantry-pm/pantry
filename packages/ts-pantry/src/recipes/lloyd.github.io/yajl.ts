@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'lloyd.github.io/yajl',
   name: 'yajl',
+  revisions: { '2.1.0': 1 },
+  revisionReasons: { '2.1.0': 'elf-loader-paths' },
   programs: [
     'json_reformat',
     'json_verify',

@@ -68,6 +68,7 @@ export const videolanorgx264Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.164.3095.1',
     '0.164.3095',
   ] as const,
   aliases: [] as const,

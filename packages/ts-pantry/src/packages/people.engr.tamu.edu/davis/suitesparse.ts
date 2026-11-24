@@ -83,6 +83,7 @@ export const peopleengrtamuedudavissuitesparsePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '7.12.2.1',
     '7.12.2',
     '7.12.1',
     '7.12.0',

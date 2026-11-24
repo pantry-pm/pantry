@@ -1,9 +1,9 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN, repaired by elf-loader-paths revisions (scripts/elf-loader-revisions.ts, audited with scripts/audit-elf-rpaths.ts).",
   "summary": {
-    "verified": 43,
-    "published": 1,
-    "pending": 65
+    "verified": 86,
+    "pending": 46,
+    "published": 2
   },
   "packages": [
     {
@@ -34,7 +34,7 @@
         "linux-x86-64"
       ],
       "batch": 1,
-      "status": "published",
+      "status": "verified",
       "note": "9.10.0.1 mirrored the vendor build, which lacks chcon, runcon and stdbuf; the catalog declares the first two, so it failed every install. 9.10.0.2 was built from the recipe on a host without SELinux headers and lacks them too. 9.10.0.3 forces both."
     },
     {
@@ -325,7 +325,7 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "savannah.nongnu.org/acl",
@@ -335,7 +335,7 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "savannah.nongnu.org/attr",
@@ -355,7 +355,7 @@
         "linux-x86-64"
       ],
       "batch": 2,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "darwinsys.com/file",
@@ -366,7 +366,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "elfutils.org",
@@ -462,7 +462,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "gnupg.org/pinentry",
@@ -552,7 +552,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "openprinting.github.io/cups",
@@ -562,7 +562,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "pcsclite.apdu.fr",
@@ -592,7 +592,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "xiph.org/vorbis",
@@ -602,7 +602,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "apache.org/avro",
@@ -613,7 +613,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "apache.org/thrift",
@@ -624,7 +624,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "crates.io/fd-find",
@@ -634,7 +634,7 @@
         "linux-arm64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "duktape.org",
@@ -645,7 +645,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "fftw.org",
@@ -656,7 +656,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "freedesktop.org/shared-mime-info",
@@ -667,7 +667,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "freedesktop.org/uchardet",
@@ -678,7 +678,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/junegunn/fzf",
@@ -689,7 +689,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/mikefarah/yq",
@@ -700,7 +700,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/numactl/numactl",
@@ -711,7 +711,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/rrthomas/libpaper",
@@ -722,7 +722,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "gnome.org/gobject-introspection",
@@ -732,7 +732,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "graphite.sil.org",
@@ -743,7 +743,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "heasarc.gsfc.nasa.gov/cfitsio",
@@ -765,7 +765,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "jbig2dec.com",
@@ -776,7 +776,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "lame.sourceforge.io",
@@ -786,7 +786,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "libgd.github.io",
@@ -807,7 +807,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "published"
     },
     {
       "domain": "luajit.org",
@@ -818,7 +818,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "mpg123.de",
@@ -829,7 +829,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "rockdaboot.github.io/libpsl",
@@ -859,7 +859,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "videolan.org/x265",
@@ -869,7 +869,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "xiph.org/flac",
@@ -879,7 +879,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "apache.org/serf",
@@ -900,7 +900,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "charm.sh/glow",
@@ -910,7 +910,7 @@
         "linux-arm64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "crates.io/ripgrep",
@@ -921,7 +921,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "crates.io/zoxide",
@@ -932,7 +932,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "docker.com/compose",
@@ -943,7 +943,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "epsilon-project.sourceforge.io",
@@ -954,7 +954,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/aws/aws-sdk-cpp",
@@ -998,7 +998,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/lm-sensors/lm-sensors",
@@ -1031,7 +1031,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/seccomp/libseccomp",
@@ -1042,7 +1042,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/thom311/libnl",
@@ -1053,7 +1053,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/tmux/tmux",
@@ -1064,7 +1064,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "glaros.dtc.umn.edu/metis",
@@ -1086,7 +1086,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "gnupg.org",
@@ -1097,7 +1097,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "google.com/protobuf-go",
@@ -1150,6 +1150,280 @@
         "linux-x86-64"
       ],
       "batch": 5,
+      "status": "pending"
+    },
+    {
+      "domain": "apache.org/arrow",
+      "oldBuild": "23.0.1",
+      "revision": "23.0.1.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "cscope.sourceforge.io",
+      "oldBuild": "15.9.0",
+      "revision": "15.9.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "developers.yubico.com/libfido2",
+      "oldBuild": "1.16.0",
+      "revision": "1.16.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "freedesktop.org/desktop-file-utils",
+      "oldBuild": "0.28.0",
+      "revision": "0.28.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "github.com/libsixel/libsixel",
+      "oldBuild": "1.10.3",
+      "revision": "1.10.3.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "gnome.org/libgsf",
+      "oldBuild": "1.14.56",
+      "revision": "1.14.56.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "gnu.org/source-highlight",
+      "oldBuild": "3.1.9",
+      "revision": "3.1.9.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "google.com/fullycapable",
+      "oldBuild": "2.66.0",
+      "revision": "2.66.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "google.com/woff2",
+      "oldBuild": "1.0.2",
+      "revision": "1.0.2.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "graphicsmagick.org",
+      "oldBuild": "1.3.46",
+      "revision": "1.3.46.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "gstreamer.freedesktop.org/orc",
+      "oldBuild": "0.4.42",
+      "revision": "0.4.42.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "khronos.org/glslang",
+      "oldBuild": "16.2.0",
+      "revision": "16.2.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "ladspa.org",
+      "oldBuild": "1.17.0",
+      "revision": "1.17.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "libimobiledevice.org/libusbmuxd",
+      "oldBuild": "2.1.1",
+      "revision": "2.1.1.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "lloyd.github.io/yajl",
+      "oldBuild": "2.1.0",
+      "revision": "2.1.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "nlnetlabs.nl/ldns",
+      "oldBuild": "1.9.0",
+      "revision": "1.9.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "people.engr.tamu.edu/davis/suitesparse",
+      "oldBuild": "7.12.2",
+      "revision": "7.12.2.1",
+      "platforms": [
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "re2c.org",
+      "oldBuild": "4.6",
+      "revision": "4.6.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "speex.org",
+      "oldBuild": "1.2.1",
+      "revision": "1.2.1.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "tcl-lang.org",
+      "oldBuild": "9.0.3",
+      "revision": "9.0.3.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "tsl0922.github.io/ttyd",
+      "oldBuild": "1.7.7",
+      "revision": "1.7.7.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "vamp-plugins.org",
+      "oldBuild": "2.10.0",
+      "revision": "2.10.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "videolan.org/x264",
+      "oldBuild": "0.164.3095",
+      "revision": "0.164.3095.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "x.org/xinput",
+      "oldBuild": "1.6.4",
+      "revision": "1.6.4.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
+      "status": "pending"
+    },
+    {
+      "domain": "zsh.sourceforge.io",
+      "oldBuild": "5.9.0",
+      "revision": "5.9.0.1",
+      "platforms": [
+        "linux-arm64",
+        "linux-x86-64"
+      ],
+      "batch": 6,
       "status": "pending"
     }
   ]

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'google.com/woff2',
   name: 'woff2',
+  revisions: { '1.0.2': 1 },
+  revisionReasons: { '1.0.2': 'elf-loader-paths' },
   programs: [
     'woff2_info',
     'woff2_decompress',

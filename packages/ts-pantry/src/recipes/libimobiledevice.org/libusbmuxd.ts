@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'libimobiledevice.org/libusbmuxd',
   name: 'libusbmuxd',
+  revisions: { '2.1.1': 1 },
+  revisionReasons: { '2.1.1': 'elf-loader-paths' },
   programs: [
     'iproxy',
     'inetcat',

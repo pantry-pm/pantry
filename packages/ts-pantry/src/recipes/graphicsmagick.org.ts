@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'graphicsmagick.org',
   name: 'gm',
+  revisions: { '1.3.46': 1 },
+  revisionReasons: { '1.3.46': 'elf-loader-paths' },
   description: 'Image processing tools collection',
   homepage: 'https://www.graphicsmagick.org/',
   programs: ['gm'],

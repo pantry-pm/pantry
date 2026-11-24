@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'github.com/libsixel/libsixel',
   name: 'libsixel',
+  revisions: { '1.10.3': 1 },
+  revisionReasons: { '1.10.3': 'elf-loader-paths' },
   programs: [
     'img2sixel',
     'sixel2png',

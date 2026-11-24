@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'khronos.org/glslang',
   name: 'glslang',
+  revisions: { '16.2.0': 1 },
+  revisionReasons: { '16.2.0': 'elf-loader-paths' },
   programs: [
     'glslang',
     'glslangValidator',

@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'developers.yubico.com/libfido2',
   name: 'libfido2',
+  revisions: { '1.16.0': 1 },
+  revisionReasons: { '1.16.0': 'elf-loader-paths' },
   programs: [
     'fido2-assert',
     'fido2-cred',

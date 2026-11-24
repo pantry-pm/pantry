@@ -3,6 +3,8 @@ import type { Recipe } from '../../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'people.engr.tamu.edu/davis/suitesparse',
   name: 'suitesparse',
+  revisions: { '7.12.2': 1 },
+  revisionReasons: { '7.12.2': 'elf-loader-paths' },
   programs: [
     'mongoose',
     'suitesparse_mongoose',

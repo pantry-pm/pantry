@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'google.com/fullycapable',
   name: 'fullycapable',
+  revisions: { '2.66.0': 1 },
+  revisionReasons: { '2.66.0': 'elf-loader-paths' },
   programs: [
     'capsh',
     'getcap',

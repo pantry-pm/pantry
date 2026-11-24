@@ -68,6 +68,7 @@ export const gstreamerfreedesktoporgorcPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.4.42.1',
     '0.4.42',
     '0.4.41',
     '0.4.40',

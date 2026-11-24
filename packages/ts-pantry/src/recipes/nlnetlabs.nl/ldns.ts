@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'nlnetlabs.nl/ldns',
   name: 'ldns',
+  revisions: { '1.9.0': 1 },
+  revisionReasons: { '1.9.0': 'elf-loader-paths' },
   programs: [
     'drill',
     'ldns-config',

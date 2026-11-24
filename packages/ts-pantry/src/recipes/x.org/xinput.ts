@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'x.org/xinput',
   name: 'xinput',
+  revisions: { '1.6.4': 1 },
+  revisionReasons: { '1.6.4': 'elf-loader-paths' },
   programs: [
     'xinput',
   ],

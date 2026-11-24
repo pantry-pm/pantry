@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnu.org/source-highlight',
   name: 'source-highlight',
+  revisions: { '3.1.9': 1 },
+  revisionReasons: { '3.1.9': 'elf-loader-paths' },
   programs: [
     'check-regexp',
     'source-highlight',

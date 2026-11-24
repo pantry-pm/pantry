@@ -77,6 +77,7 @@ export const freedesktoporgdesktopfileutilsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.28.0.1',
     '0.28.0',
     '0.27.0',
   ] as const,

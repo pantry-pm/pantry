@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gstreamer.freedesktop.org/orc',
   name: 'orc',
+  revisions: { '0.4.42': 1 },
+  revisionReasons: { '0.4.42': 'elf-loader-paths' },
   programs: [
     'orcc',
     'orc-bugreport',

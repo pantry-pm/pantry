@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'freedesktop.org/desktop-file-utils',
   name: 'desktop-file-utils',
+  revisions: { '0.28.0': 1 },
+  revisionReasons: { '0.28.0': 'elf-loader-paths' },
   programs: [
     'desktop-file-edit',
     'desktop-file-install',

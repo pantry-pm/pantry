@@ -68,6 +68,7 @@ export const zshsourceforgeioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.9.0.1',
     '5.9.0',
   ] as const,
   aliases: [] as const,

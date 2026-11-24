@@ -78,6 +78,7 @@ export const graphicsmagickorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.3.46.1',
     '1.3.46',
     '1.3.45',
     '1.3.44',

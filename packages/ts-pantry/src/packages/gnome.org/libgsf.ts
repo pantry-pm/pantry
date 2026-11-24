@@ -69,6 +69,7 @@ export const gnomeorglibgsfPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.14.56.1',
     '1.14.56',
     '1.14.55',
     '1.14.54',

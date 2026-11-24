@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'cscope.sourceforge.io',
   name: 'cscope.sourceforge',
+  revisions: { '15.9.0': 1 },
+  revisionReasons: { '15.9.0': 'elf-loader-paths' },
   description: 'Tool for browsing source code',
   homepage: 'https://cscope.sourceforge.net/',
   programs: ['cscope', 'ocs'],

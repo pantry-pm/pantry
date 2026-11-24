@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'speex.org',
   name: 'speexdec',
+  revisions: { '1.2.1': 1 },
+  revisionReasons: { '1.2.1': 'elf-loader-paths' },
   description: 'Audio codec designed for speech',
   homepage: 'https://speex.org/',
   programs: ['speexdec'],

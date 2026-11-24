@@ -78,6 +78,7 @@ export const xorgxinputPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.6.4.1',
     '1.6.4',
   ] as const,
   aliases: [] as const,

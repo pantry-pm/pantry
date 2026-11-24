@@ -61,6 +61,7 @@ export const googlecomfullycapablePackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.66.0.1',
     '2.66.0',
   ] as const,
   aliases: [] as const,

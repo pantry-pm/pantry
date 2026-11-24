@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'apache.org/arrow',
   name: 'arrow',
+  revisions: { '23.0.1': 1 },
+  revisionReasons: { '23.0.1': 'elf-loader-paths' },
   programs: [
     'parquet-dump-schema',
     'parquet-reader',

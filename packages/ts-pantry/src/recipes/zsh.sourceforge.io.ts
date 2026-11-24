@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'zsh.sourceforge.io',
   name: 'zsh',
+  revisions: { '5.9.0': 1 },
+  revisionReasons: { '5.9.0': 'elf-loader-paths' },
   description: 'UNIX shell (command interpreter)',
   homepage: 'https://www.zsh.org/',
   programs: ['zsh'],

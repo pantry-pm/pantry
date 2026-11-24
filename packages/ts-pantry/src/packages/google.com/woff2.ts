@@ -77,6 +77,7 @@ export const googlecomwoff2Package = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.0.2.1',
     '1.0.2',
   ] as const,
   aliases: [] as const,

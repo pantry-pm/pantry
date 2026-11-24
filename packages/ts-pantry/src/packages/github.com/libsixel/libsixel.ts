@@ -77,6 +77,7 @@ export const libsixelPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.10.3.1',
     '1.10.3',
   ] as const,
   aliases: [] as const,

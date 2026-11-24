@@ -77,6 +77,7 @@ export const nlnetlabsnlldnsPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.9.0.1',
     '1.9.0',
     '1.8.4',
     '1.8.3',

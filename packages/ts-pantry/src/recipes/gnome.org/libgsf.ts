@@ -3,6 +3,8 @@ import type { Recipe } from '../../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'gnome.org/libgsf',
   name: 'libgsf',
+  revisions: { '1.14.56': 1 },
+  revisionReasons: { '1.14.56': 'elf-loader-paths' },
   programs: [
     'gsf',
     'gsf-office-thumbnailer',

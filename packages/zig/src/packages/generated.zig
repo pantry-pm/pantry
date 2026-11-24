@@ -298,7 +298,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "github.com/aws/aws-sdk-cpp", "github.com/google/brotli", "sourceware.org/bzip2", "google.com/glog", "grpc.io", "lz4.org", "openssl.org", "rapidjson.org", "github.com/google/re2", "google.github.io/snappy", "apache.org/thrift", "github.com/JuliaStrings/utf8proc", "facebook.com/zstd", "darwin:c-ares.org@1", "darwin:libcxx.llvm.org~17", "linux:protobuf.dev@30.0.0", "linux:gnu.org/gcc/libstdcxx@14" },
     .build_dependencies = &[_][]const u8{ "boost.org", "cmake.org@3", "python.org@<3.12", "llvm.org@~17", "linux:gnu.org/gcc@14" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "23.0.1", "23.0.0", "22.0.0", "21.0.0", "20.0.0", "19.0.1", "19.0.0", "18.1.0", "18.0.0", "16.1.0", "16.0.0", "15.0.2", "15.0.1", "15.0.0", "14.0.2", "14.0.1", "14.0.0", "13.0.0" },
+    .versions = &[_][]const u8{ "23.0.1.1", "23.0.1", "23.0.0", "22.0.0", "21.0.0", "20.0.0", "19.0.1", "19.0.0", "18.1.0", "18.0.0", "16.1.0", "16.0.0", "15.0.2", "15.0.1", "15.0.0", "14.0.2", "14.0.1", "14.0.0", "13.0.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "23.0.1", .revision = 1 }},
 }, .{
     .name = "avro",
     .domain = "apache.org/avro",
@@ -3267,7 +3268,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"invisible-island.net/ncurses"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"15.9.0"},
+    .versions = &[_][]const u8{ "15.9.0.1", "15.9.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "15.9.0", .revision = 1 }},
 }, .{
     .name = "liblinear",
     .domain = "csie.ntu.edu.tw/cjlin/liblinear",
@@ -3611,7 +3613,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "github.com/PJK/libcbor@0", "openssl.org@1", "zlib.net@1", "linux:systemd.io" },
     .build_dependencies = &[_][]const u8{"cmake.org@3"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.16.0", "1.15.0", "1.14.0", "1.13.0" },
+    .versions = &[_][]const u8{ "1.16.0.1", "1.16.0", "1.15.0", "1.14.0", "1.13.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.16.0", .revision = 1 }},
 }, .{
     .name = "yubikey-manager",
     .domain = "developers.yubico.com/yubikey-manager",
@@ -4653,7 +4656,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"gnome.org/glib@2"},
     .build_dependencies = &[_][]const u8{"mesonbuild.com@>=0.61"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "0.28.0", "0.27.0" },
+    .versions = &[_][]const u8{ "0.28.0.1", "0.28.0", "0.27.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "0.28.0", .revision = 1 }},
 }, .{
     .name = "fontconfig",
     .domain = "freedesktop.org/fontconfig",
@@ -7472,7 +7476,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "libjpeg-turbo.org", "libpng.org" },
     .build_dependencies = &[_][]const u8{"mesonbuild.com"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"1.10.3"},
+    .versions = &[_][]const u8{ "1.10.3.1", "1.10.3" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.10.3", .revision = 1 }},
 }, .{
     .name = "libsamplerate",
     .domain = "github.com/libsndfile/libsamplerate",
@@ -9950,7 +9955,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"gnome.org/glib"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.14.56", "1.14.55", "1.14.54", "1.14.53", "1.14.52", "1.14.51", "1.14.50" },
+    .versions = &[_][]const u8{ "1.14.56.1", "1.14.56", "1.14.55", "1.14.54", "1.14.53", "1.14.52", "1.14.51", "1.14.50" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.14.56", .revision = 1 }},
 }, .{
     .name = "rsvg-convert",
     .domain = "gnome.org/librsvg",
@@ -10568,7 +10574,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"boost.org"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"3.1.9"},
+    .versions = &[_][]const u8{ "3.1.9.1", "3.1.9" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "3.1.9", .revision = 1 }},
 }, .{
     .name = "stow",
     .domain = "gnu.org/stow",
@@ -10895,7 +10902,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"2.66.0"},
+    .versions = &[_][]const u8{ "2.66.0.1", "2.66.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.66.0", .revision = 1 }},
 }, .{
     .name = "gcloud",
     .domain = "google.com/gcloud",
@@ -10984,7 +10992,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "github.com/google/brotli", "linux:gnu.org/gcc" },
     .build_dependencies = &[_][]const u8{"cmake.org"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"1.0.2"},
+    .versions = &[_][]const u8{ "1.0.2.1", "1.0.2" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.0.2", .revision = 1 }},
 }, .{
     .name = "zx",
     .domain = "google.com/zx",
@@ -11105,7 +11114,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "freetype.org", "github.com/jasper-software/jasper", "libjpeg-turbo.org", "jpeg.org/jpegxl", "libpng.org", "simplesystems.org/libtiff", "gnu.org/libtool", "littlecms.com>=2.0", "google.com/webp", "sourceware.org/bzip2", "gnome.org/libxml2", "zlib.net" },
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.3.46", "1.3.45", "1.3.44", "1.3.43", "1.3.42", "1.3.40" },
+    .versions = &[_][]const u8{ "1.3.46.1", "1.3.46", "1.3.45", "1.3.44", "1.3.43", "1.3.42", "1.3.40" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.3.46", .revision = 1 }},
 }, .{
     .name = "gr2fonttest",
     .domain = "graphite.sil.org",
@@ -11194,7 +11204,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"mesonbuild.com"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "0.4.42", "0.4.41", "0.4.40", "0.4.39", "0.4.38", "0.4.37", "0.4.36", "0.4.35", "0.4.34" },
+    .versions = &[_][]const u8{ "0.4.42.1", "0.4.42", "0.4.41", "0.4.40", "0.4.39", "0.4.38", "0.4.37", "0.4.36", "0.4.35", "0.4.34" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "0.4.42", .revision = 1 }},
 }, .{
     .name = "gtk3",
     .domain = "gtk.org/gtk3",
@@ -12314,7 +12325,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "cmake.org", "python.org~3.11" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "16.2.0", "16.1.0", "16.0.0", "15.4.0", "15.3.0", "15.2.0", "15.1.0", "15.0.0", "14.3.0", "14.2.0", "14.1.0", "14.0.0", "13.1.1", "13.1.0", "13.0.0", "12.3.1" },
+    .versions = &[_][]const u8{ "16.2.0.1", "16.2.0", "16.1.0", "16.0.0", "15.4.0", "15.3.0", "15.2.0", "15.1.0", "15.0.0", "14.3.0", "14.2.0", "14.1.0", "14.0.0", "13.1.1", "13.1.0", "13.0.0", "12.3.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "16.2.0", .revision = 1 }},
 }, .{
     .name = "opencl-headers",
     .domain = "khronos.org/opencl-headers",
@@ -12567,7 +12579,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"github.com/libsndfile/libsndfile^1.2"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"1.17.0"},
+    .versions = &[_][]const u8{ "1.17.0.1", "1.17.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.17.0", .revision = 1 }},
 }, .{
     .name = "lame",
     .domain = "lame.sourceforge.io",
@@ -12847,7 +12860,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "libimobiledevice.org/libplist^2.4", "libimobiledevice.org/libimobiledevice-glue^1.2" },
     .build_dependencies = &[_][]const u8{"gnu.org/libtool"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "2.1.1", "2.1.0", "2.0.2" },
+    .versions = &[_][]const u8{ "2.1.1.1", "2.1.1", "2.1.0", "2.0.2" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.1.1", .revision = 1 }},
 }, .{
     .name = "libisl.sourceforge",
     .domain = "libisl.sourceforge.io",
@@ -13211,7 +13225,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "cmake.org", "linux:gnu.org/gcc", "linux:gnu.org/make" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"2.1.0"},
+    .versions = &[_][]const u8{ "2.1.0.1", "2.1.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.1.0", .revision = 1 }},
 }, .{
     .name = "llvm",
     .domain = "llvm.org",
@@ -14426,7 +14441,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"openssl.org^1"},
     .build_dependencies = &[_][]const u8{ "gnu.org/autoconf", "gnu.org/automake", "swig.org" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.9.0", "1.8.4", "1.8.3" },
+    .versions = &[_][]const u8{ "1.9.0.1", "1.9.0", "1.8.4", "1.8.3" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.9.0", .revision = 1 }},
 }, .{
     .name = "nmap",
     .domain = "nmap.org",
@@ -14853,7 +14869,7 @@ pub const packages = [_]PackageInfo{ .{
     .description = "The OpenEXR project provides the specification and reference implementation of the EXR file format, the professional-grade image storage format of the motion picture industry.",
     .homepage_url = "https://www.openexr.com/",
     .programs = &[_][]const u8{ "exr2aces", "exrenvmap", "exrheader", "exrmakepreview", "exrmaketiled", "exrmultipart", "exrmultiview", "exrstdattr" },
-    .dependencies = &[_][]const u8{ "zlib.net^1", "openexr.com/imath", "linux:gnu.org/gcc/libstdcxx@14" },
+    .dependencies = &[_][]const u8{ "zlib.net^1", "openexr.com/imath", "linux:gnu.org/gcc/libstdcxx@14", "github.com/ebiggers/libdeflate^1" },
     .build_dependencies = &[_][]const u8{ "cmake.org", "linux:gnu.org/gcc@14" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "3.5.4", "3.5.4-rc", "3.5.3", "3.5.3-rc", "3.5.2", "3.5.2-rc", "3.5.1", "3.5.1-rc", "3.5.0", "3.5.0-rc2", "3.5.0-rc", "3.4.18", "3.4.18-rc2", "3.4.18-rc", "3.4.17", "3.4.17-rc2", "3.4.17-rc", "3.4.16", "3.4.16-rc", "3.4.15", "3.4.15-rc", "3.4.14", "3.4.14-rc", "3.4.13", "3.4.13-rc3", "3.4.13-rc2", "3.4.13-rc", "3.4.12", "3.4.12-rc2", "3.4.11", "3.4.11-rc3", "3.4.11-rc2", "3.4.11-rc", "3.4.10", "3.4.10-rc", "3.4.9", "3.4.9-rc", "3.4.8", "3.4.8-rc", "3.4.7", "3.4.7-rc", "3.4.6", "3.4.6-rc", "3.4.5", "3.4.5-rc", "3.4.4", "3.4.4-rc2", "3.4.4-rc", "3.4.3", "3.4.3-rc3", "3.4.3-rc2", "3.4.3-rc", "3.4.2", "3.4.2-rc2", "3.4.2-rc", "3.4.1", "3.4.1-rc2", "3.4.1-rc", "3.4.0", "3.4.0-rc2", "3.4.0-rc", "3.4-alpha", "3.3.14", "3.3.14-rc", "3.3.13", "3.3.13-rc", "3.3.12", "3.3.12-rc", "3.3.11", "3.3.11-rc3", "3.3.11-rc2", "3.3.11-rc", "3.3.10", "3.3.10-rc2", "3.3.10-rc", "3.3.9", "3.3.9-rc2", "3.3.9-rc", "3.3.8", "3.3.8-rc", "3.3.7", "3.3.7-rc4", "3.3.7-rc3", "3.3.7-rc2", "3.3.7-rc", "3.3.6", "3.3.6-rc4", "3.3.6-rc3", "3.3.6-rc2", "3.3.6-rc", "3.3.5", "3.3.5-rc3", "3.3.5-rc2", "3.3.5-rc", "3.3.4", "3.3.4-rc", "3.3.3", "3.3.3-rc1", "3.3.3-rc", "3.3.2", "3.3.2-rc4", "3.3.2-rc3", "3.3.2-rc2", "3.3.2-rc", "3.3.1", "3.3.1-rc", "3.3.0", "3.3.0-rc2", "3.3.0-rc1", "3.3.0-rc", "3.2.126", "3.2.12", "3.2.12-rc", "3.2.11", "3.2.11-rc", "3.2.10", "3.2.10-rc", "3.2.9", "3.2.9-rc", "3.2.8", "3.2.7", "3.2.6", "3.2.5", "3.2.4", "3.2.3", "3.2.2", "3.2.1", "3.2.0", "3.1.13", "3.1.12", "3.1.11", "3.1.10", "3.1.9", "3.1.8", "3.1.7", "3.1.6", "3.1.5", "3.1.4", "3.1.3", "3.1.2", "3.1.1", "3.1.0", "3.0.5", "3.0.4", "3.0.3", "3.0.2", "2.5.10", "2.5.9", "2.5.8", "2.5.7" },
@@ -15336,7 +15352,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "glaros.dtc.umn.edu/metis", "gnu.org/m4", "netlib.org/lapack", "gnu.org/gmp", "openmp.llvm.org", "gnu.org/mpfr", "gnu.org/gcc" },
     .build_dependencies = &[_][]const u8{ "cmake.org", "linux:gnu.org/make" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "7.12.2", "7.12.1", "7.12.0", "7.11.0", "7.10.3", "7.10.2", "7.10.1", "7.10.0", "7.9.0", "7.8.3", "7.8.2", "7.8.1", "7.8.0", "7.7.0", "7.6.1", "7.6.0", "7.5.1", "7.5.0", "7.4.0", "7.3.1", "7.3.0", "7.2.2", "7.2.1", "7.2.0" },
+    .versions = &[_][]const u8{ "7.12.2.1", "7.12.2", "7.12.1", "7.12.0", "7.11.0", "7.10.3", "7.10.2", "7.10.1", "7.10.0", "7.9.0", "7.8.3", "7.8.2", "7.8.1", "7.8.0", "7.7.0", "7.6.1", "7.6.0", "7.5.1", "7.5.0", "7.4.0", "7.3.1", "7.3.0", "7.2.2", "7.2.1", "7.2.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "7.12.2", .revision = 1 }},
 }, .{
     .name = "libcap-ng",
     .domain = "people.redhat.com/sgrubb/libcap-ng",
@@ -16339,7 +16356,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{"python.org@^3.10"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "4.6", "4.5.1", "4.5", "4.4", "4.4.0", "4.3.1", "4.3", "4.3.0", "4.2", "4.2.0", "4.1", "4.1.0", "4.0.2", "4.0.1", "4.0", "4.0.0", "3.1", "3.1.0", "3.0", "3.0.0", "2.2", "2.1.1", "2.1", "2.0.3", "2.0.2", "2.0.1", "2.0", "1.3", "1.2.1", "1.2", "1.1.1", "1.1", "1.0.3", "1.0.2", "1.0.1", "1.0", "0.16", "0.15.3", "0.14.3", "0.14.2", "0.14.1", "0.14", "0.13.7.5", "0.13.7.4", "0.13.7.3", "0.13.7.2", "0.13.7.1", "0.13.6" },
+    .versions = &[_][]const u8{ "4.6.1", "4.6", "4.5.1", "4.5", "4.4", "4.4.0", "4.3.1", "4.3", "4.3.0", "4.2", "4.2.0", "4.1", "4.1.0", "4.0.2", "4.0.1", "4.0", "4.0.0", "3.1", "3.1.0", "3.0", "3.0.0", "2.2", "2.1.1", "2.1", "2.0.3", "2.0.2", "2.0.1", "2.0", "1.3", "1.2.1", "1.2", "1.1.1", "1.1", "1.0.3", "1.0.2", "1.0.1", "1.0", "0.16", "0.15.3", "0.14.3", "0.14.2", "0.14.1", "0.14", "0.13.7.5", "0.13.7.4", "0.13.7.3", "0.13.7.2", "0.13.7.1", "0.13.6" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "4.6", .revision = 1 }},
 }, .{
     .name = "check_if_email_exists",
     .domain = "reacher.email/check-if-email-exists-cli",
@@ -17366,7 +17384,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{"xiph.org/ogg"},
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"1.2.1"},
+    .versions = &[_][]const u8{ "1.2.1.1", "1.2.1" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.2.1", .revision = 1 }},
 }, .{
     .name = "sphinx",
     .domain = "sphinx-doc.org",
@@ -17818,7 +17837,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "zlib.net^1", "linux:x.org/x11^1", "linux:x.org/exts^1", "linux:x.org/xft^2" },
     .build_dependencies = &[_][]const u8{ "curl.se", "freedesktop.org/pkg-config~0.29" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "9.0.3", "9.0.2", "9.0.1", "9.0.0", "8.6.17", "8.6.16", "8.6.15", "8.6.14", "8.6.13" },
+    .versions = &[_][]const u8{ "9.0.3.1", "9.0.3", "9.0.2", "9.0.1", "9.0.0", "8.6.17", "8.6.16", "8.6.15", "8.6.14", "8.6.13" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "9.0.3", .revision = 1 }},
 }, .{
     .name = "expect",
     .domain = "tcl-lang.org/expect",
@@ -18204,7 +18224,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "libuv.org@1", "github.com/json-c/json-c^0.16", "libwebsockets.org~4.3", "zlib.net@1" },
     .build_dependencies = &[_][]const u8{"cmake.org@3"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{ "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.2" },
+    .versions = &[_][]const u8{ "1.7.7.1", "1.7.7", "1.7.6", "1.7.5", "1.7.4", "1.7.2" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.7.7", .revision = 1 }},
 }, .{
     .name = "xcbeautify",
     .domain = "tuist.io/xcbeautify",
@@ -18415,7 +18436,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "xiph.org/flac^1.4", "xiph.org/ogg^1.3", "github.com/libsndfile/libsndfile^1.2" },
     .build_dependencies = &[_][]const u8{ "gnu.org/automake", "curl.se" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"2.10.0"},
+    .versions = &[_][]const u8{ "2.10.0.1", "2.10.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "2.10.0", .revision = 1 }},
 }, .{
     .name = "Vanna",
     .domain = "vanna.ai",
@@ -18569,7 +18591,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{},
     .build_dependencies = &[_][]const u8{ "gnu.org/gcc", "nasm.us" },
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"0.164.3095"},
+    .versions = &[_][]const u8{ "0.164.3095.1", "0.164.3095" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "0.164.3095", .revision = 1 }},
 }, .{
     .name = "x265",
     .domain = "videolan.org/x265",
@@ -19243,7 +19266,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "x.org/x11", "x.org/exts", "x.org/xi", "x.org/xinerama", "x.org/xrandr" },
     .build_dependencies = &[_][]const u8{"x.org/protocol"},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"1.6.4"},
+    .versions = &[_][]const u8{ "1.6.4.1", "1.6.4" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "1.6.4", .revision = 1 }},
 }, .{
     .name = "xkbfile",
     .domain = "x.org/xkbfile",
@@ -19699,7 +19723,8 @@ pub const packages = [_]PackageInfo{ .{
     .dependencies = &[_][]const u8{ "invisible-island.net/ncurses", "pcre.org" },
     .build_dependencies = &[_][]const u8{},
     .aliases = &[_][]const u8{},
-    .versions = &[_][]const u8{"5.9.0"},
+    .versions = &[_][]const u8{ "5.9.0.1", "5.9.0" },
+    .build_revisions = &[_]BuildRevision{.{ .release = "5.9.0", .revision = 1 }},
 } };
 
 /// Get package by domain name

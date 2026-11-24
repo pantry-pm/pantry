@@ -3,6 +3,8 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 'tcl-lang.org',
   name: 'tcl-lang',
+  revisions: { '9.0.3': 1 },
+  revisionReasons: { '9.0.3': 'elf-loader-paths' },
   description: 'Tool Command Language',
   homepage: 'https://www.tcl-lang.org',
   programs: ['tclsh', 'wish'],
