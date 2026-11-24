@@ -1880,7 +1880,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "github.com/libsixel/libsixel",
@@ -1970,7 +1976,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "gstreamer.freedesktop.org/orc",
@@ -1981,7 +1993,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "khronos.org/glslang",
@@ -1992,7 +2010,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "ladspa.org",
@@ -2016,7 +2040,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "lloyd.github.io/yajl",
@@ -2027,7 +2057,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "nlnetlabs.nl/ldns",
@@ -2038,7 +2074,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "people.engr.tamu.edu/davis/suitesparse",
@@ -2048,7 +2090,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "re2c.org",
@@ -2059,7 +2107,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "speex.org",
@@ -2070,7 +2124,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "tcl-lang.org",
@@ -2124,7 +2184,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "x.org/xinput",
@@ -2135,7 +2201,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "zsh.sourceforge.io",
@@ -2146,7 +2218,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:09:22Z"
+      }
     },
     {
       "domain": "github.com/ggerganov/whisper.cpp",
