@@ -1265,7 +1265,13 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "rockdaboot.github.io/libpsl",
@@ -1285,7 +1291,13 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "unixodbc.org",
@@ -1295,7 +1307,13 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "videolan.org/x265",
@@ -1305,7 +1323,13 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "xiph.org/flac",
@@ -1315,7 +1339,13 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "apache.org/serf",
@@ -1336,7 +1366,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "charm.sh/glow",
@@ -1346,7 +1382,13 @@
         "linux-arm64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "crates.io/ripgrep",
@@ -1357,7 +1399,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "crates.io/zoxide",
@@ -1368,7 +1416,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "docker.com/compose",
@@ -1379,7 +1433,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "epsilon-project.sourceforge.io",
@@ -1390,7 +1450,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/aws/aws-sdk-cpp",
@@ -1412,7 +1478,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/hughsie/libxmlb",
@@ -1423,7 +1495,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/kubernetes-sigs/aws-iam-authenticator",
@@ -1434,7 +1512,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/lm-sensors/lm-sensors",
@@ -1445,7 +1529,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/maxmind/libmaxminddb",
@@ -1456,7 +1546,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/Mbed-TLS/mbedtls",
@@ -1467,7 +1563,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/seccomp/libseccomp",
@@ -1478,7 +1580,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/thom311/libnl",
@@ -1489,7 +1597,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "github.com/tmux/tmux",
@@ -1500,7 +1614,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "glaros.dtc.umn.edu/metis",
@@ -1511,7 +1631,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "gnome.org/json-glib",
@@ -1522,7 +1648,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "gnupg.org",
@@ -1533,7 +1665,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "google.com/protobuf-go",
@@ -1544,7 +1682,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "libsdl.org/SDL_ttf",
@@ -1555,7 +1699,13 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "verified"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:25:18Z"
+      }
     },
     {
       "domain": "open-mpi.org/hwloc",
