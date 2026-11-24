@@ -1,11 +1,17 @@
 /**
  * A packaging repair needs a new identity even when the vendor release has not
- * changed. Numeric upstream tuples retain their original component count; one
- * additional component identifies a Pantry build revision (1.5.7 -> 1.5.7.2).
- * A release that is not a numeric tuple (3.15.0rc1, 3.6a) takes `.pantryN`
- * instead (3.15.0rc1.pantry1): no vendor writes that, and every comparison in
- * the CLI, the registry and these scripts orders it after its release and
- * before the next one (3.15.0rc1 < 3.15.0rc1.pantry1 < 3.15.0rc2 < 3.15.0).
+ * changed (prefer repairing in place, build-all-packages --repair-in-place;
+ * a revision is for when the old bytes must stay installable).
+ *
+ * A release of three or more numeric components takes one more numeric
+ * component (1.5.7 -> 1.5.7.2): vendors that use three components do not add
+ * a fourth. Every other release takes `.pantryN`: a numeric tuple shorter than
+ * three components (4.10 -> 4.10.pantry1), because the vendor's own next patch
+ * release is exactly what one more numeric component spells (sed 4.10.1 would
+ * have been shadowed by a revision of 4.10), and a prerelease or lettered
+ * release (3.15.0rc1.pantry1, 3.6a.pantry1). No vendor writes `.pantryN`, and
+ * every comparison in the CLI, the registry and these scripts orders it after
+ * its release and before the next one (4.10 < 4.10.pantry1 < 4.10.1 < 4.11).
  * Existing package identities and their installed/cache directories therefore
  * remain immutable.
  */
@@ -19,13 +25,38 @@ export function isNumericRelease(release: string): boolean {
   return numericTuple.test(release)
 }
 
+/**
+ * Whether a revision of `release` may be spelled with one more numeric
+ * component without ever meaning a vendor release: only a numeric tuple of
+ * three or more components.
+ */
+export function numericRevisionCannotCollide(release: string): boolean {
+  return isNumericRelease(release) && release.split('.').length >= 3
+}
+
 /** The identity of build `revision` of `release`. */
 export function revisionIdentity(release: string, revision: number): string {
-  return isNumericRelease(release) ? `${release}.${revision}` : `${release}.pantry${revision}`
+  return numericRevisionCannotCollide(release) ? `${release}.${revision}` : `${release}.pantry${revision}`
 }
 
 function revisionSuffix(release: string): string {
-  return isNumericRelease(release) ? `${release}.` : `${release}.pantry`
+  return numericRevisionCannotCollide(release) ? `${release}.` : `${release}.pantry`
+}
+
+/**
+ * Refuse a package version list that still carries a revision identity a
+ * vendor release could spell: `4.10.1` beside a revision of `4.10`, written
+ * before revisions of short tuples moved to `.pantryN`. Left in place, the
+ * client would resolve the vendor's real 4.10.1 to the old repair.
+ */
+export function assertNoCollidingRevisionIdentities(domain: string, versions: readonly string[], revisions?: PackageRevisions): void {
+  for (const [release, revision] of Object.entries(revisions ?? {})) {
+    if (!isNumericRelease(release) || numericRevisionCannotCollide(release)) continue
+    for (let n = 1; n <= revision; n++) {
+      if (versions.includes(`${release}.${n}`))
+        throw new Error(`${domain}: ${release}.${n} is a revision of ${release} spelled as a vendor patch release; it must be ${release}.pantry${n}`)
+    }
+  }
 }
 
 function entries(revisions: PackageRevisions = {}): Array<[string, number]> {
@@ -36,7 +67,7 @@ function entries(revisions: PackageRevisions = {}): Array<[string, number]> {
     if ((!numeric && (!otherRelease.test(upstream) || upstream.includes('.pantry')))
       || !Number.isSafeInteger(revision) || revision <= 0 || revision > 0xFFFFFFFF)
       throw new Error(`Invalid package build revision: ${upstream}@${revision}`)
-    if (numeric) lengths.add(upstream.split('.').length)
+    if (numeric && numericRevisionCannotCollide(upstream)) lengths.add(upstream.split('.').length)
   }
   if (lengths.size > 1) throw new Error('Revised upstream versions must use a fixed numeric tuple length')
   return result

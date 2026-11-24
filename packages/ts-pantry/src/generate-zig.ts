@@ -7,6 +7,7 @@ import { programsForPlatform } from './programs'
 import type { PlatformPrograms, ProgramVersions } from './programs'
 import { desktopApps, desktopFonts } from './catalog/desktop'
 import { resolveRuntimeEnvironment } from '../scripts/runtime-environment'
+import { assertNoCollidingRevisionIdentities } from '../scripts/package-revisions'
 
 const desktopKinds = new Map<string, 'app' | 'font'>([
   ...desktopApps.map(pkg => [pkg.domain, 'app'] as const),
@@ -356,6 +357,9 @@ export async function generateZigDefinitions(packagesDir: string, outputFile: st
         ...Object.values(pkgData.platformProgramOverrides ?? {}).flat() as string[],
       ])]
       const recipe = await loadRecipeMetadata(recipesDir, pkgData.domain, programNames)
+      // A revision of a short tuple spelled as the vendor's next patch release
+      // (4.10.1 for 4.10) would shadow that release in every client.
+      assertNoCollidingRevisionIdentities(pkgData.domain, sortedVersions, recipe.revisions)
 
       packages.push({
         name: pkgData.name || pkgData.domain,

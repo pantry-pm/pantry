@@ -633,7 +633,7 @@ pub fn build(b: *std.Build) void {
         .root_module = version_test_mod,
     });
     const run_version_tests = b.addRunArtifact(version_tests);
-    build_revision_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = version_test_mod, .filters = &.{ "a .pantryN build revision", "a prerelease release is revised" } })).step);
+    build_revision_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = version_test_mod, .filters = &.{ "a .pantryN build revision", "a prerelease release is revised", "a short numeric release is revised" } })).step);
 
     // Workspace tests (detection, config loading, member discovery, install paths)
     const workspace_test_mod = b.createModule(.{

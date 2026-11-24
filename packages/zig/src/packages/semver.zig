@@ -612,17 +612,26 @@ pub fn buildPosition(revisions: []const generated.BuildRevision, version: []cons
     return null;
 }
 
-/// A numeric tuple (1.5.7) is revised as 1.5.7.2; any other release
-/// (3.15.0rc1, 3.6a) as 3.15.0rc1.pantry1, which no vendor writes and which
-/// compareVersions orders after its release and before the next one.
-fn isNumericRelease(release: []const u8) bool {
+/// A numeric tuple of three or more components (1.5.7) is revised as
+/// 1.5.7.2. Any other release takes `.pantryN`, which no vendor writes and
+/// which compareVersions orders after its release and before the next one:
+/// a shorter tuple (4.10 -> 4.10.pantry1), because one more numeric
+/// component is exactly how its vendor spells the next patch release (a
+/// revision 4.10.1 would shadow sed's own 4.10.1), and a prerelease or
+/// lettered release (3.15.0rc1.pantry1, 3.6a.pantry1).
+fn numericRevision(release: []const u8) bool {
     if (release.len == 0 or release[0] == '.' or release[release.len - 1] == '.') return false;
-    for (release) |c| if (!std.ascii.isDigit(c) and c != '.') return false;
-    return true;
+    var dots: usize = 0;
+    for (release) |c| {
+        if (c == '.') {
+            dots += 1;
+        } else if (!std.ascii.isDigit(c)) return false;
+    }
+    return dots >= 2;
 }
 
 fn revisionSeparator(release: []const u8) []const u8 {
-    return if (isNumericRelease(release)) "." else ".pantry";
+    return if (numericRevision(release)) "." else ".pantry";
 }
 
 /// The identity of build `revision` of `release`, written into `buf`.
@@ -700,6 +709,23 @@ test "a revision range admits only later builds of the same upstream release" {
     defer a.free(chrome_range);
     try std.testing.expect(satisfiesConstraint("155.0.8059.84.2", try parseConstraint(chrome_range)));
     try std.testing.expect(!satisfiesConstraint("155.0.8059.85", try parseConstraint(chrome_range)));
+}
+
+test "a short numeric release is revised as .pantryN, never as its vendor's next patch release" {
+    var buf: [64]u8 = undefined;
+    try std.testing.expectEqualStrings("4.10.pantry1", try formatBuildRevision(&buf, "4.10", 1));
+    try std.testing.expectEqualStrings("1.5.7.2", try formatBuildRevision(&buf, "1.5.7", 2));
+    try std.testing.expectEqualStrings("5.2.1.2.1", try formatBuildRevision(&buf, "5.2.1.2", 1));
+    const sed = [_]generated.BuildRevision{.{ .release = "4.10", .revision = 1 }};
+    // The vendor's 4.10.1 is a release in its own right, not a build of 4.10.
+    try std.testing.expect(buildPosition(&sed, "4.10.1") == null);
+    try std.testing.expectEqual(@as(u32, 1), buildPosition(&sed, "4.10.pantry1").?.build);
+    try std.testing.expect(hasNewerBuildRevision(&sed, "4.10", null));
+    try std.testing.expect(!hasNewerBuildRevision(&sed, "4.10.1", null));
+    try std.testing.expectEqual(std.math.Order.gt, compareVersions("4.10.pantry1", "4.10"));
+    try std.testing.expectEqual(std.math.Order.lt, compareVersions("4.10.pantry1", "4.10.1"));
+    try std.testing.expectEqual(std.math.Order.lt, compareVersions("4.10.pantry1", "4.11"));
+    try std.testing.expect(!isPrerelease("4.10.pantry1"));
 }
 
 test "a prerelease release is revised as .pantryN and ordered between it and the next release" {
