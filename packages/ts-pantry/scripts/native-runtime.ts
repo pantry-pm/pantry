@@ -11,6 +11,13 @@ interface RuntimeLibraryCandidate { file: string, dependency?: RuntimePackage, b
 
 /** Libraries every supported Linux host provides itself (glibc, musl, libstdc++, libgcc_s). */
 export const linuxStandardLibraries: RegExp = /^(?:lib(?:c|m|dl|pthread|rt|resolv|util|anl)\.so\.[0-9]+|libstdc\+\+\.so\.6|libgcc_s\.so\.1|ld-linux[^/]*\.so\.[0-9]+|ld-musl[^/]*\.so\.[0-9]+)$/
+/**
+ * GPU driver entry points the host's driver installation must supply, matched
+ * to its kernel module: the Vulkan and OpenCL ICD loaders and NVIDIA's driver
+ * libraries. A package cannot bundle them, so a vendored binary that links one
+ * (node-llama-cpp's Vulkan and CUDA builds) needs nothing declared for it.
+ */
+export const linuxHostDriverLibraries: RegExp = /^(?:libvulkan\.so\.1|libOpenCL\.so\.1|libcuda\.so\.1|libnvidia-ml\.so\.1|libnvcuvid\.so\.1|libnvidia-encode\.so\.1)$/
 const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex')
 const inside = (root: string, path: string) => path === root || path.startsWith(root + sep)
 
@@ -210,7 +217,7 @@ export function bundleRuntimeLibraries(
       if (!linux && (dependencyName.startsWith('/usr/lib/') || dependencyName.startsWith('/System/Library/'))) continue
       const name = basename(dependencyName)
       const candidates = index.get(name) || []
-      if (candidates.length === 0 && linux && linuxStandardLibraries.test(name)) continue
+      if (candidates.length === 0 && linux && (linuxStandardLibraries.test(name) || linuxHostDriverLibraries.test(name))) continue
       // A vendored binary (an npm prebuilt such as sharp's .node beside its
       // libvips package) finds its siblings through its own $ORIGIN loader
       // path, inside this artifact. The loader resolves those; so do we, and

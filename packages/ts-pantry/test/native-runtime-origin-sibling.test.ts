@@ -30,3 +30,9 @@ test('a vendored binary\'s $ORIGIN loader path finds its sibling library inside 
   writeFileSync(patchelf, `#!/bin/sh\nprintf '%s' '$ORIGIN/../../../../../../outside'\n`)
   expect(originSibling(root, addon, 'libvips-cpp.so.8.17.3', patchelf)).toBeUndefined()
 })
+
+test('GPU driver libraries are the host\'s, never a declared dependency', async () => {
+  const { linuxHostDriverLibraries } = await import('../scripts/native-runtime')
+  for (const name of ['libvulkan.so.1', 'libcuda.so.1', 'libOpenCL.so.1', 'libnvidia-ml.so.1']) expect(linuxHostDriverLibraries.test(name)).toBe(true)
+  for (const name of ['libcudart.so.12', 'libvulkan.so', 'libz.so.1']) expect(linuxHostDriverLibraries.test(name)).toBe(false)
+})
