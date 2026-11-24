@@ -797,12 +797,11 @@ export async function run(): Promise<void> {
         core.setSecret(secret)
     }
 
-    // Export registry token as env vars for subsequent steps (e.g. pantry publish:commit)
-    const token = inputs.token || process.env.PANTRY_TOKEN || process.env.PANTRY_REGISTRY_TOKEN || ''
+    // Export the registry token for subsequent steps (e.g. pantry publish:commit)
+    const token = inputs.token || process.env.PANTRY_TOKEN || ''
     if (token) {
       core.setSecret(token)
       core.exportVariable('PANTRY_TOKEN', token)
-      core.exportVariable('PANTRY_REGISTRY_TOKEN', token)
     }
 
     const platform = detectPlatform()
@@ -1097,7 +1096,7 @@ export async function run(): Promise<void> {
  */
 async function publishPackage(type: string, registryUrl: string, cwd: string): Promise<void> {
   if (type === 'zig') {
-    const token = process.env.PANTRY_TOKEN || process.env.PANTRY_REGISTRY_TOKEN || ''
+    const token = process.env.PANTRY_TOKEN || ''
     if (!token) {
       throw new Error('PANTRY_TOKEN environment variable is required for publishing to the pantry registry')
     }
