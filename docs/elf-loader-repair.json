@@ -1,9 +1,9 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
-    "verified": 119,
+    "verified": 132,
     "next-release": 479,
-    "pending": 17,
+    "pending": 4,
     "failed": 1,
     "skipped": 1
   },
@@ -22,7 +22,7 @@
       "note": "the original case (bin/zstd RPATH /../lib loaded the host libzstd), repaired by revision 1.5.7.2 before this ledger existed",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "published",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -167,7 +167,13 @@
       ],
       "batch": 2,
       "status": "verified",
-      "note": "corrupt-archive: the July 2026 malware backfill republished the archive with its bytes decoded as text (gzip magic 1f ef bf bd); darwin-x86-64 is retired and is not rebuilt"
+      "note": "corrupt-archive: the July 2026 malware backfill republished the archive with its bytes decoded as text (gzip magic 1f ef bf bd); darwin-x86-64 is retired and is not rebuilt",
+      "method": "revision",
+      "reason": "backward repair of the corrupt 1.9.5 archive on every platform still built (darwin-x86-64 is retired)",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T04:58:39Z"
+      }
     },
     {
       "domain": "alsa-project.org/alsa-lib",
@@ -1408,7 +1414,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "published",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1843,7 +1849,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "published",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1860,7 +1866,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "published",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1873,7 +1879,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/libsixel/libsixel",
@@ -1963,7 +1969,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "gstreamer.freedesktop.org/orc",
@@ -1974,7 +1980,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "khronos.org/glslang",
@@ -1985,7 +1991,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "ladspa.org",
@@ -2009,7 +2015,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "lloyd.github.io/yajl",
@@ -2020,7 +2026,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "nlnetlabs.nl/ldns",
@@ -2031,7 +2037,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "people.engr.tamu.edu/davis/suitesparse",
@@ -2041,7 +2047,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "re2c.org",
@@ -2052,7 +2058,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "speex.org",
@@ -2063,7 +2069,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "tcl-lang.org",
@@ -2117,7 +2123,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "x.org/xinput",
@@ -2128,7 +2134,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "zsh.sourceforge.io",
@@ -2139,7 +2145,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified"
     },
     {
       "domain": "github.com/ggerganov/whisper.cpp",

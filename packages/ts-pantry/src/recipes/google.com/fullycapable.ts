@@ -11,7 +11,9 @@ export const recipe: Recipe = {
     'getpcaps',
     'setcap',
   ],
-  platforms: ['linux/x86-64'],
+  // pkgx builds x86-64 only, but the registry has served linux-arm64 since
+  // before that restriction was ported, so its repair needs an arm64 build.
+  platforms: ['linux/x86-64', 'linux/aarch64'],
   distributable: {
     url: 'https://mirrors.edge.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-{{ version.raw }}.tar.xz',
     stripComponents: 1,
