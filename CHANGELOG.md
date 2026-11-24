@@ -1,3 +1,17 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.223...v0.11.224)
+
+## 📝 Documentation
+
+- **elf-repair**: repair the popular remainder in place, leave the rest to their next release ([c50d1e5](https://github.com/pantry-pm/pantry/commit/c50d1e5)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.224 ([e25abdf](https://github.com/pantry-pm/pantry/commit/e25abdf)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.222...v0.11.223)
 
 ## ✨ Features
