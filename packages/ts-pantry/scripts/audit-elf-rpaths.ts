@@ -33,6 +33,7 @@
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
+import { linuxStandardLibraries } from './native-runtime'
 
 export const LINUX_PLATFORMS = ['linux-x86-64', 'linux-arm64'] as const
 export type LinuxPlatform = typeof LINUX_PLATFORMS[number]
@@ -68,6 +69,12 @@ export interface ArtifactResult extends ArtifactSelection {
   executables?: string[]
   /** ELF members under lib/ or lib64/: none means a binary has no private library to find. */
   sharedLibraries?: number
+  /**
+   * DT_NEEDED libraries the host does not provide itself. None, with no private
+   * library and no runtime dependency, means a broken loader path is never
+   * searched for anything only it could find.
+   */
+  needed?: string[]
   error?: string
 }
 
@@ -106,6 +113,7 @@ export function classifyLoaderPath(value: string): { issues: EntryIssue[], absol
 const PT_LOAD = 1
 const PT_DYNAMIC = 2
 const DT_NULL = 0
+const DT_NEEDED = 1
 const DT_STRTAB = 5
 const DT_RPATH = 15
 const DT_RUNPATH = 29
@@ -119,7 +127,7 @@ export function isElf(bytes: Uint8Array): boolean {
  * them: PT_DYNAMIC for the entries, PT_LOAD to map DT_STRTAB to a file offset.
  * Null for a static image or an object without a dynamic segment.
  */
-export function readElfLoaderPaths(bytes: Uint8Array): { rpath?: string, runpath?: string } | null {
+export function readElfLoaderPaths(bytes: Uint8Array): { rpath?: string, runpath?: string, needed?: string[] } | null {
   if (!isElf(bytes) || bytes.length < 52) return null
   const wide = bytes[4] === 2
   if (!wide && bytes[4] !== 1) throw new Error('unknown ELF class')
@@ -158,10 +166,10 @@ export function readElfLoaderPaths(bytes: Uint8Array): { rpath?: string, runpath
     if (tag === DT_NULL) break
     const value = word(at + (wide ? 8 : 4))
     if (tag === DT_STRTAB) strtab = value
-    else if (tag === DT_RPATH || tag === DT_RUNPATH) strings.push({ tag, value })
+    else if (tag === DT_RPATH || tag === DT_RUNPATH || tag === DT_NEEDED) strings.push({ tag, value })
   }
   if (!strings.length) return {}
-  if (strtab === undefined) throw new Error('dynamic section has loader paths but no DT_STRTAB')
+  if (strtab === undefined) throw new Error('dynamic section has dynamic strings but no DT_STRTAB')
   const segment = loads.find(load => strtab! >= load.vaddr && strtab! < load.vaddr + load.filesz)
   if (!segment) throw new Error('DT_STRTAB is outside every PT_LOAD segment')
   const table = strtab - segment.vaddr + segment.offset
@@ -173,10 +181,11 @@ export function readElfLoaderPaths(bytes: Uint8Array): { rpath?: string, runpath
     if (stop >= bytes.length) throw new Error('unterminated dynamic string')
     return new TextDecoder().decode(bytes.subarray(start, stop))
   }
-  const result: { rpath?: string, runpath?: string } = {}
+  const result: { rpath?: string, runpath?: string, needed?: string[] } = {}
   for (const { tag, value } of strings) {
     if (tag === DT_RPATH) result.rpath = read(value)
-    else result.runpath = read(value)
+    else if (tag === DT_RUNPATH) result.runpath = read(value)
+    else (result.needed ??= []).push(read(value))
   }
   return result
 }
@@ -460,6 +469,7 @@ export async function auditArtifact(registry: string, selection: ArtifactSelecti
     }
     result.executables = []
     result.sharedLibraries = 0
+    const needed = new Set<string>()
     await forEachElfMember(stream, (member, bytes) => {
       result.elfMembers++
       if (/(?:^|\/)lib(?:64)?\//.test(member)) result.sharedLibraries!++
@@ -471,6 +481,9 @@ export async function auditArtifact(registry: string, selection: ArtifactSelecti
         result.findings.push({ member, tag: 'RPATH', value: `<unreadable: ${(error as Error).message}>`, issues: [] })
         return
       }
+      for (const name of paths?.needed ?? []) {
+        if (!linuxStandardLibraries.test(name)) needed.add(name)
+      }
       for (const [tag, value] of [['RPATH', paths?.rpath], ['RUNPATH', paths?.runpath]] as const) {
         if (value === undefined) continue
         const { issues, absolute } = classifyLoaderPath(value)
@@ -479,6 +492,7 @@ export async function auditArtifact(registry: string, selection: ArtifactSelecti
       }
     }, 2 ** 31, recordExecutable)
     result.executables = [...executables].sort()
+    result.needed = [...needed].sort()
   }
   catch (error) {
     result.error = (error as Error).message

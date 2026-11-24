@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test'
 import { classifyLoaderPath, classifyLoaderPathEntry, forEachElfMember, readElfLoaderPaths, selectArtifacts } from '../scripts/audit-elf-rpaths'
 
 /** A minimal dynamic ELF64/ELF32 image: one PT_LOAD over the file, a PT_DYNAMIC, a string table. */
-function elfWithLoaderPaths(paths: { rpath?: string, runpath?: string }, wide = true, little = true): Uint8Array {
+function elfWithLoaderPaths(paths: { rpath?: string, runpath?: string, needed?: string[] }, wide = true, little = true): Uint8Array {
   const header = wide ? 64 : 52
   const phentsize = wide ? 56 : 32
   const dynEntry = wide ? 16 : 8
-  const strings = ['', paths.rpath, paths.runpath].filter(s => s !== undefined) as string[]
+  const strings = ['', paths.rpath, paths.runpath, ...(paths.needed ?? [])].filter(s => s !== undefined) as string[]
   const encoder = new TextEncoder()
   const table: number[] = []
   const offsets = new Map<string, number>()
@@ -17,6 +17,7 @@ function elfWithLoaderPaths(paths: { rpath?: string, runpath?: string }, wide = 
     }
   }
   const tags: Array<[number, number]> = []
+  for (const name of paths.needed ?? []) tags.push([1, offsets.get(name)!])
   if (paths.rpath !== undefined) tags.push([15, offsets.get(paths.rpath)!])
   if (paths.runpath !== undefined) tags.push([29, offsets.get(paths.runpath)!])
   const dynOffset = header + phentsize * 2
@@ -112,6 +113,8 @@ describe('ELF dynamic section', () => {
         expect(readElfLoaderPaths(elfWithLoaderPaths({ rpath: '/../lib' }, wide, little))).toEqual({ rpath: '/../lib' })
         expect(readElfLoaderPaths(elfWithLoaderPaths({ runpath: '$ORIGIN/../lib', rpath: '' }, wide, little))).toEqual({ rpath: '', runpath: '$ORIGIN/../lib' })
         expect(readElfLoaderPaths(elfWithLoaderPaths({}, wide, little))).toEqual({})
+        expect(readElfLoaderPaths(elfWithLoaderPaths({ rpath: '/../lib', needed: ['libc.so.6', 'libz.so.1'] }, wide, little)))
+          .toEqual({ rpath: '/../lib', needed: ['libc.so.6', 'libz.so.1'] })
       }
     }
   })

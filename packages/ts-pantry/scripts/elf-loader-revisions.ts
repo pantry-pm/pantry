@@ -12,6 +12,7 @@
  *   bun scripts/elf-loader-revisions.ts plan  --audit audit.jsonl [--ledger L]
  *   bun scripts/elf-loader-revisions.ts apply --audit audit.jsonl --ledger L --batch 1 domain...
  *   bun scripts/elf-loader-revisions.ts mark  --ledger L --status published domain...
+ *   bun scripts/elf-loader-revisions.ts classify --audit audit.jsonl --needed needed.jsonl [--write]
  */
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -33,6 +34,9 @@ export interface AuditRow {
   error?: string
   findings: Array<{ member: string, value: string, issues: string[] }>
   salvaged?: boolean
+  /** From an audit that records DT_NEEDED: libraries the host does not provide. */
+  needed?: string[]
+  sharedLibraries?: number
 }
 
 export interface Target {
@@ -227,6 +231,41 @@ export function writePackageVersion(source: string, release: string, revision: s
   return source.slice(0, start) + body.replace(pattern, `$1'${revision}',\n$1'${release}',`) + source.slice(end)
 }
 
+/**
+ * Why a broken loader path cannot matter, or why it can.
+ *
+ * `/../lib` (an `$ORIGIN` expanded away) resolves to `/lib`, a root-owned host
+ * directory. A binary that needs nothing beyond the host's own libc, libstdc++
+ * and libgcc_s, ships no private library and installs no runtime dependency
+ * never finds anything through that entry it would not find without it, so
+ * rebuilding it changes nothing. An empty or relative entry searches the
+ * working directory, and is always repaired.
+ */
+export function classifyTarget(
+  target: Target,
+  rows: readonly AuditRow[],
+  runtimeDependencies: readonly string[],
+): { harmless: true, reason: string } | { harmless: false, reason: string } {
+  const audited = target.platforms.map(platform => rows.find(r => r.domain === target.domain && r.version === target.version && r.platform === platform && !r.error && !r.salvaged && r.needed))
+  if (audited.some(r => !r)) return { harmless: false, reason: 'not audited with DT_NEEDED' }
+  const issues = new Set(audited.flatMap(r => r!.findings.flatMap(f => f.issues)))
+  const unsafe = [...issues].filter(issue => issue !== 'expanded-origin')
+  if (unsafe.length) return { harmless: false, reason: `${unsafe.join(',')} entries search the working directory` }
+  const needed = [...new Set(audited.flatMap(r => r!.needed!))].sort()
+  if (needed.length) return { harmless: false, reason: `needs ${needed.join(', ')}` }
+  if (audited.some(r => (r!.sharedLibraries ?? 1) > 0)) return { harmless: false, reason: 'ships private shared libraries' }
+  if (runtimeDependencies.length) return { harmless: false, reason: `installs runtime dependencies (${runtimeDependencies.join(', ')})` }
+  return {
+    harmless: true,
+    reason: `only expanded-$ORIGIN entries (resolve to /lib) on ${target.platforms.join(',')}; needs nothing beyond the host libc/libstdc++/libgcc_s, ships no private library, has no runtime dependency`,
+  }
+}
+
+export function runtimeDependencies(domain: string): string[] {
+  const file = packageFile(domain)
+  return file ? arrayItems(readFileSync(file, 'utf8'), 'dependencies').filter(dep => !/^(?:darwin|windows):/.test(dep)) : []
+}
+
 export function readLedger(path: string): LedgerRow[] {
   return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')).packages : []
 }
@@ -258,6 +297,8 @@ async function main(): Promise<void> {
       batch: { type: 'string' },
       status: { type: 'string' },
       note: { type: 'string' },
+      needed: { type: 'string' },
+      write: { type: 'boolean', default: false },
     },
   })
   const ledgerPath = values.ledger!
@@ -332,6 +373,21 @@ async function main(): Promise<void> {
 
   if (!values.audit) throw new Error('--audit <progress.jsonl> is required')
   const targets = brokenTargets(readAudit(values.audit))
+
+  if (command === 'classify') {
+    // --needed: a re-audit (audit-elf-rpaths.ts) of the targets that records DT_NEEDED.
+    if (!values.needed) throw new Error('--needed <audit progress.jsonl with DT_NEEDED> is required')
+    const neededRows = readAudit(values.needed)
+    const done = new Set(ledger.map(r => r.domain))
+    for (const target of targets.filter(t => !done.has(t.domain))) {
+      const verdict = classifyTarget(target, neededRows, runtimeDependencies(target.domain))
+      console.log(`${verdict.harmless ? 'harmless' : 'repair'} ${target.domain}@${target.version}: ${verdict.reason}`)
+      if (verdict.harmless && values.write)
+        ledger.push({ domain: target.domain, oldBuild: target.version, revision: '', platforms: target.platforms, batch: null, status: 'skipped', note: `false positive: ${verdict.reason}` })
+    }
+    if (values.write) writeLedger(ledgerPath, ledger)
+    return
+  }
 
   if (command === 'plan') {
     const done = new Set(ledger.map(r => r.domain))
