@@ -1,10 +1,9 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
-    "verified": 113,
-    "failed": 1,
-    "next-release": 483,
-    "pending": 18,
+    "verified": 114,
+    "next-release": 479,
+    "pending": 22,
     "skipped": 1
   },
   "packages": [
@@ -644,8 +643,8 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "failed",
-      "note": "the revision lacks declared programs: gdk-pixbuf-thumbnailer (linux-x86-64), gdk-pixbuf-thumbnailer (linux-arm64)"
+      "status": "verified",
+      "note": "re-audit clean; gdk-pixbuf-thumbnailer, which the catalog lists, is absent as it was from the base build: the recipe builds with -Dthumbnailer=disabled"
     },
     {
       "domain": "gnome.org/libsecret",
@@ -3790,9 +3789,13 @@
         "linux-x86-64"
       ],
       "batch": null,
-      "status": "next-release",
-      "note": "not fixed by a future build either: the broken entries are in upstream-vendored binaries (Python wheels under venv/, npm prebuilts under node_modules/) that the normaliser does not rewrite; repair belongs upstream or in a recipe step",
-      "reason": "not popular: 90-day registry downloads at most 7"
+      "status": "pending",
+      "reason": "vendored binaries: the normaliser now repairs wheels and npm prebuilts, so the current build is replaced in place rather than left broken",
+      "method": "in-place",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:41:23Z"
+      }
     },
     {
       "domain": "elv.sh",
@@ -4459,9 +4462,13 @@
         "linux-x86-64"
       ],
       "batch": null,
-      "status": "next-release",
-      "note": "not fixed by a future build either: the broken entries are in upstream-vendored binaries (Python wheels under venv/, npm prebuilts under node_modules/) that the normaliser does not rewrite; repair belongs upstream or in a recipe step",
-      "reason": "not popular: 90-day registry downloads at most 7"
+      "status": "pending",
+      "reason": "vendored binaries: the normaliser now repairs wheels and npm prebuilts, so the current build is replaced in place rather than left broken",
+      "method": "in-place",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:41:23Z"
+      }
     },
     {
       "domain": "github.com/cosmtrek/air",
@@ -5694,9 +5701,13 @@
         "linux-x86-64"
       ],
       "batch": null,
-      "status": "next-release",
-      "note": "not fixed by a future build either: the broken entries are in upstream-vendored binaries (Python wheels under venv/, npm prebuilts under node_modules/) that the normaliser does not rewrite; repair belongs upstream or in a recipe step",
-      "reason": "not popular: 90-day registry downloads at most 7"
+      "status": "pending",
+      "reason": "vendored binaries: the normaliser now repairs wheels and npm prebuilts, so the current build is replaced in place rather than left broken",
+      "method": "in-place",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:41:23Z"
+      }
     },
     {
       "domain": "github.com/vitor-mariano/regex-tui",
@@ -6989,9 +7000,13 @@
         "linux-x86-64"
       ],
       "batch": null,
-      "status": "next-release",
-      "note": "not fixed by a future build either: the broken entries are in upstream-vendored binaries (Python wheels under venv/, npm prebuilts under node_modules/) that the normaliser does not rewrite; repair belongs upstream or in a recipe step",
-      "reason": "not popular: 90-day registry downloads at most 7"
+      "status": "pending",
+      "reason": "vendored binaries: the normaliser now repairs wheels and npm prebuilts, so the current build is replaced in place rather than left broken",
+      "method": "in-place",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T03:41:23Z"
+      }
     },
     {
       "domain": "openpmix.github.io",
