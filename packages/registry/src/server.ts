@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url'
 import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
+import type { UpstreamPackument } from './npm-packument'
+import { buildPackument, mergeUpstream, npmRegistryPath, packumentVersionOrTag } from './npm-packument'
 import { PackageVersionExistsError } from './publication'
 import { verifyExistingPublication } from './publication-verification'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -425,6 +427,7 @@ const categorySlugMap: Record<string, AnalyticsCategory> = {
  * POST /registry/download              - Download registry tarballs as one tar stream
  * POST /npm/download                   - Compatibility alias for /registry/download
  * GET  /npm/resolve/{specs}            - GET variant (comma-separated name@constraint pairs)
+ * GET  /npm/{name}[/{version|tag}]     - npm packument (or one version): Pantry's merged over npm's (npm-packument.ts)
  *
  * Binary proxy (pantry CLI install):
  * POST /api/v1/binaries/uploads                              - Create untrusted staged upload
@@ -1482,6 +1485,14 @@ export function createHandler(
         return handleNpmResolveGet(path, corsHeaders)
       }
 
+      // GET /npm/{name}: the npm registry protocol over Pantry-published
+      // packages, so `bun install` / `npm install` can use Pantry as a scope's
+      // registry (npm-packument.ts). After /npm/resolve/, which has a slash.
+      const npmPath = req.method === 'GET' ? npmRegistryPath(path) : null
+      if (npmPath) {
+        return handleNpmPackument(req, registry, npmPath, baseUrl, corsHeaders)
+      }
+
       // Binary proxy routes — proxy pantry binary tarballs from S3
       if (path.startsWith('/binaries/')) {
         return handleBinaryProxy(path, req, analyticsStorage, corsHeaders, binaryStorage, getBinaryPublisher)
@@ -2105,6 +2116,7 @@ export function createServer(
     console.log('  POST /registry/download         - Download registry tarballs as one stream')
     console.log('  POST /npm/download              - Compatibility alias for /registry/download')
     console.log('  GET  /npm/resolve/{specs}        - GET variant (name@constraint,...)')
+    console.log('  GET  /npm/{name}                 - npm packument (bun/npm install from Pantry)')
     console.log('Binary proxy (pantry CLI):')
     console.log('  POST /api/v1/binaries/uploads          - Stage native artifact')
     console.log('  POST /api/v1/binaries/uploads/complete - Scan and promote native artifact')
@@ -2615,6 +2627,67 @@ function storefrontSearchResult(listing: StorefrontListing, baseUrl: string): Se
     formattedPrice: formatPrice(listing.paywall.price, listing.paywall.currency),
     buyUrl: `${baseUrl}/packages/${encodeURIComponent(listing.name)}/buy`,
   }
+}
+
+/**
+ * An npm packument for `name`: Pantry's published versions when it has any,
+ * else npm's own document. A package a caller may not see answers exactly as
+ * one that does not exist, and is never filled in from npm.
+ */
+async function handleNpmPackument(
+  req: Request,
+  registry: Registry,
+  { name, version }: { name: string, version?: string },
+  baseUrl: string,
+  corsHeaders: Record<string, string>,
+): Promise<Response> {
+  const exposure = await packageExposure(req, registry, name)
+  if (exposure === 'hidden' || exposure === 'storefront')
+    return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
+
+  const npmPath = `https://registry.npmjs.org/${name.replace('/', '%2f')}`
+  const fromNpm = (): Promise<Response | null> => fetch(npmPath, {
+    headers: { accept: req.headers.get('accept') || 'application/json' },
+    signal: AbortSignal.timeout(20_000),
+  }).catch(() => null)
+
+  const packument = await buildPackument(registry.metadata, name, baseUrl)
+  if (packument) {
+    // Versions only npm has stay installable through this endpoint (see
+    // mergeUpstream). A private package is never merged with npm's namesake.
+    let merged = packument
+    if (registry.npmFallbackEnabled && exposure === 'public') {
+      const upstream = await fromNpm()
+      if (upstream?.ok) merged = mergeUpstream(packument, await upstream.json().catch(() => null) as UpstreamPackument | null)
+    }
+    const body = version === undefined ? merged : packumentVersionOrTag(merged, version)
+    if (!body)
+      return Response.json({ error: 'Version not found' }, { status: 404, headers: corsHeaders })
+    return Response.json(body, {
+      headers: exposure === 'private'
+        ? { ...corsHeaders, ...PRIVATE_CACHE_HEADERS }
+        // A minute, revalidated: a release is installable within the minute.
+        : { ...corsHeaders, 'Cache-Control': 'public, max-age=60, must-revalidate' },
+    })
+  }
+
+  if (!registry.npmFallbackEnabled)
+    return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
+
+  const upstream = await fetch(version === undefined ? npmPath : `${npmPath}/${encodeURIComponent(version)}`, {
+    headers: { accept: req.headers.get('accept') || 'application/json' },
+    signal: AbortSignal.timeout(20_000),
+  }).catch(() => null)
+  if (!upstream)
+    return Response.json({ error: 'npm did not answer' }, { status: 502, headers: corsHeaders })
+  return new Response(upstream.body, {
+    status: upstream.status,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': upstream.headers.get('content-type') || 'application/json',
+      'Cache-Control': upstream.ok ? 'public, max-age=300' : 'no-store',
+    },
+  })
 }
 
 async function packageExposure(
