@@ -182,7 +182,7 @@ try {
       const started = performance.now()
       child = Bun.spawn([cli, 'install', ...(segment === 'diagnostics' ? [] : ['--verbose'])], {
         cwd,
-        env: { ...process.env, ...(segment === 'diagnostics' ? { PANTRY_VERBOSE: '1' } : {}), HOME: join(cwd, 'home'), XDG_DATA_HOME: join(cwd, 'data'), XDG_CACHE_HOME: join(cwd, 'cache'), PANTRY_REGISTRY_URL: scenarioBase, PANTRY_REGISTRY_TOKEN: token, PANTRY_TOKEN: token, CI: 'true' },
+        env: { ...process.env, ...(segment === 'diagnostics' ? { PANTRY_VERBOSE: '1' } : {}), HOME: join(cwd, 'home'), XDG_DATA_HOME: join(cwd, 'data'), XDG_CACHE_HOME: join(cwd, 'cache'), PANTRY_REGISTRY_URL: scenarioBase, PANTRY_TOKEN: token, CI: 'true' },
         stdout: 'pipe', stderr: 'pipe',
       })
       let killed = false

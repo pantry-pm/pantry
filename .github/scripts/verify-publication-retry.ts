@@ -31,7 +31,7 @@ const server = createServer(registry, port, new InMemoryAnalytics(), new InMemor
 async function cli(args: string[], token = publisher) {
   const child = Bun.spawn([binary, ...args], {
     cwd: fixture,
-    env: { ...process.env, PANTRY_REGISTRY_TOKEN: token, PANTRY_TOKEN: '', BASE_URL: origin, NODE_ENV: 'test' },
+    env: { ...process.env, PANTRY_TOKEN: token, BASE_URL: origin, NODE_ENV: 'test' },
     stdout: 'pipe', stderr: 'pipe', stdin: 'ignore',
   })
   const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])

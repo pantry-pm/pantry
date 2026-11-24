@@ -27,12 +27,12 @@ env:
   PANTRY_CACHE_BUILD_DEPENDENCIES: 'true'
   # Build-status dashboard reporting is authenticated; without this token every
   # report-build POST 401s and the build is invisible on pantry.dev/packages.
-  PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+  PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
   REQUESTED_PACKAGE: ${{ inputs.package }}
   REQUESTED_VERSION: ${{ inputs.version }}
   REQUESTED_PLATFORMS: ${{ inputs.platforms }}
   # Object storage settings remain available to build-time dependency reads.
-  # Publication itself uses PANTRY_REGISTRY_TOKEN and the registry-owned
+  # Publication itself uses PANTRY_TOKEN and the registry-owned
   # scan-before-promote API; builders do not write installable bucket keys.
   STORAGE_PROVIDER: ${{ vars.STORAGE_PROVIDER || 'aws' }}
   S3_BUCKET: ${{ vars.S3_BUCKET || 'pantry-registry' }}

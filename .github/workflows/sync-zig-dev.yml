@@ -38,5 +38,5 @@ jobs:
       - name: Publish missing compiler archives
         env:
           ZIG_VERSION: ${{ inputs.version }}
-          PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
+          PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
         run: bun packages/ts-pantry/scripts/sync-zig-dev.ts "$ZIG_VERSION"

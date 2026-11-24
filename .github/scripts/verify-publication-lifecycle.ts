@@ -30,7 +30,7 @@ async function main(): Promise<void> {
 
   async function cli(cwd: string, flags: string[]) {
     const child = Bun.spawn([binary, 'publish', '--registry', origin, ...flags], {
-      cwd, env: { ...process.env, PANTRY_REGISTRY_TOKEN: token, PANTRY_TOKEN: '', BASE_URL: origin, NODE_ENV: 'test' },
+      cwd, env: { ...process.env, PANTRY_TOKEN: token, BASE_URL: origin, NODE_ENV: 'test' },
       stdout: 'pipe', stderr: 'pipe', stdin: 'ignore', timeout: 60_000,
     })
     const [code, stdout, stderr] = await Promise.all([child.exited, new Response(child.stdout).text(), new Response(child.stderr).text()])
