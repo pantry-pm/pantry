@@ -10,7 +10,7 @@ export interface RuntimeLibraryReceipt { name: string, domain: string, version: 
 interface RuntimeLibraryCandidate { file: string, dependency?: RuntimePackage, bundledOrigin?: RuntimeLibraryReceipt & { bundledSha256: string } }
 
 /** Libraries every supported Linux host provides itself (glibc, musl, libstdc++, libgcc_s). */
-export const linuxStandardLibraries = /^(?:lib(?:c|m|dl|pthread|rt|resolv|util|anl)\.so\.[0-9]+|libstdc\+\+\.so\.6|libgcc_s\.so\.1|ld-linux[^/]*\.so\.[0-9]+|ld-musl[^/]*\.so\.[0-9]+)$/
+export const linuxStandardLibraries: RegExp = /^(?:lib(?:c|m|dl|pthread|rt|resolv|util|anl)\.so\.[0-9]+|libstdc\+\+\.so\.6|libgcc_s\.so\.1|ld-linux[^/]*\.so\.[0-9]+|ld-musl[^/]*\.so\.[0-9]+)$/
 const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex')
 const inside = (root: string, path: string) => path === root || path.startsWith(root + sep)
 

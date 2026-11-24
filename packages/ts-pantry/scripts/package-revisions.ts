@@ -87,7 +87,7 @@ export function repairInPlace(env: Record<string, string | undefined> = process.
  * upstream release itself under an in-place repair: that is the same source,
  * repackaged, with the revision's fix.
  */
-export function requireCurrentRecipeBuild(packageVersion: string, currentVersion: string, upstreamVersion?: string, inPlace = repairInPlace()): void {
+export function requireCurrentRecipeBuild(packageVersion: string, currentVersion: string, upstreamVersion?: string, inPlace: boolean = repairInPlace()): void {
   if (packageVersion === currentVersion) return
   if (inPlace && upstreamVersion !== undefined && packageVersion === upstreamVersion) return
   throw new Error(`Recipe requires package build ${currentVersion}; refusing to replace ${packageVersion}`)
