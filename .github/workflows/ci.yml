@@ -302,7 +302,11 @@ jobs:
 
   zig-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Passing runs take 13-17 minutes: a workspace install that downloads the
+    # LLVM toolchain whenever its cache misses, then two test binaries. At 20
+    # a busy runner or a rebuilt artifact cancelled the job mid-test, and that
+    # cancellation fails the full-CI gate the Releaser and registry deploy need.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
 
