@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { recipeAllowsMirror, recipeBuildVersion, requireCurrentRecipeBuild, revisedPackageVersions } from '../scripts/package-revisions'
+import { recipeAllowsMirror, recipeBuildVersion, requireCurrentRecipeBuild, revisedPackageVersions, revisionIdentity } from '../scripts/package-revisions'
 import { loadRecipe } from '../scripts/recipe-loader'
 import { buildTokens, applyTokens } from '../scripts/buildkit'
 import { compareVersions } from '../src/generate-zig'
@@ -78,14 +78,13 @@ test('native mirrors cannot bypass a packaging repair or replace its accepted pr
   expect(recipeAllowsMirror('1.2.4', recipeBuildVersion('1.2.4', revisions), true)).toBe(false)
 })
 
-test('PostgreSQL two-component releases keep their vendor identity when client tools are repackaged', async () => {
-  const loaded = await loadRecipe('postgresql.org', 'linux-x86-64', '18.6.1')
+test('PostgreSQL two-component releases are repaired in place under their vendor identity', async () => {
+  // 18.6.1 read as a vendor patch release; the repair now replaces 18.6 itself.
+  const loaded = await loadRecipe('postgresql.org', 'linux-x86-64', '18.6')
   expect(loaded.upstreamVersion).toBe('18.6')
-  expect(loaded.publicationVersion).toBe('18.6.1')
-  expect(loaded.requiresRecipeBuild).toBe(true)
-  expect(recipeAllowsMirror('18.6.1', { upstream: loaded.upstreamVersion!, current: loaded.publicationVersion! })).toBe(false)
-  expect(() => requireCurrentRecipeBuild('18.6', loaded.publicationVersion!)).toThrow('refusing to replace')
-  const tokens = buildTokens('postgresql.org', loaded.upstreamVersion!, 'linux-x86-64', '/package/v18.6.1', '/source', {})
+  expect(loaded.publicationVersion).toBe('18.6')
+  expect(() => requireCurrentRecipeBuild('18.6', loaded.publicationVersion!)).not.toThrow()
+  const tokens = buildTokens('postgresql.org', loaded.upstreamVersion!, 'linux-x86-64', '/package/v18.6', '/source', {})
   expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toContain('/REL_18_6.tar.gz')
 })
 
@@ -109,15 +108,12 @@ test('PostgreSQL runtime dependencies rebuild their macOS 14 packaging without r
   }
 })
 
-test('PostgreSQL 17 closure repairs use a new package identity and the original vendor source', async () => {
+test('PostgreSQL 17 closure repairs rebuild 17.11 from the original vendor source', async () => {
   for (const platform of ['darwin-arm64', 'linux-x86-64'] as const) {
-    const loaded = await loadRecipe('postgresql.org', platform, '17.11.1')
+    const loaded = await loadRecipe('postgresql.org', platform, '17.11')
     expect(loaded.upstreamVersion).toBe('17.11')
-    expect(loaded.publicationVersion).toBe('17.11.1')
-    expect(loaded.requiresRecipeBuild).toBe(true)
-    expect(recipeAllowsMirror('17.11.1', { upstream: loaded.upstreamVersion!, current: loaded.publicationVersion! })).toBe(false)
-    expect(() => requireCurrentRecipeBuild('17.11', loaded.publicationVersion!)).toThrow('refusing to replace')
-    const tokens = buildTokens('postgresql.org', loaded.upstreamVersion!, platform, '/package/v17.11.1', '/source', {})
+    expect(loaded.publicationVersion).toBe('17.11')
+    const tokens = buildTokens('postgresql.org', loaded.upstreamVersion!, platform, '/package/v17.11', '/source', {})
     expect(applyTokens(loaded.recipe.distributable!.url, tokens)).toContain('/REL_17_11.tar.gz')
     expect(loaded.recipe.test?.required).toBe(true)
     expect(loaded.recipe.test?.script.join('\n')).toContain('psql')
@@ -315,4 +311,21 @@ test('PANTRY_REPAIR_IN_PLACE turns the in-place repair on', async () => {
   const { repairInPlace } = await import('../scripts/package-revisions')
   expect(repairInPlace({ PANTRY_REPAIR_IN_PLACE: '1' })).toBe(true)
   expect(repairInPlace({})).toBe(false)
+})
+
+test('a short numeric release is revised as .pantryN, never as its vendor next patch release', async () => {
+  const { assertNoCollidingRevisionIdentities, numericRevisionCannotCollide } = await import('../scripts/package-revisions')
+  expect(revisionIdentity('4.10', 1)).toBe('4.10.pantry1')
+  expect(revisionIdentity('18.6', 2)).toBe('18.6.pantry2')
+  expect(revisionIdentity('1.5.7', 2)).toBe('1.5.7.2')
+  expect(revisionIdentity('5.2.1.2', 1)).toBe('5.2.1.2.1')
+  expect(numericRevisionCannotCollide('4.10')).toBe(false)
+  expect(numericRevisionCannotCollide('1.5.7')).toBe(true)
+  // The vendor's 4.10.1 stays a vendor release beside a revision of 4.10.
+  expect(recipeBuildVersion('4.10.1', { '4.10': 1 })).toEqual({ upstream: '4.10.1', current: '4.10.1' })
+  expect(recipeBuildVersion('4.10.pantry1', { '4.10': 1 })).toEqual({ upstream: '4.10', current: '4.10.pantry1' })
+  expect(revisedPackageVersions(['4.11', '4.10.1', '4.10'], { '4.10': 1 })).toEqual(['4.11', '4.10.1', '4.10.pantry1'])
+  // A version list that still carries the old spelling is refused.
+  expect(() => assertNoCollidingRevisionIdentities('gnu.org/sed', ['4.10.1', '4.10'], { '4.10': 1 })).toThrow('4.10.pantry1')
+  expect(() => assertNoCollidingRevisionIdentities('facebook.com/zstd', ['1.5.7.2', '1.5.7'], { '1.5.7': 2 })).not.toThrow()
 })

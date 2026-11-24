@@ -9,10 +9,10 @@ export const recipe: Recipe = {
   homepage: 'https://www.postgresql.org/',
   github: 'https://github.com/postgres/postgres',
   programs,
-  // Preserve the original archives: 18.6 had a broken ELF path, and 17.11
-  // bundled incompatible macOS readline/ncurses libraries. Both repairs must
-  // use the current source/relocation pipeline under a new package identity.
-  revisions: { '18.6': 1, '17.11': 1 },
+  // 18.6 (a broken ELF path) and 17.11 (incompatible macOS readline and
+  // ncurses) were first repaired as 18.6.1 and 17.11.1, identities that read as
+  // vendor patch releases. Both were rebuilt in place under their own versions
+  // and the 18.6.1 and 17.11.1 identities retired.
   versionSource: {
     // postgres/postgres is a mirror with no GitHub Releases — it tags stable
     // releases as REL_<major>_<minor> (e.g. REL_17_10). Read tags and join the

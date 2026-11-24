@@ -15,7 +15,7 @@ const beforeUnits = new Set(existsSync(unitDirectory) ? readdirSync(unitDirector
 const uid = process.getuid!()
 const username = userInfo().username
 const runtime = `/run/user/${uid}`
-const postgresVersion = process.env.PANTRY_SERVICE_TEST_POSTGRES_VERSION || '18.6.1'
+const postgresVersion = process.env.PANTRY_SERVICE_TEST_POSTGRES_VERSION || '18.7'
 assert(/^\d+(?:\.\d+){0,3}$/.test(postgresVersion), 'Use a numeric native PostgreSQL version or major range')
 // A portable published artifact must run when the optional host ELF repair
 // utility is absent. Refuse that repair explicitly in this isolated fixture;

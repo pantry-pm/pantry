@@ -3,8 +3,6 @@ import type { Recipe } from '../../scripts/recipe-types'
 export const recipe: Recipe = {
   domain: 're2c.org',
   name: 're2c',
-  revisions: { '4.6': 1 },
-  revisionReasons: { '4.6': 'elf-loader-paths' },
   description: 'Lexer generator for C, C++, D, Go, Haskell, Java, JS, OCaml, Python, Rust, V and Zig.',
   homepage: 'https://re2c.org',
   github: 'https://github.com/skvadrik/re2c',

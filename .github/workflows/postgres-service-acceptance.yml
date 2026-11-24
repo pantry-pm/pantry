@@ -10,7 +10,7 @@ on:
         type: string
       postgres-version:
         description: Native PostgreSQL version or major range to qualify
-        default: '18.6.1'
+        default: '18.7'
         required: true
         type: string
 

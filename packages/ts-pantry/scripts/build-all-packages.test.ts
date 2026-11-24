@@ -584,10 +584,11 @@ test('every exact pin survives the automatic version selection limit', async () 
 })
 
 describe('automatic package build revisions', () => {
-  const postgres = { domain: 'postgresql.org', name: 'postgresql', versions: ['18.6.1', '18.6', '17.11.1', '17.11', '17.10'], latestVersion: '18.6.1', pantryYamlPath: '', hasDistributable: true, hasBuildScript: true, needsProps: false, hasProps: false, depDomains: [], isApp: false, isDownloadRecipe: false }
+  // A three-component release takes numeric revisions (zstd 1.5.7.2).
+  const postgres = { domain: 'facebook.com/zstd', name: 'zstd', versions: ['1.5.7.2', '1.5.7.1', '1.5.7', '1.5.6', '1.5.5'], latestVersion: '1.5.7.2', pantryYamlPath: '', hasDistributable: true, hasBuildScript: true, needsProps: false, hasProps: false, depDomains: [], isApp: false, isDownloadRecipe: false }
 
   test('selects only current recipe identities while preserving unrevised releases', async () => {
-    expect(await selectVersionsForBuild(postgres, 10)).toEqual(['18.6.1', '17.11.1', '17.10'])
+    expect(await selectVersionsForBuild(postgres, 10)).toEqual(['1.5.7.2', '1.5.6', '1.5.5'])
   })
 
   test('does not spend a one-version budget on a superseded latest marker', async () => {
@@ -596,8 +597,8 @@ describe('automatic package build revisions', () => {
   })
 
   test('preserves explicit historical pins for the immutable build guard', async () => {
-    const pinned = applyVersionPins(postgres, new Map([['postgresql.org', ['18.6']]]))
-    expect(await selectVersionsForBuild(pinned, 1)).toEqual(['18.6'])
+    const pinned = applyVersionPins(postgres, new Map([['facebook.com/zstd', ['1.5.7']]]))
+    expect(await selectVersionsForBuild(pinned, 1)).toEqual(['1.5.7'])
   })
 
   test('resolves recipe revisions independently of vendor tuple length', async () => {

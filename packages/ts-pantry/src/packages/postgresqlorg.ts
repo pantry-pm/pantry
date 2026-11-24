@@ -115,7 +115,6 @@ export const postgresPackage = {
   */
   versions: [
     '18.7',
-    '18.6.1',
     '18.6',
     '18.4',
     '18.3',
@@ -124,7 +123,6 @@ export const postgresPackage = {
     '18.0',
     '18.0.0',
     '17.12',
-    '17.11.1',
     '17.11',
     '17.10',
     '17.9',

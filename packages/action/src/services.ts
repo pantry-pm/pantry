@@ -46,7 +46,9 @@ export function parseServiceSpecs(input: string): ServiceSpec[] {
     const name = serviceName(requested || '')
     if (!name) throw new Error(`Unsupported Pantry Action service: ${requested}`)
     if (seen.has(name)) throw new Error(`Duplicate Pantry Action service: ${name}`)
-    if (version !== undefined && !(name === 'redis' || name === 'mysql' || name === 'dynamodb' ? /^\d+\.\d+\.\d+$/ : /^\d+\.\d+(?:\.\d+)?$/).test(version))
+    // PostgreSQL's own versions are two components; a Pantry build revision of
+    // one is spelled 17.11.pantry1, never as a vendor patch release.
+    if (version !== undefined && !(name === 'redis' || name === 'mysql' || name === 'dynamodb' ? /^\d+\.\d+\.\d+$/ : /^\d+\.\d+(?:\.\d+|\.pantry[1-9]\d*)?$/).test(version))
       throw new Error(`Service versions must be exact semantic versions: ${raw}`)
     seen.add(name)
     const domain = serviceDomains[name]

@@ -67,7 +67,6 @@ export const re2corgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
-    '4.6.1',
     '4.6',
     '4.5.1',
     '4.5',
