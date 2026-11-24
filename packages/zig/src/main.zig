@@ -949,6 +949,14 @@ fn whoamiAction(ctx: *cli.BaseCommand.ParseContext) !void {
 ///
 /// Seconds at the command line because the thing being waited on is npm's
 /// propagation delay, which publishers talk about in minutes.
+/// `--concurrency`: packages a Pantry-registry workspace publish uploads at
+/// once. Defaults to 16; 1 publishes one after another.
+fn publishConcurrency(ctx: *cli.BaseCommand.ParseContext) usize {
+    const raw = ctx.getOption("concurrency") orelse return 16;
+    const value = std.fmt.parseInt(usize, std.mem.trim(u8, raw, " \t"), 10) catch return 16;
+    return @max(@as(usize, 1), @min(value, 64));
+}
+
 fn confirmTimeoutMs(ctx: *cli.BaseCommand.ParseContext) ?u64 {
     const raw = ctx.getOption("confirm-timeout") orelse return null;
     const seconds = std.fmt.parseInt(u64, std.mem.trim(u8, raw, " \t"), 10) catch return null;
@@ -1641,9 +1649,11 @@ fn registryPublishAction(ctx: *cli.BaseCommand.ParseContext) !void {
         .dry_run = dry_run,
         .verify_existing = verify_existing,
         .ignore_scripts = ignore_scripts,
+        .skip = skip_val,
+        .concurrency = publishConcurrency(ctx),
     };
 
-    const result = try lib.commands.registryPublishCommand(allocator, &[_][]const u8{}, options);
+    const result = try lib.commands.registryPublishCommand(allocator, paths.items, options);
     defer {
         var r = result;
         r.deinit(allocator);
@@ -5049,6 +5059,8 @@ pub fn main() !void {
 
     const pub_skip_opt = cli.Option.init("skip", "skip", "Comma-separated package directory names to skip (e.g. docs,playground)", .string);
     _ = try publish_cmd.addOption(pub_skip_opt);
+
+    _ = try publish_cmd.addOption(cli.Option.init("concurrency", "concurrency", "Packages a Pantry-registry workspace publish uploads at once (default 16)", .string));
 
     const pub_github_release_opt = cli.Option.init("github-release", "github-release", "Create a GitHub release after publishing", .bool);
     _ = try publish_cmd.addOption(pub_github_release_opt);

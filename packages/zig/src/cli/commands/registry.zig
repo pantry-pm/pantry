@@ -703,23 +703,41 @@ pub const RegistryPublishOptions = struct {
     verify_existing: bool = false,
     /// Publish the already-built payload without running lifecycle scripts.
     ignore_scripts: bool = false,
+    /// Comma-separated package directory names a workspace publish leaves out.
+    skip: ?[]const u8 = null,
+    /// Packages a workspace publish uploads at once.
+    concurrency: usize = 16,
+    /// Report a version the registry already has as skipped, not an error.
+    /// Set for workspace publishes so a rerun resumes where one stopped.
+    skip_existing: bool = false,
 };
 
-/// Publish a package to the Pantry registry
-/// This uploads the tarball directly to S3 via the registry API
-/// Auto-detects monorepos (packages/ directory) and publishes all non-private packages.
+/// Publish a package to the Pantry registry.
+///
+/// With path or glob arguments (`'storage/framework/core/*'`), those are the
+/// packages to publish; without them a `packages/` monorepo is detected, and
+/// failing that the current directory is the package.
+///
+/// Several packages publish in parallel, `options.concurrency` at a time.
+/// npm makes a bulk release wait twice per package: once for the upload and
+/// again for the version to become readable, and a dependent cannot go out
+/// until its dependencies are readable, so a workspace there publishes in
+/// dependency layers. The Pantry registry answers a publish with the version
+/// already readable, so nothing waits on anything else and every package can
+/// upload at once. A version already in the registry is skipped, so a rerun
+/// after a failure publishes only what is still missing.
 pub fn registryPublishCommand(allocator: std.mem.Allocator, args: []const []const u8, options: RegistryPublishOptions) !CommandResult {
-    _ = args;
-
     // Get current working directory
     const cwd = io_helper.realpathAlloc(allocator, ".") catch {
         return CommandResult.err(allocator, "Error: Could not determine current directory");
     };
     defer allocator.free(cwd);
 
-    // Check for monorepo (packages/ directory with package.json files)
-    const monorepo_packages = detectMonorepoPackages(allocator, cwd, null) catch null;
-    defer if (monorepo_packages) |pkgs| {
+    const packages: ?[]MonorepoPackage = if (args.len > 0)
+        detectPackagesFromArgs(allocator, cwd, args, options.skip) catch null
+    else
+        detectMonorepoPackages(allocator, cwd, options.skip) catch null;
+    defer if (packages) |pkgs| {
         for (pkgs) |*pkg| {
             var p = pkg.*;
             p.deinit(allocator);
@@ -727,91 +745,12 @@ pub fn registryPublishCommand(allocator: std.mem.Allocator, args: []const []cons
         allocator.free(pkgs);
     };
 
-    if (monorepo_packages) |pkgs| {
-        // Monorepo mode — publish each non-private package
-        style.print("Monorepo detected: {d} publishable package(s) in packages/\n", .{pkgs.len});
-        style.print("----------------------------------------\n", .{});
+    if (packages) |pkgs| {
+        return publishPackagesToRegistry(allocator, cwd, pkgs, options);
+    }
 
-        // Detect root files to propagate to packages that don't have their own
-        const root_files = [_][]const u8{ "README.md", "LICENSE", "LICENSE.md" };
-        var has_root_file: [root_files.len]bool = undefined;
-        var root_file_paths: [root_files.len]?[]const u8 = undefined;
-        for (root_files, 0..) |file_name, i| {
-            const root_path = std.fs.path.join(allocator, &[_][]const u8{ cwd, file_name }) catch null;
-            root_file_paths[i] = root_path;
-            has_root_file[i] = if (root_path) |p| blk: {
-                io_helper.accessAbsolute(p, .{}) catch break :blk false;
-                break :blk true;
-            } else false;
-        }
-        defer for (&root_file_paths) |*p| {
-            if (p.*) |path| allocator.free(path);
-        };
-
-        var failed: usize = 0;
-        var succeeded: usize = 0;
-
-        for (pkgs) |pkg| {
-            style.print("\nPublishing {s}...\n", .{pkg.name});
-
-            // Propagate root files (README, LICENSE) to package if missing
-            var copied_files: [root_files.len]?[]const u8 = @splat(null);
-            for (root_files, 0..) |file_name, i| {
-                if (!has_root_file[i]) continue;
-                const pkg_file_path = std.fs.path.join(allocator, &[_][]const u8{ pkg.path, file_name }) catch continue;
-                // Check if package already has its own copy
-                io_helper.accessAbsolute(pkg_file_path, .{}) catch {
-                    // Package doesn't have this file — copy from root
-                    if (root_file_paths[i]) |root_path| {
-                        if (io_helper.copyFile(root_path, pkg_file_path)) {
-                            copied_files[i] = pkg_file_path;
-                            style.print("  Copied root {s} to {s}\n", .{ file_name, pkg.name });
-                        } else |_| {
-                            allocator.free(pkg_file_path);
-                        }
-                    } else {
-                        allocator.free(pkg_file_path);
-                    }
-                    continue;
-                };
-                // File exists in package — don't overwrite
-                allocator.free(pkg_file_path);
-            }
-
-            const result = publishSingleToRegistry(allocator, pkg.path, pkg.config_path, options);
-
-            // Cleanup: remove propagated files after publish
-            for (&copied_files) |*cf| {
-                if (cf.*) |path| {
-                    io_helper.deleteFile(path) catch {};
-                    allocator.free(path);
-                    cf.* = null;
-                }
-            }
-
-            if (result) |r| {
-                if (r.exit_code == 0) {
-                    succeeded += 1;
-                } else {
-                    failed += 1;
-                    if (r.message) |msg| style.print("  Error: {s}\n", .{msg});
-                }
-                var res = r;
-                res.deinit(allocator);
-            } else |err| {
-                failed += 1;
-                style.print("  Error: {any}\n", .{err});
-            }
-            style.print("----------------------------------------\n", .{});
-        }
-
-        style.print("\nPublished {d}/{d} packages", .{ succeeded, succeeded + failed });
-        if (failed > 0) {
-            style.print(" ({d} failed)", .{failed});
-        }
-        style.print("\n", .{});
-
-        return .{ .exit_code = if (failed > 0) 1 else 0 };
+    if (args.len > 0) {
+        return CommandResult.err(allocator, "Error: No publishable package matched the given paths");
     }
 
     // Single package mode — publish CWD
@@ -821,6 +760,163 @@ pub fn registryPublishCommand(allocator: std.mem.Allocator, args: []const []cons
     defer allocator.free(config_path);
 
     return publishSingleToRegistry(allocator, cwd, config_path, options);
+}
+
+/// Root files a workspace package without its own copy is published with.
+const root_publish_files = [_][]const u8{ "README.md", "LICENSE", "LICENSE.md" };
+
+/// Shared state for the publish workers: each takes the next package index.
+const RegistryPublishBatch = struct {
+    allocator: std.mem.Allocator,
+    packages: []const MonorepoPackage,
+    options: RegistryPublishOptions,
+    root_file_paths: [root_publish_files.len]?[]const u8,
+    next: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    succeeded: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    skipped: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    failed: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    /// Serializes printing a finished package's captured output.
+    print_lock: std.atomic.Mutex = .unlocked,
+
+    fn worker(batch: *RegistryPublishBatch) void {
+        while (true) {
+            const index = batch.next.fetchAdd(1, .monotonic);
+            if (index >= batch.packages.len) return;
+            batch.publishOne(batch.packages[index]);
+        }
+    }
+
+    fn publishOne(batch: *RegistryPublishBatch, pkg: MonorepoPackage) void {
+        const allocator = batch.allocator;
+        const started = io_helper.getMilliTimestamp();
+
+        var output = std.ArrayList(u8).empty;
+        defer output.deinit(allocator);
+        const parallel = batch.packages.len > 1 and batch.options.concurrency > 1;
+        if (parallel) style.beginCapture(allocator, &output);
+
+        // Propagate root files (README, LICENSE) to the package if missing,
+        // and take them away again after the upload.
+        var copied_files: [root_publish_files.len]?[]const u8 = @splat(null);
+        for (root_publish_files, 0..) |file_name, i| {
+            const root_path = batch.root_file_paths[i] orelse continue;
+            const pkg_file_path = std.fs.path.join(allocator, &[_][]const u8{ pkg.path, file_name }) catch continue;
+            if (io_helper.accessAbsolute(pkg_file_path, .{})) |_| {
+                allocator.free(pkg_file_path);
+                continue;
+            } else |_| {}
+            if (io_helper.copyFile(root_path, pkg_file_path)) {
+                copied_files[i] = pkg_file_path;
+                style.print("  Copied root {s} to {s}\n", .{ file_name, pkg.name });
+            } else |_| {
+                allocator.free(pkg_file_path);
+            }
+        }
+
+        const result = publishSingleToRegistry(allocator, pkg.path, pkg.config_path, batch.options);
+
+        for (&copied_files) |*cf| {
+            if (cf.*) |path| {
+                io_helper.deleteFile(path) catch {};
+                allocator.free(path);
+                cf.* = null;
+            }
+        }
+
+        var outcome: []const u8 = "failed";
+        if (result) |r| {
+            var res = r;
+            defer res.deinit(allocator);
+            if (r.exit_code != 0) {
+                _ = batch.failed.fetchAdd(1, .monotonic);
+                if (r.message) |msg| style.print("  Error: {s}\n", .{msg});
+            } else if (r.skipped) {
+                _ = batch.skipped.fetchAdd(1, .monotonic);
+                outcome = "already published";
+            } else {
+                _ = batch.succeeded.fetchAdd(1, .monotonic);
+                outcome = "ok";
+            }
+        } else |err| {
+            _ = batch.failed.fetchAdd(1, .monotonic);
+            style.print("  Error: {any}\n", .{err});
+        }
+
+        if (!parallel) {
+            style.print("----------------------------------------\n", .{});
+            return;
+        }
+        style.endCapture();
+
+        const seconds = @divTrunc(io_helper.getMilliTimestamp() - started, 1000);
+        while (!batch.print_lock.tryLock()) std.atomic.spinLoopHint();
+        defer batch.print_lock.unlock();
+        // A GitHub Actions group per package keeps a 100-package log readable.
+        if (style.isGitHubActions()) {
+            style.print("::group::{s} ({s}, {d}s)\n{s}::endgroup::\n", .{ pkg.name, outcome, seconds, output.items });
+        } else {
+            style.print("\n{s} ({s}, {d}s)\n{s}----------------------------------------\n", .{ pkg.name, outcome, seconds, output.items });
+        }
+    }
+};
+
+/// Publish several workspace packages to the Pantry registry, in parallel.
+fn publishPackagesToRegistry(
+    allocator: std.mem.Allocator,
+    cwd: []const u8,
+    pkgs: []const MonorepoPackage,
+    options: RegistryPublishOptions,
+) !CommandResult {
+    var batch_options = options;
+    // A bulk publish is resumable: what is already out is skipped, as the
+    // npm path does, instead of failing the whole release on a rerun.
+    batch_options.skip_existing = true;
+    const concurrency = @max(@as(usize, 1), @min(options.concurrency, pkgs.len));
+
+    style.print("Publishing {d} package(s) to {s}, {d} at a time\n", .{ pkgs.len, options.registry, concurrency });
+    style.print("----------------------------------------\n", .{});
+
+    var batch = RegistryPublishBatch{
+        .allocator = allocator,
+        .packages = pkgs,
+        .options = batch_options,
+        .root_file_paths = @splat(null),
+    };
+    for (root_publish_files, 0..) |file_name, i| {
+        const root_path = std.fs.path.join(allocator, &[_][]const u8{ cwd, file_name }) catch continue;
+        if (io_helper.accessAbsolute(root_path, .{})) |_| {
+            batch.root_file_paths[i] = root_path;
+        } else |_| {
+            allocator.free(root_path);
+        }
+    }
+    defer for (batch.root_file_paths) |path| {
+        if (path) |p| allocator.free(p);
+    };
+
+    const started = io_helper.getMilliTimestamp();
+    const threads = try allocator.alloc(?std.Thread, concurrency - 1);
+    defer allocator.free(threads);
+    for (threads) |*thread| {
+        thread.* = std.Thread.spawn(.{}, RegistryPublishBatch.worker, .{&batch}) catch null;
+    }
+    // The calling thread works too, so a failed spawn only lowers concurrency.
+    batch.worker();
+    for (threads) |thread| {
+        if (thread) |t| t.join();
+    }
+
+    const succeeded = batch.succeeded.load(.monotonic);
+    const skipped = batch.skipped.load(.monotonic);
+    const failed = batch.failed.load(.monotonic);
+    const seconds = @divTrunc(io_helper.getMilliTimestamp() - started, 1000);
+
+    style.print("\nPublished {d}/{d} packages in {d}s", .{ succeeded, pkgs.len, seconds });
+    if (skipped > 0) style.print(" ({d} already published)", .{skipped});
+    if (failed > 0) style.print(" ({d} failed)", .{failed});
+    style.print("\n", .{});
+
+    return .{ .exit_code = if (failed > 0) 1 else 0 };
 }
 
 /// Publish a single package directory to the Pantry registry.
@@ -935,6 +1031,10 @@ fn publishSingleToRegistry(
 
     if (version_check) |check| {
         defer allocator.free(check.latest_version);
+        if (check.version_exists and !options.verify_existing and options.skip_existing) {
+            style.print("  {s}@{s} is already published; skipped\n", .{ name, version });
+            return .{ .exit_code = 0, .skipped = true };
+        }
         if (check.version_exists and !options.verify_existing) {
             const err_msg = try std.fmt.allocPrint(
                 allocator,
@@ -1042,6 +1142,18 @@ fn publishSingleToRegistry(
     style.print("Uploading to registry...\n", .{});
 
     const result = uploadToRegistry(allocator, options.registry, name, version, tarball_data, token orelse "", publish_content, options.verify_existing) catch |err| {
+        if (err == error.VersionExists) {
+            if (options.skip_existing) {
+                style.print("  {s}@{s} is already published; skipped\n", .{ name, version });
+                return .{ .exit_code = 0, .skipped = true };
+            }
+            const exists_msg = try std.fmt.allocPrint(
+                allocator,
+                "Error: Version {s} already exists in registry.\nBump the version in package.json before publishing.",
+                .{version},
+            );
+            return CommandResult.err(allocator, exists_msg);
+        }
         const err_msg = try std.fmt.allocPrint(allocator, "Error: Failed to upload to registry: {any}", .{err});
         return CommandResult.err(allocator, err_msg);
     };
@@ -1520,6 +1632,10 @@ fn uploadViaHttp(
     if (result.status != .ok and result.status != .created) {
         const err_data = alloc_writer.writer.buffer[0..alloc_writer.writer.end];
         const status = @backingInt(result.status);
+        // The registry refuses an upload of a version it holds with 409,
+        // checked against its own store only, never an npm fallback. A
+        // workspace publish takes that as "already out" (see the caller).
+        if (status == 409 and !verify_existing) return error.VersionExists;
         style.print("Upload rejected: HTTP {d}\n", .{status});
         if (err_data.len > 0) {
             const message = publishRejectionMessage(allocator, err_data);

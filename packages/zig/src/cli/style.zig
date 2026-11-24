@@ -157,6 +157,24 @@ fn stripAnsi(s: []u8) []u8 {
 
 // ── Core Output ─────────────────────────────────────────────────────────────
 
+/// Output this thread collects instead of writing, while a capture is open.
+/// Work that runs several packages at once (a parallel workspace publish)
+/// gives each worker its own buffer and prints it whole when the package is
+/// done, so the log reads package by package instead of interleaved lines.
+threadlocal var capture_buffer: ?*std.ArrayList(u8) = null;
+threadlocal var capture_allocator: std.mem.Allocator = undefined;
+
+/// Collect everything this thread prints into `buffer` until `endCapture`.
+pub fn beginCapture(allocator: std.mem.Allocator, buffer: *std.ArrayList(u8)) void {
+    capture_allocator = allocator;
+    capture_buffer = buffer;
+}
+
+/// Stop collecting; later output from this thread is written as usual.
+pub fn endCapture() void {
+    capture_buffer = null;
+}
+
 /// Write a formatted message straight to stdout, ignoring quiet mode. Backs
 /// both `print` (gated) and `printForced` (always). Strips ANSI when color is
 /// disabled. Thread-safe via write().
@@ -173,6 +191,9 @@ fn emit(comptime fmt: []const u8, args: anytype) void {
     // On the interactive TTY path colorsEnabled() is true (cached) and `msg`
     // is written as-is — no scan. Stripping only runs when output is redirected.
     const out = if (colorsEnabled()) msg else stripAnsi(msg);
+    if (capture_buffer) |buffer| {
+        if (buffer.appendSlice(capture_allocator, out)) |_| return else |_| {}
+    }
     const target = if (diagnostics_to_stderr) io_helper.File.stderr() else io_helper.File.stdout();
     io_helper.writeAllToFile(target, out) catch {
         // Last resort: try stderr
