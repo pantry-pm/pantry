@@ -261,3 +261,24 @@ export function npmRegistryUrl(name: string, version?: string): string {
   const path = name.startsWith('@') ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)
   return `https://registry.npmjs.org/${path}${version === undefined ? '' : `/${encodeURIComponent(version)}`}`
 }
+
+/**
+ * The package, version and file an npm tarball path names
+ * (`/npm/{name}/-/{base}-{version}.tgz`), or null.
+ *
+ * Bun builds this URL itself, from the configured registry and a lockfile
+ * entry that names no registry, instead of reading `dist.tarball`: an app
+ * whose lockfile came from npm and whose registry is now Pantry asks Pantry
+ * for every tarball in that lockfile.
+ */
+export function npmTarballPath(path: string): { name: string, version: string, file: string } | null {
+  const match = path.match(/^\/npm\/((?:@|%40)[^/%]+(?:%2[fF]|\/)[^/]+|[^/@%][^/]*)\/-\/([^/]+\.tgz)$/)
+  if (!match) return null
+  const name = decodeURIComponent(match[1]!)
+  const file = decodeURIComponent(match[2]!)
+  const base = name.startsWith('@') ? name.slice(name.indexOf('/') + 1) : name
+  if (!file.startsWith(`${base}-`)) return null
+  const version = file.slice(base.length + 1, -'.tgz'.length)
+  if (!/^[\w.+-]{1,64}$/.test(version) || name.length > 214) return null
+  return { name, version, file }
+}

@@ -10,7 +10,7 @@ import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
 import type { UpstreamPackument } from './npm-packument'
-import { buildPackument, mergeUpstream, npmRegistryPath, npmRegistryUrl, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
+import { buildPackument, mergeUpstream, npmRegistryPath, npmRegistryUrl, npmTarballPath, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
 import { PackageVersionExistsError } from './publication'
 import { verifyExistingPublication } from './publication-verification'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -1496,6 +1496,20 @@ export function createHandler(
       const npmPath = req.method === 'GET' ? npmRegistryPath(path) : null
       if (npmPath) {
         return handleNpmPackument(req, registry, npmPath, baseUrl, corsHeaders)
+      }
+      // GET /npm/{name}/-/{file}.tgz: the tarball URL Bun builds from the
+      // registry and a lockfile entry (npmTarballPath). Pantry's own version
+      // goes to its tarball route, which enforces access; anything else to npm.
+      const npmTarball = req.method === 'GET' || req.method === 'HEAD' ? npmTarballPath(path) : null
+      if (npmTarball) {
+        const exposure = await packageExposure(req, registry, npmTarball.name)
+        if (exposure === 'hidden')
+          return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
+        const held = exposure !== 'public' || await registry.metadata.getPackageVersion(npmTarball.name, npmTarball.version)
+        const location = held
+          ? `${baseUrl}/packages/${encodeURIComponent(npmTarball.name)}/${encodeURIComponent(npmTarball.version)}/tarball`
+          : `${npmRegistryUrl(npmTarball.name)}/-/${encodeURIComponent(npmTarball.file)}`
+        return new Response(null, { status: 302, headers: { ...corsHeaders, 'Location': location, 'Cache-Control': 'public, max-age=86400' } })
       }
 
       // Binary proxy routes — proxy pantry binary tarballs from S3

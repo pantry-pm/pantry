@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { PackageMetadata } from './types'
-import { buildPackument, compareVersions, latestOf, mergeUpstream, npmDist, npmRegistryPath, npmRegistryUrl, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
+import { buildPackument, compareVersions, latestOf, mergeUpstream, npmDist, npmRegistryPath, npmRegistryUrl, npmTarballPath, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
 
 function source(versions: Record<string, Partial<PackageMetadata> & Record<string, unknown>>) {
   return {
@@ -129,5 +129,16 @@ describe('npm packument', () => {
     answer(null)
     await Bun.sleep(5)
     expect(await cache.get('stacks', Date.now() + 5_000)).toEqual(doc)
+  })
+
+  it('reads the tarball path Bun builds from a registry and a lockfile entry', () => {
+    expect(npmTarballPath('/npm/@stacksjs/bun-router/-/bun-router-0.1.24.tgz')).toEqual({ name: '@stacksjs/bun-router', version: '0.1.24', file: 'bun-router-0.1.24.tgz' })
+    expect(npmTarballPath('/npm/@stacksjs%2fclapp/-/clapp-0.2.17.tgz')).toEqual({ name: '@stacksjs/clapp', version: '0.2.17', file: 'clapp-0.2.17.tgz' })
+    expect(npmTarballPath('/npm/bun-query-builder/-/bun-query-builder-0.6.4.tgz')).toEqual({ name: 'bun-query-builder', version: '0.6.4', file: 'bun-query-builder-0.6.4.tgz' })
+    expect(npmTarballPath('/npm/@typescript/typescript-linux-x64/-/typescript-linux-x64-7.1.0-dev.20261011.1.tgz')!.version).toBe('7.1.0-dev.20261011.1')
+    expect(npmTarballPath('/npm/left-pad/-/other-1.0.0.tgz')).toBeNull()
+    expect(npmTarballPath('/npm/left-pad/-/left-pad-1.0.0.zip')).toBeNull()
+    expect(npmTarballPath('/npm/left-pad')).toBeNull()
+    expect(npmRegistryPath('/npm/left-pad/-/left-pad-1.3.0.tgz')).toBeNull()
   })
 })
