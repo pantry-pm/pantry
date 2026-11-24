@@ -1,3 +1,30 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.226...v0.11.227)
+
+## 🐛 Bug Fixes
+
+- **install**: check free space before replacing an artifact, and adopt unmarked trees installed after its upload ([7fe4c2f](https://github.com/pantry-pm/pantry/commit/7fe4c2f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **fullycapable**: build linux-arm64 too, which the registry already serves ([f865878](https://github.com/pantry-pm/pantry/commit/f865878)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: 118 in-place replacements verified; fullycapable arm64 revision verified ([0e00390](https://github.com/pantry-pm/pantry/commit/0e00390)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: request in-place overwrites of 13 more repaired base builds ([754a249](https://github.com/pantry-pm/pantry/commit/754a249)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: kargo 1.9.5 replaced in place; 13 more revisions verified ([620d860](https://github.com/pantry-pm/pantry/commit/620d860)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: 100 in-place replacements verified; elizaOS blocked on libatomic; zstd tracked ([78866a9](https://github.com/pantry-pm/pantry/commit/78866a9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 💚 Continuous Integration
+
+- **registry**: drop the one-time publish token key migration ([4ab4c13](https://github.com/pantry-pm/pantry/commit/4ab4c13)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.227 ([5f2e5dc](https://github.com/pantry-pm/pantry/commit/5f2e5dc)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.225...v0.11.226)
 
 ## 🐛 Bug Fixes
