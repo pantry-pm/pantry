@@ -376,14 +376,15 @@ async function main(): Promise<void> {
       if (!missing.length && row.status === 'pending') row.status = 'published'
       console.log(`${row.domain}@${row.revision}: ${missing.length ? `missing ${missing.join(',')}` : 'served'} (${row.status})`)
     }
-    // In-place overwrites: every Linux platform `oldBuild` is served on now
+    // In-place overwrites: every broken platform `oldBuild` is served on now
     // carries an artifact uploaded after the request.
     for (const row of ledger) {
       if (row.inPlace?.status !== 'pending') continue
       const response = await fetch(`https://registry.pantry.dev/binaries/${row.domain}/metadata.json`)
       if (!response.ok) continue
       const metadata = await response.json() as { versions?: Record<string, { platforms?: Record<string, { sha256?: string, uploadedAt?: string }> }> }
-      const platforms = Object.entries(metadata.versions?.[row.oldBuild]?.platforms ?? {}).filter(([p]) => p.startsWith('linux-'))
+      // The broken platforms are the ones to replace; a sound one need not move.
+      const platforms = Object.entries(metadata.versions?.[row.oldBuild]?.platforms ?? {}).filter(([p]) => row.platforms.includes(p))
       const stale = platforms.filter(([, r]) => !r.uploadedAt || r.uploadedAt < row.inPlace!.since).map(([p]) => p)
       if (platforms.length && !stale.length) {
         row.inPlace.status = 'published'
