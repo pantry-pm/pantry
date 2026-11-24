@@ -36,3 +36,11 @@ test('GPU driver libraries are the host\'s, never a declared dependency', async 
   for (const name of ['libvulkan.so.1', 'libcuda.so.1', 'libOpenCL.so.1', 'libnvidia-ml.so.1']) expect(linuxHostDriverLibraries.test(name)).toBe(true)
   for (const name of ['libcudart.so.12', 'libvulkan.so', 'libz.so.1']) expect(linuxHostDriverLibraries.test(name)).toBe(false)
 })
+
+test('package-manager prebuilts are recognised by their install trees', async () => {
+  const { vendoredByPackageManager } = await import('../scripts/native-runtime')
+  expect(vendoredByPackageManager('libexec/node_modules/.bun/@rolldown+binding-linux-x64-musl@1.0.1/node_modules/@rolldown/binding-linux-x64-musl/rolldown.node')).toBe(true)
+  expect(vendoredByPackageManager('venv/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib/libnvrtc.so.12')).toBe(true)
+  expect(vendoredByPackageManager('lib/libssl.so.3')).toBe(false)
+  expect(vendoredByPackageManager('bin/node')).toBe(false)
+})

@@ -141,6 +141,14 @@ export function originSibling(root: string, file: string, name: string, patchelf
   return undefined
 }
 
+/**
+ * A file a language package manager installed (npm's node_modules, pip's
+ * site-packages): its optional platform variants are chosen at run time.
+ */
+export function vendoredByPackageManager(relativePath: string): boolean {
+  return relativePath.split(/[\\/]/).some(part => part === 'node_modules' || part === 'site-packages' || part === 'dist-packages')
+}
+
 export function bundleRuntimeLibraries(
   prefix: string,
   platform: string,
@@ -199,6 +207,7 @@ export function bundleRuntimeLibraries(
   })
   const visited = new Set<string>()
   const missing = new Set<string>()
+  const vendoredUnresolved = new Set<string>()
   for (let position = 0; position < queue.length; position++) {
     const file = queue[position]
     if (visited.has(file)) continue
@@ -225,6 +234,13 @@ export function bundleRuntimeLibraries(
       const sibling = candidates.length === 0 && linux ? originSibling(root, file, name, patchelf) : undefined
       if (sibling) {
         queue.push(sibling)
+        continue
+      }
+      if (candidates.length === 0 && vendoredByPackageManager(relative(root, file))) {
+        // npm and pip install every platform's optional prebuilt (musl
+        // builds, GPU builds) and load only the one the host can run; what a
+        // variant needs beyond this artifact is not this package's to declare.
+        vendoredUnresolved.add(`${dependencyName} (${relative(root, file)})`)
         continue
       }
       if (candidates.length === 0) {
@@ -272,6 +288,8 @@ export function bundleRuntimeLibraries(
     }
   }
   if (missing.size) throw new Error([...missing].join('; '))
+  if (vendoredUnresolved.size)
+    console.log(`  Left ${vendoredUnresolved.size} library need(s) of package-manager prebuilts to the host or another platform: ${[...vendoredUnresolved].slice(0, 5).join('; ')}${vendoredUnresolved.size > 5 ? '; ...' : ''}`)
   return receipts
 }
 
