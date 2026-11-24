@@ -1,8 +1,8 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
-    "verified": 102,
-    "published": 12,
+    "verified": 113,
+    "failed": 1,
     "next-release": 483,
     "pending": 18,
     "skipped": 1
@@ -97,7 +97,7 @@
         "linux-x86-64"
       ],
       "batch": 1,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "gnu.org/tar",
@@ -644,7 +644,8 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "published"
+      "status": "failed",
+      "note": "the revision lacks declared programs: gdk-pixbuf-thumbnailer (linux-x86-64), gdk-pixbuf-thumbnailer (linux-arm64)"
     },
     {
       "domain": "gnome.org/libsecret",
@@ -784,7 +785,7 @@
         "linux-x86-64"
       ],
       "batch": 3,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "libimobiledevice.org/libplist",
@@ -1188,7 +1189,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "lame.sourceforge.io",
@@ -1275,7 +1276,7 @@
         "linux-x86-64"
       ],
       "batch": 4,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "tcl.tk/tcl",
@@ -1325,7 +1326,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "bcrypt.sourceforge.net",
@@ -1401,7 +1402,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "github.com/google/shaderc",
@@ -1566,7 +1567,7 @@
         "linux-x86-64"
       ],
       "batch": 5,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "virtualsquare.org/vde",
@@ -1643,7 +1644,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "gnome.org/libgsf",
@@ -1654,7 +1655,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "gnu.org/source-highlight",
@@ -1665,7 +1666,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "google.com/fullycapable",
@@ -1687,7 +1688,7 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "published"
+      "status": "verified"
     },
     {
       "domain": "graphicsmagick.org",
