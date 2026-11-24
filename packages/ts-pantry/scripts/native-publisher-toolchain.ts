@@ -56,7 +56,10 @@ export function reportedVersionMatches(program: string, identity: string, expect
   const name = basename(program).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const report = identity.replace(new RegExp(`^(?:.*[/\\\\])?${name}(?=\\s|$)`), '').trim()
   const reported = report.match(/\b\d+(?:\.\d+){0,3}(?:[-+][A-Za-z0-9.-]+)?/)?.[0]
-  const normalized = (value: string): string => value.replace(/(?:\.0)+$/, '')
+  // GNU Binutils can append its BFD date to the release it reports: the
+  // vendor build of 2.46.0 prints `2.46.0.20260210`, the release's own date.
+  // It names the same release, so it is not a version mismatch.
+  const normalized = (value: string): string => value.replace(/\.(?:19|20)\d{6}$/, '').replace(/(?:\.0)+$/, '')
   return !!reported && normalized(reported) === normalized(expected)
 }
 

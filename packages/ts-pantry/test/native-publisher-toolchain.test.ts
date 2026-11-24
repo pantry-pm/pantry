@@ -42,3 +42,9 @@ describe('native publisher tool ownership', () => {
     finally { rmSync(root, { recursive: true, force: true }) }
   })
 })
+
+test('a GNU Binutils BFD date after the release is the same release', () => {
+  expect(reportedVersionMatches('/x/bin/ld', 'GNU ld (GNU Binutils) 2.46.0.20260210', '2.46.0')).toBe(true)
+  expect(reportedVersionMatches('/x/bin/ld', 'GNU ld (GNU Binutils) 2.46', '2.46.0')).toBe(true)
+  expect(reportedVersionMatches('/x/bin/ld', 'GNU ld (GNU Binutils) 2.45.0.20250727', '2.46.0')).toBe(false)
+})
