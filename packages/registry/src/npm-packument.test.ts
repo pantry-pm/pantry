@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { PackageMetadata } from './types'
-import { buildPackument, compareVersions, latestOf, mergeUpstream, npmDist, npmRegistryPath, packumentVersionOrTag } from './npm-packument'
+import { buildPackument, compareVersions, latestOf, mergeUpstream, npmDist, npmRegistryPath, npmRegistryUrl, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
 
 function source(versions: Record<string, Partial<PackageMetadata> & Record<string, unknown>>) {
   return {
@@ -96,5 +96,38 @@ describe('npm packument', () => {
     expect((packumentVersionOrTag(packument, 'latest') as any).version).toBe('0.75.665')
     expect((packumentVersionOrTag(packument, '0.75.665') as any).version).toBe('0.75.665')
     expect(packumentVersionOrTag(packument, '9.9.9')).toBeNull()
+  })
+
+  it('redirects to npm\'s own URL for a name, version or tag', () => {
+    expect(npmRegistryUrl('left-pad')).toBe('https://registry.npmjs.org/left-pad')
+    expect(npmRegistryUrl('@stacksjs/buddy')).toBe('https://registry.npmjs.org/@stacksjs%2Fbuddy')
+    expect(npmRegistryUrl('@stacksjs/buddy', '0.75.700')).toBe('https://registry.npmjs.org/@stacksjs%2Fbuddy/0.75.700')
+    expect(npmRegistryUrl('stacks', 'latest')).toBe('https://registry.npmjs.org/stacks/latest')
+  })
+
+  it('never waits on npm longer than its timeout, and serves the last good copy', async () => {
+    const doc = { 'dist-tags': { latest: '1.0.0' }, 'versions': { '1.0.0': {} } }
+    let calls = 0
+    let answer: (value: typeof doc | null) => void = () => {}
+    const cache = new UpstreamPackuments(() => { calls++; return new Promise(resolve => answer = resolve) }, 1_000, 20)
+
+    // npm is slow: the first read gives up at the timeout instead of waiting.
+    const started = performance.now()
+    expect(await cache.get('stacks')).toBeNull()
+    expect(performance.now() - started).toBeLessThan(500)
+    // The fetch it started carries on, and is shared rather than repeated.
+    expect(await cache.get('stacks')).toBeNull()
+    expect(calls).toBe(1)
+    answer(doc)
+    await Bun.sleep(5)
+    expect(await cache.get('stacks')).toEqual(doc)
+    expect(calls).toBe(1)
+
+    // Stale: served at once while one refresh runs; a failed refresh keeps it.
+    expect(await cache.get('stacks', Date.now() + 5_000)).toEqual(doc)
+    expect(calls).toBe(2)
+    answer(null)
+    await Bun.sleep(5)
+    expect(await cache.get('stacks', Date.now() + 5_000)).toEqual(doc)
   })
 })

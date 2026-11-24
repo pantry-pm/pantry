@@ -11,9 +11,9 @@
  * "@stacksjs" = "https://registry.pantry.dev/npm/"
  * ```
  *
- * A name Pantry has no published versions of is answered with npm's own
- * packument, so pointing a scope (or a whole install) here never loses a
- * package that lives only on npm.
+ * A name Pantry has no published versions of is redirected to npm, so
+ * pointing a scope (or a whole install) here never loses a package that lives
+ * only on npm, and never makes it wait on this server's own connection to npm.
  *
  * This is what lets a project publish its releases to Pantry alone: a
  * workspace release then uploads every package at once and each one is
@@ -205,4 +205,59 @@ export function packumentVersionOrTag(packument: Record<string, unknown>, versio
   const versions = packument.versions as Record<string, unknown>
   const tags = packument['dist-tags'] as Record<string, string> | undefined
   return versions[versionOrTag] ?? versions[tags?.[versionOrTag] ?? ''] ?? null
+}
+
+/**
+ * npm's packument for a name Pantry also publishes, for `mergeUpstream`,
+ * without letting npm's response time decide this endpoint's.
+ *
+ * Each read waits at most `timeoutMs` for npm. A copy younger than `ttlMs` is
+ * served as is; an older one is served while a single refresh runs behind it;
+ * with no copy yet, a slow or failed fetch yields null and the packument goes
+ * out with Pantry's versions alone, which is every release published since the
+ * project moved. Concurrent reads of one name share one fetch.
+ */
+export class UpstreamPackuments {
+  private readonly copies = new Map<string, { doc: UpstreamPackument, at: number }>()
+  private readonly inFlight = new Map<string, Promise<UpstreamPackument | null>>()
+
+  constructor(
+    private readonly fetchUpstream: (name: string) => Promise<UpstreamPackument | null>,
+    private readonly ttlMs = 5 * 60_000,
+    private readonly timeoutMs = 3_000,
+    private readonly maxEntries = 1_000,
+  ) {}
+
+  async get(name: string, now = Date.now()): Promise<UpstreamPackument | null> {
+    const copy = this.copies.get(name)
+    if (copy && now - copy.at < this.ttlMs) return copy.doc
+    const refresh = this.refresh(name)
+    if (copy) return copy.doc
+    const timeout = new Promise<null>(resolve => setTimeout(resolve, this.timeoutMs, null))
+    return Promise.race([refresh, timeout])
+  }
+
+  private refresh(name: string): Promise<UpstreamPackument | null> {
+    const running = this.inFlight.get(name)
+    if (running) return running
+    const fetching = this.fetchUpstream(name)
+      .catch(() => null)
+      .then((doc) => {
+        if (doc?.versions) {
+          if (this.copies.size >= this.maxEntries && !this.copies.has(name))
+            this.copies.delete(this.copies.keys().next().value!)
+          this.copies.set(name, { doc, at: Date.now() })
+        }
+        return doc?.versions ? doc : this.copies.get(name)?.doc ?? null
+      })
+      .finally(() => this.inFlight.delete(name))
+    this.inFlight.set(name, fetching)
+    return fetching
+  }
+}
+
+/** Where npm serves `name` (and a version or tag of it), for a redirect. */
+export function npmRegistryUrl(name: string, version?: string): string {
+  const path = name.startsWith('@') ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name)
+  return `https://registry.npmjs.org/${path}${version === undefined ? '' : `/${encodeURIComponent(version)}`}`
 }

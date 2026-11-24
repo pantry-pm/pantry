@@ -893,8 +893,9 @@ install from Pantry. Point a scope at it:
 @my-org:registry=https://registry.pantry.dev/npm/
 ```
 
-A name with no versions on Pantry is answered with npm's own packument, so a
-scope that also has packages on npm keeps resolving them.
+A name with no versions on Pantry is redirected to npm, and Bun, npm and the
+Pantry CLI follow the redirect, so a scope that also has packages on npm (or a
+whole install pointed at Pantry with `registry=`) keeps resolving them.
 
 ## Publishing to npm
 

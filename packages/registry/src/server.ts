@@ -10,7 +10,7 @@ import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
 import type { UpstreamPackument } from './npm-packument'
-import { buildPackument, mergeUpstream, npmRegistryPath, packumentVersionOrTag } from './npm-packument'
+import { buildPackument, mergeUpstream, npmRegistryPath, npmRegistryUrl, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
 import { PackageVersionExistsError } from './publication'
 import { verifyExistingPublication } from './publication-verification'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -2637,7 +2637,7 @@ function storefrontSearchResult(listing: StorefrontListing, baseUrl: string): Se
 
 /**
  * An npm packument for `name`: Pantry's published versions when it has any,
- * else npm's own document. A package a caller may not see answers exactly as
+ * else a redirect to npm. A package a caller may not see answers exactly as
  * one that does not exist, and is never filled in from npm.
  */
 async function handleNpmPackument(
@@ -2651,24 +2651,16 @@ async function handleNpmPackument(
   if (exposure === 'hidden' || exposure === 'storefront')
     return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
 
-  const npmPath = `https://registry.npmjs.org/${name.replace('/', '%2f')}`
-  const fromNpm = (): Promise<Response | null> => fetch(npmPath, {
-    headers: { accept: req.headers.get('accept') || 'application/json' },
-    signal: AbortSignal.timeout(20_000),
-  }).catch(() => null)
-
   const packument = await buildPackument({
     listVersions: versionName => registry.metadata.listVersions(versionName),
     getPackageVersion: (versionName, versionId) => registry.getStoredVersion(versionName, versionId),
   }, name, baseUrl)
   if (packument) {
     // Versions only npm has stay installable through this endpoint (see
-    // mergeUpstream). A private package is never merged with npm's namesake.
-    let merged = packument
-    if (registry.npmFallbackEnabled && exposure === 'public') {
-      const upstream = await fromNpm()
-      if (upstream?.ok) merged = mergeUpstream(packument, await upstream.json().catch(() => null) as UpstreamPackument | null)
-    }
+    // mergeUpstream), from a cached copy that never holds the response up.
+    // A private package is never merged with npm's namesake.
+    const upstream = registry.npmFallbackEnabled && exposure === 'public' ? await upstreamPackuments.get(name) : null
+    const merged = mergeUpstream(packument, upstream)
     const body = version === undefined ? merged : packumentVersionOrTag(merged, version)
     if (!body)
       return Response.json({ error: 'Version not found' }, { status: 404, headers: corsHeaders })
@@ -2683,21 +2675,23 @@ async function handleNpmPackument(
   if (!registry.npmFallbackEnabled)
     return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
 
-  const upstream = await fetch(version === undefined ? npmPath : `${npmPath}/${encodeURIComponent(version)}`, {
-    headers: { accept: req.headers.get('accept') || 'application/json' },
-    signal: AbortSignal.timeout(20_000),
-  }).catch(() => null)
-  if (!upstream)
-    return Response.json({ error: 'npm did not answer' }, { status: 502, headers: corsHeaders })
-  return new Response(upstream.body, {
-    status: upstream.status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': upstream.headers.get('content-type') || 'application/json',
-      'Cache-Control': upstream.ok ? 'public, max-age=300' : 'no-store',
-    },
+  // A name Pantry holds nothing of goes straight to npm: Bun and the Pantry
+  // CLI both follow the redirect, so an install never waits on this server's
+  // own connection to npm for the thousand packages it does not publish.
+  return new Response(null, {
+    status: 302,
+    headers: { ...corsHeaders, 'Location': npmRegistryUrl(name, version), 'Cache-Control': 'public, max-age=300' },
   })
 }
+
+/** npm's packuments for names Pantry also publishes (see UpstreamPackuments). */
+const upstreamPackuments = new UpstreamPackuments(async (name) => {
+  const response = await fetch(npmRegistryUrl(name), {
+    headers: { accept: 'application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8' },
+    signal: AbortSignal.timeout(30_000),
+  })
+  return response.ok ? await response.json() as UpstreamPackument : null
+})
 
 async function packageExposure(
   req: Request,

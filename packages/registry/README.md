@@ -46,7 +46,7 @@ The server will start at `<http://localhost:3000>`.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/npm/{name}` | npm packument for a Pantry-published package (npm's own for anything else), so Bun and npm install from Pantry: `"@my-org" = "https://registry.pantry.dev/npm/"` under `[install.scopes]` in bunfig.toml |
+| GET | `/npm/{name}` | npm packument for a Pantry-published package (a redirect to npm for anything else), so Bun and npm install from Pantry: `"@my-org" = "https://registry.pantry.dev/npm/"` under `[install.scopes]` in bunfig.toml |
 
 ### Analytics
 

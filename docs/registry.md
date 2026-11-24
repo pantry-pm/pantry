@@ -141,7 +141,7 @@ SHA-256 over the uploaded archive.
 | `GET` | `/npm/resolve/{specs}` | GET compatibility form for bounded spec lists. |
 | `POST` | `/registry/download` | Stream or bundle resolved tarballs for efficient installs. |
 | `POST` | `/npm/download` | Compatibility alias for registry download. |
-| `GET` | `/npm/{name}` | npm packument (every version, `dist-tags`, `dist.tarball`, SRI `dist.integrity`) for a package published to Pantry, so Bun and npm can use Pantry as a scope's registry; npm's own packument for a name Pantry holds no versions of. A private package answers as nonexistent to a caller who may not read it and is never filled in from npm. |
+| `GET` | `/npm/{name}` | npm packument (every version, `dist-tags`, `dist.tarball`, SRI `dist.integrity`) for a package published to Pantry, so Bun and npm can use Pantry as a scope's registry; a 302 to npm for a name Pantry holds no versions of. npm's versions are merged into a Pantry packument from a copy cached for five minutes; a read waits at most three seconds for npm and otherwise goes out with Pantry's versions alone. A private package answers as nonexistent to a caller who may not read it and is never filled in from npm. |
 | `POST` | `/api/v1/binaries/uploads` | Authenticate an operator or an operator-issued exact-domain publishing token; create a short-lived upload scoped to an untrusted staging key. |
 | `POST` | `/api/v1/binaries/uploads/complete` | Seal, stream-scan, digest-verify, and promote a staged native artifact. |
 | `POST` | `/api/v1/binaries/rescan` | Authenticate an operator, stream-scan a retained artifact in place, and either attest it clean or quarantine it. |
