@@ -519,6 +519,33 @@ else {
   }
 }
 
+/**
+ * Where to fetch a source archive from, in order. ftp.gnu.org is a single host
+ * that refuses or drops connections from busy CI ranges (gnu.org/sed's
+ * linux-x86-64 revision failed twice there while arm64 downloaded fine), so a
+ * GNU release is fetched through GNU's mirror redirector first, which serves
+ * the same signed files from a nearby mirror, and from ftp.gnu.org only if
+ * that fails.
+ */
+export function sourceDownloadCandidates(url: string): string[] {
+  const gnu = /^https?:\/\/ftp\.gnu\.org\/(?:pub\/)?gnu\/(.+)$/.exec(url)
+  return gnu ? [`https://ftpmirror.gnu.org/${gnu[1]}`, url] : [url]
+}
+
+function downloadFirstAvailable(url: string, destFile: string): void {
+  const candidates = sourceDownloadCandidates(url.replace(/ /g, '%20'))
+  for (const [index, candidate] of candidates.entries()) {
+    try {
+      execSync(`curl -fSL --connect-timeout 30 --max-time 600 --retry 2 --retry-delay 5 -o "${destFile}" "${candidate}"`, { stdio: 'inherit' })
+      return
+    }
+    catch (error) {
+      if (index === candidates.length - 1) throw error
+      console.log(`   ⚠️  ${candidate} failed; trying ${candidates[index + 1]}`)
+    }
+  }
+}
+
 async function downloadSource(url: string, destDir: string, stripComponents: number = 1, ref?: string, pkgDomain?: string, pkgVersion?: string): Promise<void> {
   console.log(`📥 Downloading source from ${url}`)
 
@@ -540,7 +567,7 @@ catch {
     const fileName = pkgDomain && pkgVersion ? `${safeDomain}-${pkgVersion}${matchedExt}` : urlPath.split('/').pop() || `download${matchedExt}`
     const destFile = join(destDir, fileName)
     console.log(`📦 Saving non-archive file as ${fileName}`)
-    execSync(`curl -fSL --connect-timeout 30 --max-time 600 --retry 2 --retry-delay 5 -o "${destFile}" "${encodedUrl}"`, { stdio: 'inherit' })
+    downloadFirstAvailable(encodedUrl, destFile)
     return
   }
 
@@ -593,7 +620,7 @@ catch {
     // --connect-timeout 30: fail fast if server doesn't respond
     // --max-time 600: abort if download takes >10 minutes (SourceForge can be very slow)
     // --retry 2 --retry-delay 5: retry on transient failures
-    execSync(`curl -fSL --connect-timeout 30 --max-time 600 --retry 2 --retry-delay 5 -o "${tempFile}" "${encodedUrl}"`, { stdio: 'inherit' })
+    downloadFirstAvailable(encodedUrl, tempFile)
   }
 catch (curlError: unknown) {
     const err = new Error(`DOWNLOAD_FAILED: Failed to download ${url}`) as any
