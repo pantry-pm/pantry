@@ -1,9 +1,9 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
-    "verified": 114,
+    "verified": 116,
     "next-release": 479,
-    "pending": 22,
+    "pending": 20,
     "skipped": 1
   },
   "packages": [
@@ -878,7 +878,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -906,7 +906,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -922,7 +922,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -939,7 +939,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -956,7 +956,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -972,7 +972,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -989,7 +989,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1006,7 +1006,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1023,7 +1023,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1040,7 +1040,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1057,7 +1057,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1074,7 +1074,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1091,7 +1091,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1108,7 +1108,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1124,7 +1124,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1141,7 +1141,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1158,7 +1158,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1175,7 +1175,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1202,7 +1202,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1219,7 +1219,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1235,7 +1235,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1252,7 +1252,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:28:22Z"
       }
     },
@@ -1896,11 +1896,11 @@
         "linux-x86-64"
       ],
       "batch": 8,
-      "status": "pending",
+      "status": "verified",
       "method": "in-place",
       "reason": "popular: in our installs (runtime dependency of tesseract-ocr.github.io)",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:21:09Z"
       }
     },
@@ -1913,11 +1913,11 @@
         "linux-x86-64"
       ],
       "batch": 8,
-      "status": "pending",
+      "status": "verified",
       "method": "in-place",
       "reason": "popular: 179 registry downloads in 90 days (noise floor is about 7, this repair's own audit reads)",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T03:21:09Z"
       }
     },
