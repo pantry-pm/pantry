@@ -4159,9 +4159,9 @@
       "inPlace": {
         "status": "failed",
         "since": "2026-11-24T03:41:23Z",
-        "note": "blocked: mirroring 2.0.3 needs its runtime dependency gnu.org/gcc/libatomic, which the registry has never published (a standing catalog publication failure); the vendored-binary normaliser (9a2852b20) applies once that dependency publishes, and a rewrite can fix the files (ordinary shared libraries with a trailing empty entry)"
+        "note": "libatomic now publishes (gnu.org/gcc/libatomic 15.2.0, Linux) and the 2.0.3 mirror now normalises cleanly (vendored npm prebuilts handled); the in-place upload of the 2.2 GB artifact never completes on the registry: three attempts stayed in malware-scan completion past the client budget, the last past the staging TTL (BINARY_UPLOAD_EXPIRED). Needs a look at the registry's scan of very large artifacts (logs on the box)"
       },
-      "note": "blocked: mirroring 2.0.3 needs its runtime dependency gnu.org/gcc/libatomic, which the registry has never published (a standing catalog publication failure); the vendored-binary normaliser (9a2852b20) applies once that dependency publishes, and a rewrite can fix the files (ordinary shared libraries with a trailing empty entry)"
+      "note": "libatomic now publishes (gnu.org/gcc/libatomic 15.2.0, Linux) and the 2.0.3 mirror now normalises cleanly (vendored npm prebuilts handled); the in-place upload of the 2.2 GB artifact never completes on the registry: three attempts stayed in malware-scan completion past the client budget, the last past the staging TTL (BINARY_UPLOAD_EXPIRED). Needs a look at the registry's scan of very large artifacts (logs on the box)"
     },
     {
       "domain": "elv.sh",
