@@ -9,7 +9,10 @@ export const recipe: Recipe = {
   dependencies: {
     'python.org': '~3.11',
     'ffmpeg.org': '^6.1',
-    'huggingface.co': '^0.19',
+    // pkgx pinned ^0.19, a series the registry never published on any
+    // platform, so no build could resolve it. The CLI's 0.x and 1.x serve the
+    // same role here (fetching models next to whisper's own downloader).
+    'huggingface.co': '>=0.19',
     'pyyaml.org': '^0.2',
   },
   buildDependencies: {

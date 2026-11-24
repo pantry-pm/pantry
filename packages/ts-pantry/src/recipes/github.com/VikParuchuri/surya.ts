@@ -14,7 +14,9 @@ export const recipe: Recipe = {
   dependencies: {
     'pkgx.sh': '>=1',
     linux: {
-      'mesa3d.org': '^23.3',
+      // The registry carries mesa 25 and 26, never 23. Its libraries keep
+      // their sonames (libGL.so.1, libEGL.so.1, libgbm.so.1) across majors.
+      'mesa3d.org': '>=23.3',
       'gnome.org/glib': '^2',
       'mupdf.com': '*',
     },
