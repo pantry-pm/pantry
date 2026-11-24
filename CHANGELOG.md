@@ -1,3 +1,27 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.224...v0.11.225)
+
+## 🐛 Bug Fixes
+
+- **fix-up**: drop broken loader path entries from vendored ELF files ([9a2852b](https://github.com/pantry-pm/pantry/commit/9a2852b)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: 12 batch 5-6 revisions re-audited ([040e0bb](https://github.com/pantry-pm/pantry/commit/040e0bb)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: 50 base builds replaced in place and re-audited clean ([f6564cf](https://github.com/pantry-pm/pantry/commit/f6564cf)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 💚 Continuous Integration
+
+- give zig-tests 35 minutes ([4f66e14](https://github.com/pantry-pm/pantry/commit/4f66e14)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.225 ([4bc59d3](https://github.com/pantry-pm/pantry/commit/4bc59d3)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.223...v0.11.224)
 
 ## 📝 Documentation
