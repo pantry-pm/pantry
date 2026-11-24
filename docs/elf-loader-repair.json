@@ -171,8 +171,9 @@
       "method": "revision",
       "reason": "backward repair of the corrupt 1.9.5 archive on every platform still built (darwin-x86-64 is retired)",
       "inPlace": {
-        "status": "pending",
-        "since": "2026-11-24T04:58:39Z"
+        "status": "verified",
+        "since": "2026-11-24T04:58:39Z",
+        "note": "linux-x86-64, linux-arm64 and darwin-arm64 replaced with valid gzip archives (re-audit clean); darwin-x86-64 is a retired platform the pipeline no longer builds, so its 1.9.5 archive stays corrupt (gzip magic 1f ef bf bd)"
       }
     },
     {
