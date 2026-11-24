@@ -59,12 +59,12 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
   let buildStatus: ReturnType<typeof createBuildStatusFixture>
 
   // Use a fixed token for dashboard auth tests
-  const TEST_TOKEN = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN || 'ABCD1234'
+  const TEST_TOKEN = process.env.PANTRY_TOKEN || 'ABCD1234'
 
   beforeEach(async () => {
-    // Server reads PANTRY_REGISTRY_TOKEN lazily — pin it so dashboard auth
+    // Server reads PANTRY_TOKEN lazily — pin it so dashboard auth
     // accepts `TEST_TOKEN` in these tests.
-    process.env.PANTRY_REGISTRY_TOKEN = TEST_TOKEN
+    process.env.PANTRY_TOKEN = TEST_TOKEN
     port = await getAvailablePort()
     baseUrl = `http://localhost:${port}`
     analytics = new InMemoryAnalytics()

@@ -310,8 +310,8 @@ describe('e2e: auth routes', () => {
 
   beforeEach(async () => {
     // Pin the legacy token so the "legacy REGISTRY_TOKEN still works" test has
-    // a known value to send (the server reads PANTRY_REGISTRY_TOKEN lazily).
-    process.env.PANTRY_REGISTRY_TOKEN = 'ABCD1234'
+    // a known value to send (the server reads PANTRY_TOKEN lazily).
+    process.env.PANTRY_TOKEN = 'ABCD1234'
     port = await getAvailablePort()
     baseUrl = `http://localhost:${port}`
     authStorage = new InMemoryAuthStorage()
@@ -580,7 +580,7 @@ describe('e2e: auth routes', () => {
     })
 
     it('legacy REGISTRY_TOKEN still works for publish', async () => {
-      const LEGACY = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN || 'ABCD1234'
+      const LEGACY = process.env.PANTRY_TOKEN || 'ABCD1234'
       const metadata = { name: `legacy-pkg-${Date.now()}`, version: '1.0.0', publishedAt: new Date().toISOString() }
       const tarball = new Uint8Array([0x1f, 0x8b, 0x08, 0x00])
 

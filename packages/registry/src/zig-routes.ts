@@ -191,7 +191,7 @@ export async function handleZigRoutes(
 
 // Read lazily so token rotation takes effect without importing this module again.
 function getRegistryToken(): string | undefined {
-  return process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+  return process.env.PANTRY_TOKEN
 }
 
 /**

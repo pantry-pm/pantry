@@ -60,7 +60,7 @@ describe('immutable publication verification over HTTP', () => {
   let publisher: string
   let storage: InMemoryAuthStorage
   const saved = new Map<string, string | undefined>()
-  const environment = ['PANTRY_REGISTRY_TOKEN', 'PANTRY_TOKEN', 'BASE_URL', 'REGISTRY_INTERNAL_URL', 'REGISTRY_VISIBILITY', 'STRIPE_SECRET_KEY']
+  const environment = ['PANTRY_TOKEN', 'BASE_URL', 'REGISTRY_INTERNAL_URL', 'REGISTRY_VISIBILITY', 'STRIPE_SECRET_KEY']
 
   async function publish(bytes: Uint8Array<ArrayBuffer>, token = publisher, extra: Record<string, unknown> = {}, verify = true) {
     const body = new FormData()
@@ -74,7 +74,7 @@ describe('immutable publication verification over HTTP', () => {
       saved.set(name, process.env[name])
       delete process.env[name]
     }
-    process.env.PANTRY_REGISTRY_TOKEN = 'publication-verification-fixture-admin'
+    process.env.PANTRY_TOKEN = 'publication-verification-fixture-admin'
     directory = await mkdtemp(join(tmpdir(), 'pantry-publication-verification-'))
     const port = await getAvailablePort()
     origin = `http://localhost:${port}`

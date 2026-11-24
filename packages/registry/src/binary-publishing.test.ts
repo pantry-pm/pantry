@@ -1313,7 +1313,7 @@ describe('binary publication API', () => {
 
   beforeEach(async () => {
     token = `binary-test-${crypto.randomUUID()}`
-    process.env.PANTRY_REGISTRY_TOKEN = token
+    process.env.PANTRY_TOKEN = token
     const port = await getAvailablePort()
     baseUrl = `http://localhost:${port}`
     store = new UrlArtifactStore()
@@ -1339,7 +1339,7 @@ describe('binary publication API', () => {
 
   afterEach(() => {
     server.stop()
-    delete process.env.PANTRY_REGISTRY_TOKEN
+    delete process.env.PANTRY_TOKEN
   })
 
   it('grants only an operator-selected domain and binds completion to the initiating account', async () => {

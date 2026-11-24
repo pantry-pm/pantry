@@ -25,7 +25,7 @@ describe('subscription tiers', () => {
   let registryDirectory: string
   let buildStatus: ReturnType<typeof createBuildStatusFixture>
   const savedEnv: Record<string, string | undefined> = {}
-  const ENV_KEYS = ['PANTRY_REGISTRY_TOKEN', 'PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']
+  const ENV_KEYS = ['PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']
 
   async function account(email: string): Promise<{ token: string, session: string }> {
     await auth.signup(email, email.split('@')[0], 'password123')
@@ -43,7 +43,7 @@ describe('subscription tiers', () => {
 
   beforeEach(async () => {
     for (const key of ENV_KEYS) savedEnv[key] = process.env[key]
-    process.env.PANTRY_REGISTRY_TOKEN = ADMIN_TOKEN
+    process.env.PANTRY_TOKEN = ADMIN_TOKEN
     delete process.env.STRIPE_SECRET_KEY
 
     port = await getAvailablePort()

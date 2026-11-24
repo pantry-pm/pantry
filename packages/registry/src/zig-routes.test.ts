@@ -21,7 +21,7 @@ describe('Zig registry routes', () => {
 
   beforeEach(async () => {
     token = `zig-test-${crypto.randomUUID()}`
-    process.env.PANTRY_REGISTRY_TOKEN = token
+    process.env.PANTRY_TOKEN = token
     port = await getAvailablePort()
     baseUrl = `http://localhost:${port}`
     server = createServer(
@@ -35,7 +35,7 @@ describe('Zig registry routes', () => {
 
   afterEach(() => {
     server.stop()
-    delete process.env.PANTRY_REGISTRY_TOKEN
+    delete process.env.PANTRY_TOKEN
   })
 
   async function publish(version = '1.0.0', authorization = token): Promise<Response> {
@@ -61,7 +61,7 @@ describe('Zig registry routes', () => {
 
   it('uses the current token after runtime rotation', async () => {
     const rotatedToken = `rotated-${crypto.randomUUID()}`
-    process.env.PANTRY_REGISTRY_TOKEN = rotatedToken
+    process.env.PANTRY_TOKEN = rotatedToken
 
     expect((await publish('1.0.0', token)).status).toBe(401)
     expect((await publish('1.0.0', rotatedToken)).status).toBe(201)

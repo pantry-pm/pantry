@@ -43,8 +43,8 @@ describe('immutable package publication', () => {
   })
   test('HTTP races return one creation and one conflict, with the winning bytes still downloadable', async () => {
     const instance = await registry()
-    const previous = process.env.PANTRY_REGISTRY_TOKEN
-    process.env.PANTRY_REGISTRY_TOKEN = 'immutable-publication-test'
+    const previous = process.env.PANTRY_TOKEN
+    process.env.PANTRY_TOKEN = 'immutable-publication-test'
     let arrived = 0
     let release!: () => void
     const gate = new Promise<void>(resolve => { release = resolve })
@@ -72,8 +72,8 @@ describe('immutable package publication', () => {
       expect(await contents(instance, 'racing-package')).toBe(results[0].status === 201 ? 'first' : 'second')
     }
     finally {
-      if (previous === undefined) delete process.env.PANTRY_REGISTRY_TOKEN
-      else process.env.PANTRY_REGISTRY_TOKEN = previous
+      if (previous === undefined) delete process.env.PANTRY_TOKEN
+      else process.env.PANTRY_TOKEN = previous
     }
   })
   test('two racing publishers cannot replace the winning version or its bytes', async () => {

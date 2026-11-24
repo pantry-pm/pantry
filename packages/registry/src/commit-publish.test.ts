@@ -9,8 +9,8 @@ describe('commit publish', () => {
   let port: number
 
   beforeEach(async () => {
-    // Server reads PANTRY_REGISTRY_TOKEN lazily — pin the value tests send.
-    process.env.PANTRY_REGISTRY_TOKEN = process.env.PANTRY_REGISTRY_TOKEN || 'ABCD1234'
+    // Server reads PANTRY_TOKEN lazily — pin the value tests send.
+    process.env.PANTRY_TOKEN = process.env.PANTRY_TOKEN || 'ABCD1234'
     // OS-assigned free port so parallel test files can't collide.
     port = await getAvailablePort()
     baseUrl = `http://localhost:${port}`
@@ -161,7 +161,7 @@ describe('commit publish', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.PANTRY_REGISTRY_TOKEN || 'ABCD1234'}`,
+            'Authorization': `Bearer ${process.env.PANTRY_TOKEN || 'ABCD1234'}`,
           },
           body: JSON.stringify({
             sha: 'eee5555eee5555eee5555eee5555eee5555eee55',
@@ -558,7 +558,7 @@ describe('commit publish', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.PANTRY_REGISTRY_TOKEN || 'ABCD1234'}`,
+            'Authorization': `Bearer ${process.env.PANTRY_TOKEN || 'ABCD1234'}`,
           },
           body: JSON.stringify({
             sha: 'dd10101010101010101010101010101010101010',

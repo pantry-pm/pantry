@@ -40,7 +40,7 @@ describe('paid packages', () => {
   let registry: ReturnType<typeof createLocalRegistry>
   let auth: AuthService
   const savedEnv: Record<string, string | undefined> = {}
-  const ENV_KEYS = ['PANTRY_REGISTRY_TOKEN', 'PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'REGISTRY_VISIBILITY']
+  const ENV_KEYS = ['PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'REGISTRY_VISIBILITY']
 
   /** A publisher and a buyer, each with an account and an API token. */
   let publisherToken: string
@@ -100,7 +100,7 @@ describe('paid packages', () => {
 
   beforeEach(async () => {
     for (const key of ENV_KEYS) savedEnv[key] = process.env[key]
-    process.env.PANTRY_REGISTRY_TOKEN = ADMIN_TOKEN
+    process.env.PANTRY_TOKEN = ADMIN_TOKEN
     process.env.STRIPE_WEBHOOK_SECRET = WEBHOOK_SECRET
     delete process.env.STRIPE_SECRET_KEY // no live Stripe calls from tests
     delete process.env.REGISTRY_VISIBILITY

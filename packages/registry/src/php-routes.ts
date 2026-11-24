@@ -159,7 +159,7 @@ export async function handlePhpRoutes(
 
 // Token for authentication — read lazily so tests can set it in beforeEach.
 function getRegistryToken(): string | undefined {
-  return process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+  return process.env.PANTRY_TOKEN
 }
 
 /**

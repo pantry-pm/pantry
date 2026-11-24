@@ -44,7 +44,6 @@ describe('registry visibility', () => {
     'REGISTRY_SIGNUP_DOMAINS',
     'REGISTRY_PUBLIC_PATHS',
     'REGISTRY_PLUGINS',
-    'PANTRY_REGISTRY_TOKEN',
     'PANTRY_TOKEN',
   ]
 
@@ -72,7 +71,7 @@ describe('registry visibility', () => {
   beforeEach(async () => {
     for (const key of ENV_KEYS) savedEnv[key] = process.env[key]
     for (const key of ENV_KEYS) delete process.env[key]
-    process.env.PANTRY_REGISTRY_TOKEN = ADMIN_TOKEN
+    process.env.PANTRY_TOKEN = ADMIN_TOKEN
     resetPlugins()
     setPlugins([])
     await startServer()

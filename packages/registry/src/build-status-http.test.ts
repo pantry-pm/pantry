@@ -18,8 +18,8 @@ const resources: Array<{ server: ReturnType<typeof createServer>, registry: Regi
 let previousToken: string | undefined
 
 beforeEach(() => {
-  previousToken = process.env.PANTRY_REGISTRY_TOKEN
-  process.env.PANTRY_REGISTRY_TOKEN = token
+  previousToken = process.env.PANTRY_TOKEN
+  process.env.PANTRY_TOKEN = token
 })
 
 afterEach(async () => {
@@ -33,8 +33,8 @@ afterEach(async () => {
     }
   }
   finally {
-    if (previousToken === undefined) delete process.env.PANTRY_REGISTRY_TOKEN
-    else process.env.PANTRY_REGISTRY_TOKEN = previousToken
+    if (previousToken === undefined) delete process.env.PANTRY_TOKEN
+    else process.env.PANTRY_TOKEN = previousToken
   }
 })
 

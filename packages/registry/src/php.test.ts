@@ -243,11 +243,11 @@ describe('PHP routes (HTTP)', () => {
   let baseUrl: string
   let server: ReturnType<typeof import('./server').createServer>
 
-  const TEST_TOKEN = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN || 'ABCD1234'
+  const TEST_TOKEN = process.env.PANTRY_TOKEN || 'ABCD1234'
 
   beforeEach(async () => {
-    // Server reads PANTRY_REGISTRY_TOKEN lazily — pin the value tests send.
-    process.env.PANTRY_REGISTRY_TOKEN = TEST_TOKEN
+    // Server reads PANTRY_TOKEN lazily — pin the value tests send.
+    process.env.PANTRY_TOKEN = TEST_TOKEN
     const { createServer } = await import('./server')
     const { createLocalRegistry } = await import('./registry')
     const { InMemoryAnalytics } = await import('./analytics')

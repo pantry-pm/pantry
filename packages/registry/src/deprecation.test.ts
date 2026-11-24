@@ -71,7 +71,7 @@ describe('package deprecation', () => {
   let auth: AuthService
   let authStorage: InMemoryAuthStorage
   const savedEnv: Record<string, string | undefined> = {}
-  const ENV_KEYS = ['PANTRY_REGISTRY_TOKEN', 'PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'REGISTRY_VISIBILITY', 'BASE_URL']
+  const ENV_KEYS = ['PANTRY_TOKEN', 'STRIPE_SECRET_KEY', 'REGISTRY_VISIBILITY', 'BASE_URL']
 
   let ownerToken: string
   let ownerReadToken: string
@@ -117,8 +117,7 @@ describe('package deprecation', () => {
 
   beforeEach(async () => {
     for (const key of ENV_KEYS) savedEnv[key] = process.env[key]
-    process.env.PANTRY_REGISTRY_TOKEN = ADMIN_TOKEN
-    delete process.env.PANTRY_TOKEN
+    process.env.PANTRY_TOKEN = ADMIN_TOKEN
     delete process.env.STRIPE_SECRET_KEY
     delete process.env.REGISTRY_VISIBILITY
     delete process.env.BASE_URL

@@ -70,8 +70,8 @@ export async function publish(targetDir: string = process.cwd()): Promise<void> 
   if (!manifest.name) throw new Error('package.json is missing "name"')
   if (!manifest.version) throw new Error('package.json is missing "version"')
 
-  const token = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
-  if (!token) throw new Error('PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN is required')
+  const token = process.env.PANTRY_TOKEN
+  if (!token) throw new Error('PANTRY_TOKEN is required')
   const registryUrl = (process.env.PANTRY_REGISTRY_URL || process.env.BASE_URL || 'https://registry.pantry.dev').replace(/\/+$/, '')
 
   console.log(`Publishing ${manifest.name}@${manifest.version} through ${registryUrl}`)

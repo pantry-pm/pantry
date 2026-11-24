@@ -2309,10 +2309,10 @@ async function handleAnalyticsEvent(
 // Read lazily at request time — tests mutate process.env in beforeEach, and a
 // module-load-time snapshot would lock in `undefined` before the env is set.
 function getRegistryToken(): string | undefined {
-  return process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+  return process.env.PANTRY_TOKEN
 }
 if (!getRegistryToken()) {
-  console.warn('WARNING: PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN must be set — publish/admin endpoints will reject all requests')
+  console.warn('WARNING: PANTRY_TOKEN must be set — publish/admin endpoints will reject all requests')
 }
 
 /** Reference to the AuthService (set by createServer, used by validateToken) */
@@ -2349,11 +2349,11 @@ async function validateToken(authHeader: string | null): Promise<{ valid: boolea
 
   // Fall back to legacy admin token (constant-time comparison to prevent timing attacks).
   // Distinguish "server isn't configured to accept publishes" from "token mismatch" —
-  // the former is an operator misconfiguration (e.g. PANTRY_REGISTRY_TOKEN not set in the
+  // the former is an operator misconfiguration (e.g. PANTRY_TOKEN not set in the
   // service env after a server/host migration) and was previously indistinguishable from
   // a bad client token, which made it very hard to diagnose.
   if (!registryToken) {
-    return { valid: false, error: 'Registry has no publish token configured — set PANTRY_REGISTRY_TOKEN in the registry service environment' }
+    return { valid: false, error: 'Registry has no publish token configured — set PANTRY_TOKEN in the registry service environment' }
   }
   const crypto = require('node:crypto')
   const maxLen = Math.max(token.length, registryToken.length)
@@ -3632,7 +3632,7 @@ async function handleAdminRoutes(
 
   if (!(await isAdminRequest(req))) {
     return Response.json(
-      { error: 'Admin authentication required', hint: 'Send the registry token: Authorization: Bearer $PANTRY_REGISTRY_TOKEN' },
+      { error: 'Admin authentication required', hint: 'Send the registry token: Authorization: Bearer $PANTRY_TOKEN' },
       { status: 401, headers: corsHeaders },
     )
   }
@@ -6488,7 +6488,7 @@ async function handleBinaryProxy(
  */
 // Read lazily (see getRegistryToken rationale above).
 function getDashboardToken(): string | undefined {
-  return process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+  return process.env.PANTRY_TOKEN
 }
 
 function constantTimeEquals(a: string, b: string): boolean {
