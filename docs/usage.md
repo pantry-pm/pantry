@@ -872,7 +872,7 @@ registry already holds is skipped, so a rerun after a failure publishes only
 what is still missing.
 
 Publishing needs a token with publish rights to the names
-(`PANTRY_REGISTRY_TOKEN`, or `pantry token set`). The registry has no OIDC
+(`PANTRY_TOKEN`, or `pantry token set`). The registry has no OIDC
 exchange yet.
 
 ### Installing Pantry-published packages with Bun or npm
