@@ -15,8 +15,8 @@
 
 import { BinaryPublishError, type BinaryArtifactPublisher } from './binary-publishing'
 import { createHash } from 'node:crypto'
-import { execSync } from 'node:child_process'
-import { createReadStream, createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { createReadStream, createWriteStream } from 'node:fs'
+import { mkdir, mkdtemp, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -223,6 +223,35 @@ export async function augmentMetadataWithPkgx(
 }
 
 // ── lazy materialization ─────────────────────────────────────────────────────
+
+/**
+ * Run `tar` without blocking the event loop.
+ *
+ * This used to be `execSync`. Unpacking a pkgx .tar.xz and repacking it as
+ * .tar.gz takes from seconds to minutes for a large package, and a synchronous
+ * child process holds the whole registry for that long: every other request,
+ * `/health` and every unrelated binary redirect included, waits behind one
+ * install of a version that has not been materialized yet. The argument vector
+ * also removes the shell, so a path derived from a package name is never
+ * interpreted by one.
+ */
+export async function runTar(args: string[]): Promise<void> {
+  const proc = Bun.spawn(['tar', ...args], { stdin: 'ignore', stdout: 'ignore', stderr: 'pipe' })
+  const [code, stderr] = await Promise.all([proc.exited, new Response(proc.stderr).text()])
+  if (code !== 0)
+    throw new Error(`tar ${args[0]} exited ${code}: ${stderr.trim().slice(0, 500)}`)
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path)
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
 const _inflight = new Map<string, Promise<MaterializeResult | null>>()
 
 async function sha256File(path: string): Promise<string> {
@@ -256,7 +285,7 @@ export async function materializeFromPkgx(
       return null
     const safe = domain.replace(/\//g, '-')
     const tarballKey = tarballKeyFor(domain, version, platform)
-    const work = mkdtempSync(join(tmpdir(), `pkgx-${safe}-`))
+    const work = await mkdtemp(join(tmpdir(), `pkgx-${safe}-`))
     try {
       const xzPath = join(work, 'pkg.tar.xz')
       const res = await fetch(url, { signal: AbortSignal.timeout(120000) })
@@ -269,23 +298,23 @@ export async function materializeFromPkgx(
         createWriteStream(xzPath),
       )
       const exDir = join(work, 'ex')
-      mkdirSync(exDir, { recursive: true })
-      execSync(`tar -xJf "${xzPath}" -C "${exDir}"`, { stdio: 'pipe' })
+      await mkdir(exDir, { recursive: true })
+      await runTar(['-xJf', xzPath, '-C', exDir])
 
       // pkgx tarballs nest under <domain>/v<version>/ — flatten that prefix.
       let root = join(exDir, domain, `v${version}`)
-      if (!existsSync(root)) {
+      if (!await pathExists(root)) {
         const domDir = join(exDir, domain)
-        const vs = existsSync(domDir) ? readdirSync(domDir).filter(d => d.startsWith('v')) : []
+        const vs = await pathExists(domDir) ? (await readdir(domDir)).filter(d => d.startsWith('v')) : []
         if (vs.length === 1)
           root = join(domDir, vs[0])
       }
-      if (!existsSync(root))
+      if (!await pathExists(root))
         throw new Error('pkgx archive is missing its package directory')
 
       const gzPath = join(work, 'out.tar.gz')
-      execSync(`tar -czf "${gzPath}" -C "${root}" .`, { stdio: 'pipe' })
-      const size = statSync(gzPath).size
+      await runTar(['-czf', gzPath, '-C', root, '.'])
+      const size = (await stat(gzPath)).size
       const sha256 = await sha256File(gzPath)
       const initiated = publisher.initiate({
         domain,
@@ -322,8 +351,7 @@ export async function materializeFromPkgx(
       throw err
     }
     finally {
-      try { rmSync(work, { recursive: true, force: true }) }
-      catch { /* best-effort */ }
+      await rm(work, { recursive: true, force: true }).catch(() => { /* best-effort */ })
     }
   })()
 
