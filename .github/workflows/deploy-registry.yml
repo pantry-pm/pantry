@@ -366,6 +366,15 @@ jobs:
             systemctl enable --now systemd-tmpfiles-clean.timer
             set_env PANTRY_HTTP_IDLE_TIMEOUT_SECONDS 255
             set_env PANTRY_EGRESS_BUDGET_TB "$EGRESS_BUDGET_TB"
+            # The publish token has one name, PANTRY_TOKEN. Move a box still
+            # holding it under the retired key across, keeping the value the
+            # running server uses today. One-time: removed once the box moved.
+            OLD_TOKEN=$(sed -n 's/^PANTRY_REGISTRY_TOKEN=//p' "$ENV_FILE" | tail -n 1)
+            if [ -n "$OLD_TOKEN" ]; then
+              set_env PANTRY_TOKEN "$OLD_TOKEN"
+            fi
+            sed -i '/^PANTRY_REGISTRY_TOKEN=/d' "$ENV_FILE"
+            unset OLD_TOKEN
             if ! grep -q '^PANTRY_BINARY_STAGING_SECRET=' "$ENV_FILE"; then
               command -v openssl >/dev/null 2>&1 || {
                 echo "openssl is required to generate the binary staging secret" >&2
@@ -494,9 +503,9 @@ jobs:
             # End-to-end production rehearsal: clamd must detect EICAR through
             # the Registry publish route, and the API must reject it before any
             # package metadata or installable artifact can be written.
-            REGISTRY_TOKEN=$(sed -n 's/^PANTRY_REGISTRY_TOKEN=//p' "$ENV_FILE" | tail -n 1)
+            REGISTRY_TOKEN=$(sed -n 's/^PANTRY_TOKEN=//p' "$ENV_FILE" | tail -n 1)
             [ -n "$REGISTRY_TOKEN" ] || {
-              echo "PANTRY_REGISTRY_TOKEN is required for the malware rehearsal" >&2
+              echo "PANTRY_TOKEN is required for the malware rehearsal" >&2
               exit 1
             }
             REHEARSAL_DIR=$(mktemp -d)
