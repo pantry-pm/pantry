@@ -104,6 +104,18 @@ interface CompletionState {
   promise: Promise<BinaryPublishCompleted>
   /** Unset while running. */
   settledAt: number | undefined
+  /** Settled without a verdict the next attempt would repeat (scanner busy or down, a storage error). */
+  retryable?: boolean
+}
+
+/**
+ * An outcome another attempt can change: the scanner was busy, down or backing
+ * off, or a storage call failed. Verdicts (blocked, review, a size or digest
+ * mismatch, a coverage limit) are final.
+ */
+export function isRetryableCompletionFailure(error: unknown): boolean {
+  if (error instanceof BinaryPublishError) return error.status === 503 || error.status === 425
+  return true
 }
 // A retained whole-archive scan may consume the full 30-minute ClamAV
 // MaxScanTime before coverage-limit fallback downloads the exact object again.
@@ -729,12 +741,18 @@ export class BinaryArtifactPublisher {
     if (claim.publisher && publisher !== '_admin' && claim.publisher !== publisher)
       throw new BinaryPublishError('Upload belongs to another publisher', 403, 'BINARY_UPLOAD_OWNER_MISMATCH')
 
-    // Consulted BEFORE any object lookup. A completion that already ran
+    // Consulted BEFORE any object lookup. A completion that reached a verdict
     // deleted both the staging and sealed objects on its way out, so an
     // object-first poll reports BINARY_STAGING_NOT_FOUND and the verdict it
     // was polling for is lost - a blocked artifact would read as a missing
     // upload. The recorded outcome is authoritative whatever the store holds.
     this.pruneSettledCompletions()
+    // A completion that settled without a verdict (the scanner was busy or
+    // down) is not the answer to this upload: returning it until the entry
+    // aged out kept a publisher told "retry" from ever being retried.
+    const settledRetryable = this.completing.get(uploadId)
+    if (settledRetryable?.settledAt !== undefined && settledRetryable.retryable)
+      this.completing.delete(uploadId)
     const running = this.completing.get(uploadId)
     if (running) {
       // Answer a poll at once: the result if it is ready, otherwise "wait".
@@ -746,10 +764,14 @@ export class BinaryArtifactPublisher {
 
     // Past this point we would be starting or resuming work, which an expired
     // claim may not authorize.
-    if (claim.expiresAt < this.now())
-      throw new BinaryPublishError('Binary staging upload has expired', 410, 'BINARY_UPLOAD_EXPIRED')
-
     const sealedKey = claim.stagingKey.replace(`${STAGING_PREFIX}/`, '.pantry-staging/sealed/')
+    if (claim.expiresAt < this.now()) {
+      // Bytes kept for resumption after a retryable failure go with the claim.
+      await this.store.deleteObject(claim.stagingKey).catch(() => {})
+      await this.store.deleteObject(sealedKey).catch(() => {})
+      throw new BinaryPublishError('Binary staging upload has expired', 410, 'BINARY_UPLOAD_EXPIRED')
+    }
+
     let stagingExists = true
     try {
       const head = await this.store.headObject(claim.stagingKey)
@@ -831,7 +853,10 @@ export class BinaryArtifactPublisher {
   ): CompletionState {
 
     const state: CompletionState = { promise: undefined as never, settledAt: undefined }
-    state.promise = run().finally(() => {
+    state.promise = run().catch((error: unknown) => {
+      state.retryable = isRetryableCompletionFailure(error)
+      throw error
+    }).finally(() => {
       state.settledAt = Date.now()
     })
     // Nothing may await this promise before the next poll arrives, and an
@@ -935,6 +960,7 @@ export class BinaryArtifactPublisher {
     publisher?: string,
     surface: Extract<PublishSurface, 'binary' | 'pkgx'> = 'binary',
   ): Promise<BinaryPublishCompleted> {
+    let retainForRetry = false
     try {
       // Seal the object before scanning. The presigned URL can write only the
       // original staging key, so a retry/overwrite cannot race the scan and the
@@ -1074,12 +1100,23 @@ export class BinaryArtifactPublisher {
       await this.options.onPublished?.(completed)
       return completed
     }
+    catch (error) {
+      retainForRetry = isRetryableCompletionFailure(error)
+      throw error
+    }
     finally {
       // The map entry is NOT dropped here. It holds the outcome this upload's
       // next poll will read; pruneSettledCompletions retires it once the
       // client's own deadline has passed.
-      await this.store.deleteObject(claim.stagingKey).catch(() => {})
-      await this.store.deleteObject(sealedKey).catch(() => {})
+      //
+      // Without a verdict the bytes stay (staging and sealed copies are never
+      // served), so the publisher's retry resumes from them. Deleting it here while answering
+      // "retry" (503) left every retry with BINARY_STAGING_NOT_FOUND until the
+      // client's hour-long deadline: rockdaboot.github.io/libpsl@0.21.5.1.
+      if (!retainForRetry) {
+        await this.store.deleteObject(claim.stagingKey).catch(() => {})
+        await this.store.deleteObject(sealedKey).catch(() => {})
+      }
     }
   }
 

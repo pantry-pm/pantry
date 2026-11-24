@@ -115,7 +115,7 @@ class TestScanner implements MalwareScanner {
   readonly required = true
   contexts: MalwareScanContext[] = []
 
-  constructor(private verdict: MalwareScanResult['verdict'] = 'clean') {}
+  constructor(public verdict: MalwareScanResult['verdict'] = 'clean') {}
 
   async scan(data: ArrayBuffer, context: MalwareScanContext): Promise<MalwareScanResult> {
     this.contexts.push(context)
@@ -373,7 +373,7 @@ describe('binary scan-before-promote publisher', () => {
     )).toHaveLength(2)
   })
 
-  it('fails closed and cleans staging when the scanner is unavailable', async () => {
+  it('fails closed without publishing, and keeps the bytes for a retry, when the scanner is unavailable', async () => {
     const store = new MemoryArtifactStore()
     const publisher = new BinaryArtifactPublisher(store, new TestScanner('error'), {
       tokenSecret: 'test-secret-that-is-long-enough',
@@ -385,7 +385,56 @@ describe('binary scan-before-promote publisher', () => {
       code: 'MALWARE_SCAN_UNAVAILABLE',
       status: 503,
     })
-    expect(store.files.size).toBe(0)
+    // Nothing public: only the unserved staging area holds the upload.
+    expect([...store.files.keys()].every(key => key.startsWith('.pantry-staging/'))).toBe(true)
+  })
+
+  it('promotes the same upload when a retry follows an unavailable scanner', async () => {
+    // rockdaboot.github.io/libpsl@0.21.5.1: the first completion answered 503
+    // and deleted the bytes, then the cached 503 was replayed until it aged
+    // out, and every retry after that read BINARY_STAGING_NOT_FOUND.
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner('error')
+    let now = Date.now()
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+      stagingTtlSeconds: 3 * 60 * 60,
+      now: () => now,
+    })
+    const bytes = Buffer.from('retried artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+    await expect(publisher.complete(initiated.uploadId)).rejects.toMatchObject({ code: 'MALWARE_SCAN_UNAVAILABLE' })
+    // Inside the scan backoff: still "retry", never "not found".
+    await expect(publisher.complete(initiated.uploadId)).rejects.toMatchObject({ code: 'MALWARE_SCAN_UNAVAILABLE' })
+    expect(scanner.contexts.length).toBe(1)
+
+    now += 60 * 60 * 1000
+    scanner.verdict = 'clean'
+    const completed = await publisher.complete(initiated.uploadId)
+    expect(completed.scan.verdict).toBe('clean')
+    expect(Object.values(completed.platforms).map(platform => platform.sha256)).toContain(createHash('sha256').update(bytes).digest('hex'))
+    expect([...store.files.keys()].some(key => key.startsWith('.pantry-staging/'))).toBe(false)
+    // A later poll reads the recorded success, not a missing upload.
+    await expect(publisher.complete(initiated.uploadId)).resolves.toMatchObject({ version: completed.version })
+  })
+
+  it('keeps a final verdict cached and cleans staging after a block', async () => {
+    const store = new MemoryArtifactStore()
+    const scanner = new TestScanner('blocked')
+    const publisher = new BinaryArtifactPublisher(store, scanner, {
+      tokenSecret: 'test-secret-that-is-long-enough',
+    })
+    const bytes = Buffer.from('blocked artifact')
+    const initiated = publisher.initiate(request(bytes))
+    await store.putObject(store.lastUploadKey, bytes, 'application/gzip')
+    const first = await publisher.complete(initiated.uploadId).catch((error: unknown) => error)
+    expect(first).toBeInstanceOf(BinaryPublishError)
+    expect([...store.files.keys()].some(key => key.startsWith('.pantry-staging/'))).toBe(false)
+    scanner.verdict = 'clean'
+    const again = await publisher.complete(initiated.uploadId).catch((error: unknown) => error)
+    expect((again as BinaryPublishError).code).toBe((first as BinaryPublishError).code)
+    expect(scanner.contexts.length).toBe(1)
   })
 
   it('rejects size, digest, token tampering, and expired uploads', async () => {
