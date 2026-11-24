@@ -1,3 +1,4 @@
+import type { InstallManifest } from '../install-manifest'
 import type {
   CommitPublish,
   MetadataStorage,
@@ -56,11 +57,20 @@ export class InMemoryMetadataStorage implements MetadataStorage {
       contentPolicy: versionInfo.contentPolicy,
       disclosure: versionInfo.disclosure,
       malwareScan: versionInfo.malwareScan,
+      ...versionInfo.install,
+      install: versionInfo.install,
     }
   }
 
   async putPackage(record: PackageRecord): Promise<void> {
     this.packages.set(record.name, record)
+    this.onMutate()
+  }
+
+  async setVersionInstall(name: string, version: string, install: InstallManifest): Promise<void> {
+    const versionInfo = this.packages.get(name)?.versions[version]
+    if (!versionInfo) return
+    versionInfo.install = install
     this.onMutate()
   }
 
@@ -98,6 +108,7 @@ export class InMemoryMetadataStorage implements MetadataStorage {
       contentPolicy: metadata.contentPolicy,
       disclosure: metadata.disclosure,
       malwareScan: metadata.malwareScan,
+      install: metadata.install,
     }
 
     // Stable beats prerelease, then newest wins (see version-precedence.ts)

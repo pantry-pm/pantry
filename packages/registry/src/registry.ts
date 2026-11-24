@@ -1,3 +1,4 @@
+import { packagedInstallManifest } from './install-manifest'
 import type {
   CommitPublish,
   CommitPublishSummary,
@@ -119,7 +120,7 @@ export class Registry {
     // First check our registry
     const pkg = await this.metadataStorage.getPackage(name)
     const metadata = version
-      ? await this.metadataStorage.getPackageVersion(name, version)
+      ? await this.getStoredVersion(name, version)
       : pkg && await this.getLatestVersion(name, pkg)
 
     if (metadata) {
@@ -147,7 +148,32 @@ export class Registry {
     if (isPrereleaseVersion(latest))
       latest = pickLatestVersion(await this.metadataStorage.listVersions(name)) || latest
 
-    return this.metadataStorage.getPackageVersion(name, latest)
+    return this.getStoredVersion(name, latest)
+  }
+
+  /**
+   * A version Pantry holds, with its install fields (dependencies, bins,
+   * platform constraints). Never falls back to npm.
+   *
+   * A version recorded before those fields were kept is filled in from the
+   * `package.json` in its tarball, once: the result is stored, so the next
+   * read is a plain lookup. Should the tarball be unreadable, the version is
+   * served as stored rather than failing the read.
+   */
+  async getStoredVersion(name: string, version: string): Promise<PackageMetadata | null> {
+    const metadata = await this.metadataStorage.getPackageVersion(name, version)
+    if (!metadata || metadata.install !== undefined) return metadata
+    try {
+      const tarball = await this.downloadTarball(name, version, { recordDownload: false, allowFallback: false })
+      const install = tarball ? packagedInstallManifest(tarball, name, version) : null
+      if (!install) return metadata
+      await this.metadataStorage.setVersionInstall(name, version, install)
+      return { ...metadata, ...install, install }
+    }
+    catch (error) {
+      console.warn(`Could not read install fields for ${name}@${version}: ${(error as Error).message}`)
+      return metadata
+    }
   }
 
   /**
@@ -312,6 +338,9 @@ export class Registry {
     // Store metadata
     await this.metadataStorage.putVersion(metadata.name, metadata.version, {
       ...metadata,
+      // From the published bytes, not the request: the package.json in the
+      // tarball is what an installer extracts.
+      install: packagedInstallManifest(tarball, metadata.name, metadata.version) ?? {},
       tarballUrl,
       checksum,
       publishedAt: new Date().toISOString(),

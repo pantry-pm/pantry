@@ -1,3 +1,4 @@
+import type { InstallManifest } from './install-manifest'
 import type { DisclosureMetadata, MalwareScanResult } from './malware-scanning'
 
 /**
@@ -32,6 +33,13 @@ export interface PackageMetadata {
    * document is served, never stored with the version.
    */
   deprecated?: string
+  /**
+   * The version's install fields as recorded (`install-manifest.ts`), also
+   * spread onto this object when it is read. Absent on a version recorded
+   * before install fields were kept; the registry fills it in from the
+   * tarball.
+   */
+  install?: InstallManifest
 }
 
 /**
@@ -43,6 +51,8 @@ export interface PackageVersion {
   checksum: string
   publishedAt: string
   size: number
+  /** Dependencies, bins and platform constraints (`install-manifest.ts`). */
+  install?: InstallManifest
   contentPolicy?: unknown
   disclosure?: DisclosureMetadata
   malwareScan?: MalwareScanResult
@@ -468,6 +478,8 @@ export interface MetadataStorage {
    * same write, so a package published private is never briefly public.
    */
   putVersion(name: string, version: string, metadata: PackageMetadata, options?: { ifAbsent?: boolean, settingsIfNew?: PackagePublisherSettings }): Promise<void>
+  /** Record the install fields of a version stored before they were kept. */
+  setVersionInstall(name: string, version: string, install: InstallManifest): Promise<void>
   search(query: string, limit?: number): Promise<SearchResult[]>
   listVersions(name: string): Promise<string[]>
   incrementDownloads(name: string, version: string): Promise<void>

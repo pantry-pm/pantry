@@ -24,6 +24,19 @@ import type {
 import { compareVersions, preferAsLatest } from '../version-precedence'
 import { DynamoDBClient } from './dynamodb-client'
 import { PackageVersionExistsError } from '../publication'
+import type { InstallManifest } from '../install-manifest'
+
+/** A stored `install` attribute back as an object; undefined when never recorded. */
+function installOf(stored: unknown): InstallManifest | undefined {
+  if (typeof stored !== 'string') return undefined
+  try {
+    const parsed = JSON.parse(stored)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as InstallManifest : undefined
+  }
+  catch {
+    return undefined
+  }
+}
 
 /**
  * Build a bounded searchText field: dedupe keywords, cap array + total length
@@ -82,6 +95,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
         contentPolicy: versionData.contentPolicy,
         disclosure: versionData.disclosure,
         malwareScan: versionData.malwareScan,
+        install: installOf(versionData.install),
       }
     }
 
@@ -149,7 +163,21 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
       contentPolicy: versionData.contentPolicy,
       disclosure: versionData.disclosure,
       malwareScan: versionData.malwareScan,
+      ...installOf(versionData.install),
+      install: installOf(versionData.install),
     }
+  }
+
+  async setVersionInstall(name: string, version: string, install: InstallManifest): Promise<void> {
+    await this.db.updateItem({
+      TableName: this.tableName,
+      Key: { PK: { S: `PACKAGE#${name}` }, SK: { S: `VERSION#${version}` } },
+      UpdateExpression: 'SET install = :install',
+      ConditionExpression: 'attribute_exists(PK)',
+      ExpressionAttributeValues: { ':install': { S: JSON.stringify(install) } },
+    } as any).catch((error: { awsType?: string }) => {
+      if (!String(error?.awsType ?? '').includes('ConditionalCheckFailed')) throw error
+    })
   }
 
   async putPackage(record: PackageRecord): Promise<void> {
@@ -190,6 +218,7 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
           contentPolicy: versionInfo.contentPolicy,
           disclosure: versionInfo.disclosure,
           malwareScan: versionInfo.malwareScan,
+          install: versionInfo.install ? JSON.stringify(versionInfo.install) : undefined,
         }),
       })
     }
@@ -262,6 +291,8 @@ export class DynamoDBMetadataStorage implements MetadataStorage {
           contentPolicy: metadata.contentPolicy,
           disclosure: metadata.disclosure,
           malwareScan: metadata.malwareScan,
+          // A JSON string: one attribute, whatever shape the manifest has.
+          install: metadata.install ? JSON.stringify(metadata.install) : undefined,
         }),
       })
     }

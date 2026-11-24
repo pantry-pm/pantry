@@ -2657,7 +2657,10 @@ async function handleNpmPackument(
     signal: AbortSignal.timeout(20_000),
   }).catch(() => null)
 
-  const packument = await buildPackument(registry.metadata, name, baseUrl)
+  const packument = await buildPackument({
+    listVersions: versionName => registry.metadata.listVersions(versionName),
+    getPackageVersion: (versionName, versionId) => registry.getStoredVersion(versionName, versionId),
+  }, name, baseUrl)
   if (packument) {
     // Versions only npm has stay installable through this endpoint (see
     // mergeUpstream). A private package is never merged with npm's namesake.
