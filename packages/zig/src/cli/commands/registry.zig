@@ -17,6 +17,7 @@ const publish_ignore = @import("publish_ignore.zig");
 const publish_bins = @import("publish_bins.zig");
 const publish_archive = @import("publish_archive.zig");
 const token_commands = @import("token.zig");
+const package_commands = @import("package.zig");
 const http = std.http;
 
 const CommandResult = common.CommandResult;
@@ -1102,16 +1103,31 @@ fn publishSingleToRegistry(
         }
     }
 
-    // Create tarball
+    // Create tarball. A package.json package is packed exactly as
+    // `pantry publish --npm` packs it, so a version on both registries is the
+    // same bytes; anything else (a pantry.json package) keeps this packer.
     style.print("Creating tarball...\n", .{});
-    const tarball_path = createTarball(allocator, package_dir, name, version, publish_content) catch |err| {
+    const npm_archive: ?package_commands.TarballInfo = if (std.mem.eql(u8, std.fs.path.basename(config_path), "package.json"))
+        package_commands.packNpmArchive(allocator, package_dir, name, version) catch |err| {
+            if (err == error.UnresolvableWorkspaceDependency) {
+                return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
+            }
+            return err;
+        }
+    else
+        null;
+    defer if (npm_archive) |archive| archive.deinit(allocator);
+    const own_tarball: ?[]const u8 = if (npm_archive != null) null else createTarball(allocator, package_dir, name, version, publish_content) catch |err| {
         if (err == error.UnresolvableWorkspaceDependency) {
             return CommandResult.err(allocator, "Error: Could not resolve workspace: protocol ranges (see details above).");
         }
         return err;
     };
-    defer allocator.free(tarball_path);
-    defer io_helper.deleteFile(tarball_path) catch {};
+    defer if (own_tarball) |path| {
+        io_helper.deleteFile(path) catch {};
+        allocator.free(path);
+    };
+    const tarball_path: []const u8 = if (npm_archive) |archive| archive.path else own_tarball.?;
 
     // Check tarball size before reading into memory
     const tarball_stat = io_helper.statFile(tarball_path) catch {

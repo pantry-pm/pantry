@@ -2467,7 +2467,7 @@ fn attemptOIDCPublishUnverified(
 }
 
 /// Info about a created tarball for clean publish output
-const TarballInfo = struct {
+pub const TarballInfo = struct {
     path: []const u8,
     directory: []const u8,
     packed_size: u64,
@@ -2476,7 +2476,7 @@ const TarballInfo = struct {
     shasum: [40]u8,
     integrity: [95]u8,
 
-    fn deinit(self: @This(), allocator: std.mem.Allocator) void {
+    pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
         io_helper.deleteTree(self.directory) catch {};
         allocator.free(self.path);
         allocator.free(self.directory);
@@ -2566,6 +2566,16 @@ fn stageRootMetadata(allocator: std.mem.Allocator, package_dir: []const u8, stag
         defer allocator.free(destination);
         try io_helper.copyFile(source, destination);
     }
+}
+
+/// The archive `pantry publish --npm` uploads for this package, byte for byte.
+///
+/// The Pantry registry path packs with this too, so a version published to
+/// both registries is one artifact with one integrity. With two packers the
+/// copies differed (directory entries, file order), and a lockfile that had
+/// recorded npm's integrity failed its check against Pantry's bytes.
+pub fn packNpmArchive(allocator: std.mem.Allocator, package_dir: []const u8, package_name: []const u8, version: []const u8) !TarballInfo {
+    return createTarball(allocator, package_dir, package_name, version, null);
 }
 
 /// Create tarball for package following npm's `files` array and publish standards
