@@ -21,6 +21,63 @@ export const linuxHostDriverLibraries: RegExp = /^(?:libvulkan\.so\.1|libOpenCL\
 const hash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex')
 const inside = (root: string, path: string) => path === root || path.startsWith(root + sep)
 
+/**
+ * The name a linker resolves `-l<name>` through for a runtime library file:
+ * `libintl.8.dylib` → `libintl.dylib`, `libgettextlib-0.26.dylib` →
+ * `libgettextlib.dylib`, `libz.so.1.3` → `libz.so`.
+ */
+export function linkTimeLibraryName(name: string): string {
+  const elf = /^(lib.+?)\.so(?:\.[\d.]+)?$/.exec(name)
+  if (elf) return `${elf[1]}.so`
+  const macho = /^(lib.+?)(?:[-.]\d[\d.]*)?\.dylib$/.exec(name)
+  if (macho) return `${macho[1]}.dylib`
+  return name
+}
+
+/** The current version in a Mach-O library's LC_ID_DYLIB, or null without one. */
+export function machoCurrentVersion(file: string): string | null {
+  const commands = execFileSync('otool', ['-l', file], { encoding: 'utf8' })
+  return /cmd LC_ID_DYLIB[\s\S]*?current version ([\d.]+)/.exec(commands)?.[1] ?? null
+}
+
+/** The file name in a Mach-O library's install name (LC_ID_DYLIB), or null. */
+export function machoInstallBasename(file: string): string | null {
+  const id = execFileSync('otool', ['-D', file], { encoding: 'utf8' }).trim().split('\n')[1]?.trim()
+  return id ? basename(id) : null
+}
+
+/** Dotted-version comparison as dyld applies it; an unknown version passes. */
+export function versionAtLeast(version: string | null, minimum: string): boolean {
+  if (!version) return true
+  const have = version.split('.').map(Number)
+  const want = minimum.split('.').map(Number)
+  for (let i = 0; i < Math.max(have.length, want.length); i++) {
+    const a = have[i] ?? 0
+    const b = want[i] ?? 0
+    if (a !== b) return a > b
+  }
+  return true
+}
+
+/**
+ * True when `file`'s package ships the link-time name for it, resolving to
+ * this very file: the package is a library a binary can have been linked
+ * against with `-l`. A runtime copy bundled into another package's lib/
+ * carries only the versioned file.
+ */
+export function shipsLinkTimeName(file: string): boolean {
+  const name = basename(file)
+  const linkName = linkTimeLibraryName(name)
+  // An unversioned file is its own link-time name, wherever it was copied.
+  if (linkName === name) return true
+  try {
+    return realpathSync(join(dirname(file), linkName)) === realpathSync(file)
+  }
+  catch {
+    return false
+  }
+}
+
 /** Preserve recipe-owned library data at the same relative path in its new artifact. */
 export function copyRuntimeResources(prefix: string, dependency: RuntimePackage): RuntimeResourceReceipt[] {
   const root = realpathSync(prefix)
@@ -206,6 +263,10 @@ export function bundleRuntimeLibraries(
     if (!lstatSync(file).isSymbolicLink() && isBinary(file)) queue.push(file)
   })
   const visited = new Set<string>()
+  const copiedFrom = new Map<string, string>()
+  // The dependency each bundled copy came from. Its own lib/ holds the closure
+  // it was built and normalized with, so its needs resolve there first.
+  const copiedOwner = new Map<string, RuntimePackage>()
   const missing = new Set<string>()
   const vendoredUnresolved = new Set<string>()
   for (let position = 0; position < queue.length; position++) {
@@ -213,19 +274,27 @@ export function bundleRuntimeLibraries(
     if (visited.has(file)) continue
     visited.add(file)
     options.prepareBinary?.(file)
+    // Mach-O load commands record the compatibility version the client was
+    // linked against; a provider older than that is not the one it linked.
+    const requiredCompatibility = new Map<string, string>()
     const needed = linux
       ? execFileSync(patchelf, ['--print-needed', file], { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
       // Load commands are the indented lines. A universal image prints one
       // unindented `<file> (architecture <arch>):` header per slice, and
       // dropping only the first line read the later headers as the image
       // depending on itself.
-      : [...new Set(execFileSync('otool', ['-L', file], { encoding: 'utf8' }).split('\n').filter(line => /^\s/.test(line)).map(line => line.trim().replace(/\s+\(.*$/, '')).filter(Boolean))]
+      : [...new Set(execFileSync('otool', ['-L', file], { encoding: 'utf8' }).split('\n').filter(line => /^\s/.test(line)).map((line) => {
+          const name = line.trim().replace(/\s+\(.*$/, '')
+          const compatibility = /\(compatibility version ([\d.]+)/.exec(line)?.[1]
+          if (name && compatibility) requiredCompatibility.set(name, compatibility)
+          return name
+        }).filter(Boolean))]
     const ownInstallName = linux ? undefined : execFileSync('otool', ['-D', file], { encoding: 'utf8' }).trim().split('\n')[1]?.trim()
     for (const dependencyName of needed) {
       if (dependencyName === ownInstallName) continue
       if (!linux && (dependencyName.startsWith('/usr/lib/') || dependencyName.startsWith('/System/Library/'))) continue
       const name = basename(dependencyName)
-      const candidates = index.get(name) || []
+      let candidates = index.get(name) || []
       if (candidates.length === 0 && linux && (linuxStandardLibraries.test(name) || linuxHostDriverLibraries.test(name))) continue
       // A vendored binary (an npm prebuilt such as sharp's .node beside its
       // libvips package) finds its siblings through its own $ORIGIN loader
@@ -247,9 +316,40 @@ export function bundleRuntimeLibraries(
         missing.add(`Undeclared or missing runtime library ${dependencyName} required by ${relative(root, file)}`)
         continue
       }
-      const selected = candidates.find(candidate => inside(root, candidate.file)) || candidates[0]
-      if (!inside(root, selected.file) && candidates.some(candidate => hash(candidate.file) !== hash(selected.file)))
-        throw new Error(`Conflicting declared runtime providers for ${name}: ${candidates.map(candidate => `${candidate.dependency?.domain}@${candidate.dependency?.version} (${candidate.file}, sha256 ${hash(candidate.file)})`).join('; ')}`)
+      // Two versions of one library can both be declared (libxml2 2.13.9 for
+      // a pkgx-built dependency beside php's 2.15.4) and both answer to the
+      // link-time name. dyld loads a library only if its current version is
+      // at least the compatibility version the client recorded, so a provider
+      // below it was never the library this binary linked.
+      const required = requiredCompatibility.get(dependencyName)
+      if (!linux && required && candidates.length > 1) {
+        const compatible = candidates.filter(candidate => inside(root, candidate.file) || versionAtLeast(machoCurrentVersion(candidate.file), required))
+        if (compatible.length) candidates = compatible
+      }
+      // A library copied from dependency P needs what P's own install loads
+      // through @loader_path: thrysoee.dk/editline's libedit carries the
+      // libncursesw.6.dylib (with tgetent) it was linked against, while the
+      // separately declared ncurses keeps tgetent in libtinfow.
+      const owner = copiedOwner.get(file)
+      if (owner && candidates.length > 1) {
+        const ownerPrefix = realpathSync(owner.prefix)
+        const own = candidates.filter(candidate => candidate.dependency && realpathSync(candidate.dependency.prefix) === ownerPrefix)
+        if (own.length) candidates = own
+      }
+      let selected = candidates.find(candidate => inside(root, candidate.file)) || candidates[0]
+      if (!inside(root, selected.file) && candidates.some(candidate => hash(candidate.file) !== hash(selected.file))) {
+        // Older artifacts carry runtime copies of other packages' libraries
+        // with no provenance receipt: gnu.org/bison, sed and m4 on darwin each
+        // ship a libintl.8.dylib beside the gettext that owns it. A binary
+        // links a library through its link-time name (-lintl → libintl.dylib),
+        // which only the owning package ships, so when the linkable candidates
+        // agree on one identity that is the library the binary was linked
+        // against. No linkable candidate, or several that differ, still conflict.
+        const owners = candidates.filter(candidate => shipsLinkTimeName(candidate.file))
+        if (!owners.length || owners.some(owner => hash(owner.file) !== hash(owners[0].file)))
+          throw new Error(`Conflicting declared runtime providers for ${name}: ${candidates.map(candidate => `${candidate.dependency?.domain}@${candidate.dependency?.version} (${candidate.file}, sha256 ${hash(candidate.file)})`).join('; ')}`)
+        selected = owners[0]
+      }
       // A vendor runtime can load the same internal library both through its
       // linker and dlopen. Flattening it creates a second identity (notably a
       // second JVM). Honor the recipe's preserved loader layout while still
@@ -258,11 +358,22 @@ export function bundleRuntimeLibraries(
         queue.push(selected.file)
         continue
       }
-      const destination = join(root, 'lib', name)
+      // A Mach-O copy is named after the provider's install name, its ABI
+      // name, so every client that reaches one library (php through the
+      // link-time name libxml2.dylib, libxslt through libxml2.16.dylib) shares
+      // one image instead of loading two copies of it. ELF clients find a
+      // library by its DT_NEEDED name, which is already the soname.
+      const bundledName = !linux && !inside(root, selected.file) ? machoInstallBasename(selected.file) ?? name : name
+      const destination = join(root, 'lib', bundledName)
       mkdirSync(dirname(destination), { recursive: true })
+      const earlier = copiedFrom.get(bundledName)
+      if (earlier && hash(earlier) !== hash(selected.file))
+        throw new Error(`Conflicting declared runtime providers for ${bundledName}: ${earlier} and ${selected.file}`)
       if (!existsSync(destination)) {
         copyFileSync(selected.file, destination)
         chmodSync(destination, 0o755)
+        if (!inside(root, selected.file)) copiedFrom.set(bundledName, selected.file)
+        if (selected.dependency) copiedOwner.set(destination, selected.dependency)
         if (selected.dependency) {
           const identity = `${selected.dependency.domain}@${selected.dependency.version}`
           if (!licenses.has(identity)) licenses.set(identity, preserveLicenses(root, selected.dependency))
@@ -276,15 +387,15 @@ export function bundleRuntimeLibraries(
               if (isBinary(file)) queue.push(file)
             }
           }
-          receipts.push({ name, domain: selected.dependency.domain, version: selected.dependency.version, source: relative(realpathSync(selected.dependency.prefix), selected.file).split(sep).join('/'), sourceSha256: hash(selected.file), licenseFiles: licenses.get(identity)!, resources: resources.get(identity)! })
+          receipts.push({ name: bundledName, domain: selected.dependency.domain, version: selected.dependency.version, source: relative(realpathSync(selected.dependency.prefix), selected.file).split(sep).join('/'), sourceSha256: hash(selected.file), licenseFiles: licenses.get(identity)!, resources: resources.get(identity)! })
         }
       }
-      else if (!inside(root, realpathSync(destination))) throw new Error(`Bundled runtime library escapes artifact: ${name}`)
+      else if (!inside(root, realpathSync(destination))) throw new Error(`Bundled runtime library escapes artifact: ${bundledName}`)
       queue.push(destination)
       if (linux && dependencyName !== name)
         execFileSync(patchelf, ['--replace-needed', dependencyName, name, file], { stdio: 'pipe' })
-      if (!linux && dependencyName !== `@rpath/${name}`)
-        execFileSync('install_name_tool', ['-change', dependencyName, `@rpath/${name}`, file], { stdio: 'pipe' })
+      if (!linux && dependencyName !== `@rpath/${bundledName}`)
+        execFileSync('install_name_tool', ['-change', dependencyName, `@rpath/${bundledName}`, file], { stdio: 'pipe' })
     }
   }
   if (missing.size) throw new Error([...missing].join('; '))
