@@ -32,7 +32,9 @@ export const recipe: Recipe = {
       'libarchive.org': '^3',
     },
     linux: {
-      'mesa3d.org': '^23',
+      // The registry carries mesa 25 and 26, never 23; libGL.so.1 and
+      // libEGL.so.1 keep their sonames across majors.
+      'mesa3d.org': '>=23',
       'freeglut.sourceforge.io': '^3',
       'freedesktop.org/mesa-glu': '^9',
       'x.org/protocol': '>=2022',
