@@ -30,7 +30,12 @@ export const recipe: Recipe = {
       // The library's own configure, with the compiler that is already here:
       // the top-level tree would build a whole GCC first to compile it with.
       'cd libatomic',
-      './configure --prefix="{{prefix}}" --libdir="{{prefix}}/lib" --disable-multilib --disable-static --disable-werror',
+      // GCC's own driver: the build's cc and gcc are clang wrappers, and
+      // libatomic's configure asks the compiler for -print-multi-os-directory,
+      // which clang rejects (then every type probe fails: "no 8-bit type").
+      'GCC=""; IFS=: read -r -a dirs <<< "$PATH"; for dir in "${dirs[@]}"; do case "$dir" in *_cc_wrapper*) continue ;; esac; if [ -x "$dir/gcc" ] && "$dir/gcc" -print-multi-os-directory >/dev/null 2>&1; then GCC="$dir/gcc"; break; fi; done',
+      'test -n "$GCC" || { echo "libatomic needs GCC itself (gnu.org/gcc), not a clang wrapper" >&2; exit 1; }',
+      './configure CC="$GCC" --prefix="{{prefix}}" --libdir="{{prefix}}/lib" --disable-multilib --disable-static --disable-werror',
       'make --jobs {{hw.concurrency}}',
       'make install',
       // GCC installs target libraries under the compiler's multi-OS directory,
