@@ -18,6 +18,7 @@ const registry_versions_mod = @import("registry_versions.zig");
 const bun_lock = @import("../deps/resolution/bun_lock.zig");
 const style = @import("../cli/style.zig");
 const scopes = @import("../registry/scopes.zig");
+const artifact_refresh = @import("artifact_refresh.zig");
 
 const pantryError = errors.pantryError;
 const Paths = core.Paths;
@@ -51,6 +52,10 @@ pub const InstallOptions = struct {
     pantry_registry: bool = false,
     /// Force reinstall even if cached
     force: bool = false,
+    /// The installed copy of exactly this package is a superseded artifact
+    /// (install/artifact_refresh.zig): download it afresh and replace it, as
+    /// `force` would, without forcing every dependency to be reinstalled too.
+    replace_artifact: bool = false,
     /// Verbose output
     verbose: bool = false,
     /// Dry run (don't actually install)
@@ -881,7 +886,7 @@ pub const Installer = struct {
         // time, for packages that were already there (a cached CI service
         // tree spent three minutes re-resolving what it had restored).
         var resolved_locally = false;
-        if (!options.force) {
+        if (!options.force and !options.replace_artifact) {
             if (options.project_root) |project_root| {
                 if (self.installedProjectVersion(project_root, domain, spec.version)) |local| {
                     s3_version_alloc = local;
@@ -998,7 +1003,11 @@ pub const Installer = struct {
         // for already-present deps is cheap.
         if (pkg_info) |info| {
             if (options.verbose) std.debug.print("[verbose:installer] installing sub-dependencies for {s} (count={d})\n", .{ resolved_spec.name, info.dependencies.len });
-            try self.installDependencies(info.dependencies, options);
+            var dependency_options = options;
+            // Only the package being replaced is replaced; its dependencies
+            // are checked as on any install.
+            dependency_options.replace_artifact = false;
+            try self.installDependencies(info.dependencies, dependency_options);
 
             // Re-fix this package's libraries now that its dependencies are on
             // disk: cross-package references (e.g. a Homebrew-built libssh2 that
@@ -1056,6 +1065,8 @@ pub const Installer = struct {
             .install_path = install_path,
             .from_cache = used_cache,
             .install_time_ms = @intCast(end_time - start_time),
+            // The archive this copy was installed from, for pantry.lock.
+            .integrity = if (install_path.len > 0) artifact_refresh.readMarkerIntegrity(self.allocator, install_path) else null,
         };
     }
 
@@ -2631,7 +2642,7 @@ pub const Installer = struct {
         errdefer self.allocator.free(install_dir);
 
         // Check if already installed (lightweight access check, no dir handle)
-        const already_installed = !options.force and blk: {
+        const already_installed = !options.force and !options.replace_artifact and blk: {
             io_helper.accessAbsolute(install_dir, .{}) catch break :blk false;
             break :blk true;
         };
@@ -2725,6 +2736,7 @@ pub const Installer = struct {
         }
 
         try self.materializeZigArchive(&staging, archive_path, archive_ext, url, resolved_version, install_dir, options.verbose);
+        recordArtifact(install_dir, download_options);
 
         // Use the standard symlink creation — same as all other packages.
         // discoverBinaries now finds executables at the package root (e.g. zig binary),
@@ -2765,7 +2777,7 @@ pub const Installer = struct {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
 
-        const from_cache = !options.force and blk: {
+        const from_cache = !options.force and !options.replace_artifact and blk: {
             io_helper.accessAbsolute(global_pkg_dir, .{}) catch break :blk false;
             break :blk true;
         };
@@ -2837,7 +2849,7 @@ pub const Installer = struct {
         if (self.verbose) std.debug.print("[verbose:project] installToProject: {s} @ {s} -> {s}\n", .{ spec.name, spec.version, project_pkg_dir });
 
         // Check if already installed in project (verify actual package structure, not just dir existence)
-        const already_installed = !options.force and
+        const already_installed = !options.force and !options.replace_artifact and
             self.hasPackageStructure(project_pkg_dir) and
             validator.hasUsableDeclaredPrograms(self.allocator, domain, project_pkg_dir);
 
@@ -2857,8 +2869,12 @@ pub const Installer = struct {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         defer self.allocator.free(global_pkg_dir);
 
+        // A global copy of an artifact the registry has since rebuilt (or one
+        // that recorded no artifact at all) must not be copied over a fresh
+        // download of the current one.
         const has_global = self.hasPackageStructure(global_pkg_dir) and
             validator.hasUsableDeclaredPrograms(self.allocator, domain, global_pkg_dir) and
+            artifact_refresh.copyMatches(artifact_refresh.readMarker(global_pkg_dir), expectedArtifact(options)) and
             verified_staging.canMaterializeTree(self.allocator, global_pkg_dir);
 
         if (has_global) {
@@ -3001,9 +3017,19 @@ pub const Installer = struct {
                     }
                     break :blk_cache null;
                 };
-                if (cached_meta) |meta| {
+                if (cached_meta) |meta| cached: {
                     if (io_helper.readFileAlloc(self.allocator, meta.cache_path, 512 * 1024 * 1024)) |cached_bytes| {
                         defer self.allocator.free(cached_bytes);
+                        // The cache is keyed by domain@version, and the
+                        // registry can replace the artifact under the same
+                        // version. Only the archive it serves now is used.
+                        if (options.native_archive) |identity| {
+                            if (!artifact_refresh.archiveMatches(cached_bytes, identity.sha256, identity.size)) {
+                                io_helper.deleteFile(meta.cache_path) catch {};
+                                if (self.verbose) std.debug.print("[verbose:project] cached archive for {s} @ {s} is not the registry's current artifact; downloading\n", .{ domain, spec.version });
+                                break :cached;
+                            }
+                        }
                         const file = io_helper.cwd().createFile(io_helper.io, temp_archive_path, .{}) catch break :blk false;
                         defer file.close(io_helper.io);
                         io_helper.writeAllToFile(file, cached_bytes) catch break :blk false;
@@ -3125,6 +3151,7 @@ pub const Installer = struct {
             defer self.traceProjectPhase(domain, spec.version, "library-path-repair", "leave");
             try libfixer.fixDirectoryLibraryPathsInTree(self.allocator, project_pkg_dir, tree_root);
         }
+        recordArtifact(project_pkg_dir, options);
 
         // Remove macOS quarantine/provenance xattrs so launchd can run service binaries
         if (comptime @import("builtin").os.tag == .macos) {
@@ -3308,6 +3335,21 @@ pub const Installer = struct {
             try self.installer.downloadAndInstallToProject(self.spec, self.domain, self.install_path, options, null);
         }
     };
+
+    /// The registry's sha256 for the archive this install resolved, if any.
+    fn expectedArtifact(options: InstallOptions) ?artifact_refresh.Digest {
+        return if (options.native_archive) |identity| identity.sha256 else null;
+    }
+
+    /// Record which archive `dir` was installed from. Only an install whose
+    /// download was verified against the registry's identity knows it; any
+    /// other leaves no marker, which reads as "unknown" later on.
+    fn recordArtifact(dir: []const u8, options: InstallOptions) void {
+        const identity = options.native_archive orelse return;
+        artifact_refresh.writeMarker(dir, identity.sha256) catch |err| {
+            if (options.verbose) std.debug.print("[verbose:installer] could not record the artifact of {s}: {s}\n", .{ dir, @errorName(err) });
+        };
+    }
 
     fn markLibraryPathsCurrent(allocator: std.mem.Allocator, install_path: []const u8, tree_root: ?[]const u8) void {
         const marker = std.fs.path.join(allocator, &.{ install_path, library_paths_marker }) catch return;
@@ -3639,7 +3681,9 @@ pub const Installer = struct {
         const global_pkg_dir = try self.getGlobalPackageDir(domain, spec.version);
         errdefer self.allocator.free(global_pkg_dir);
 
-        var check_dir = io_helper.cwd().openDir(io_helper.io, global_pkg_dir, .{}) catch |err| blk: {
+        // `force` and a superseded artifact both mean "download it again".
+        const reuse = !options.force and !options.replace_artifact;
+        var check_dir = if (!reuse) null else io_helper.cwd().openDir(io_helper.io, global_pkg_dir, .{}) catch |err| blk: {
             if (err != error.FileNotFound) return err;
             break :blk null;
         };
@@ -3760,6 +3804,7 @@ pub const Installer = struct {
 
         // Fix library paths for macOS (especially for Node.js OpenSSL issue)
         try libfixer.fixDirectoryLibraryPaths(self.allocator, global_pkg_dir);
+        recordArtifact(global_pkg_dir, options);
 
         // Now create symlinks in the environment bin directory
         try self.createEnvSymlinks(domain, spec.version, global_pkg_dir);

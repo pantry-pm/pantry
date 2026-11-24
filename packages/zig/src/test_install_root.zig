@@ -7,6 +7,8 @@ test {
     _ = @import("cli/commands/install/core.zig");
     // Replacing locked or installed builds that a build revision superseded.
     _ = @import("install/build_revisions.zig");
+    // Reinstalling registry binaries whose artifact was rebuilt in place.
+    _ = @import("install/artifact_refresh.zig");
     _ = @import("cli/commands/install/workspace.zig");
     // Scope pinning: private scopes resolve from their Pantry registry only.
     // Rooted here rather than in test_registry_root.zig because reading a

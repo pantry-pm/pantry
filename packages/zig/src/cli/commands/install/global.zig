@@ -8,6 +8,7 @@ const io_helper = @import("../../../io_helper.zig");
 const lib = @import("../../../lib.zig");
 const types = @import("types.zig");
 const style = @import("../../style.zig");
+const artifacts = @import("artifacts.zig");
 
 const cache = lib.cache;
 const install = lib.install;
@@ -146,6 +147,15 @@ fn installGlobalDepsCommandWithOptions(allocator: std.mem.Allocator, user_local:
         specs[i] = .{ .name = dep.name, .version = dep.version };
     }
 
+    // A global copy whose artifact the registry rebuilt in place is replaced
+    // before the install below reuses it (install/artifact_refresh.zig).
+    {
+        const names = try allocator.alloc([]const u8, specs.len);
+        defer allocator.free(names);
+        for (specs, names) |spec, *name| name.* = spec.name;
+        artifacts.refreshGlobal(allocator, &shared_installer, global_dir, names);
+    }
+
     // Allocate results
     const results = try allocator.alloc(GlobalInstallResult, global_deps.len);
     defer {
@@ -277,6 +287,15 @@ fn installPackagesWithScope(allocator: std.mem.Allocator, packages: []const []co
             version = pkg_str[at_pos + 1 ..];
         }
         specs[i] = .{ .name = name, .version = version };
+    }
+
+    // See installGlobalDepsCommandWithOptions. Desktop apps are activated
+    // per user after install, which a replacement here would skip.
+    if (!desktop) {
+        const names = try allocator.alloc([]const u8, specs.len);
+        defer allocator.free(names);
+        for (specs, names) |spec, *name| name.* = spec.name;
+        artifacts.refreshGlobal(allocator, &shared_installer, global_dir, names);
     }
 
     // Allocate results

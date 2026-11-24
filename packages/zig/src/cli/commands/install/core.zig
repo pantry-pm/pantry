@@ -10,6 +10,7 @@ const helpers = @import("helpers.zig");
 const env_deps = @import("env_deps.zig");
 const workspace = @import("workspace.zig");
 const global = @import("global.zig");
+const artifacts = @import("artifacts.zig");
 
 const lockfile_hooks = @import("lockfile_hooks.zig");
 const offline = @import("../../../install/offline.zig");
@@ -216,6 +217,10 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
     var integrity_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     while (pkg_it.next()) |entry| {
         const pkg = entry.value_ptr.*;
+        // A registry binary's integrity is the sha256 of the archive it came
+        // from, not a hash of its directory; install/artifact_refresh.zig
+        // compared it with the registry before this ran.
+        if (pkg.source == .pantry and std.mem.indexOfScalar(u8, pkg.name, '.') != null and pkg.name[0] != '@') continue;
         if (pkg.integrity) |expected_integrity| {
             const pkg_path = std.fmt.bufPrint(&integrity_path_buf, "{s}/{s}/{s}", .{ effective_dir, modules_dir, pkg.name }) catch continue;
             const valid = helpers.verifyPackageIntegrity(allocator, pkg_path, expected_integrity) catch {
@@ -632,6 +637,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
     // the defective build forever: see install/build_revisions.zig.
     if (!options.frozen_lockfile and !offline.isOfflineMode())
         reviseSupersededBuilds(allocator, package_args.items, options);
+
+    // Likewise a tree whose installed artifact the registry rebuilt in place
+    // under the same version: see install/artifact_refresh.zig. This runs
+    // under --frozen-lockfile too, where a lock hash the registry no longer
+    // serves fails the install instead of installing other bytes.
+    if (try artifacts.refreshProject(allocator, options)) |failure| return failure;
 
     // Otherwise, normal install flow
     if (package_args.items.len == 0) {
@@ -1420,11 +1431,20 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                             !lockIntegrityMatches(&lock_file, clean_name, result.integrity))
                             frozen_lockfile_changed = true;
                     } else if (!options.no_save) {
+                        // The same version keeps a recorded integrity when
+                        // this install produced none (a copy that recorded
+                        // no artifact). Copied first: adding the entry frees
+                        // the previous one.
+                        var carried: ?[]const u8 = null;
+                        defer if (carried) |c| allocator.free(c);
                         if (lockfile_hooks.getLockedVersionForPackage(&lock_file, clean_name)) |previous| {
                             if (!std.mem.eql(u8, previous.version, result.version))
-                                style.printLockPinMoved(clean_name, previous.version, result.version, false);
+                                style.printLockPinMoved(clean_name, previous.version, result.version, false)
+                            else if (result.integrity == null) if (previous.integrity) |i| {
+                                carried = try allocator.dupe(u8, i);
+                            };
                         }
-                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, result.integrity);
+                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, result.integrity orelse carried);
                     }
                 }
                 // Nothing of it is on disk to record below.
@@ -2195,6 +2215,23 @@ fn mergeCompanionResult(allocator: std.mem.Allocator, final_result: *types.Comma
     }
 }
 
+/// A committed lock written before registry binaries recorded their artifact
+/// hash accepts the first one, as `lockIntegrityMatches` does for the
+/// single-project path: a frozen install over such a lock is not "out of
+/// date" merely because this install knows the hash. Drops those hashes from
+/// `generated` before the two are compared.
+fn acceptFirstArtifactHashes(allocator: std.mem.Allocator, committed: *const lib.packages.Lockfile, generated: *lib.packages.Lockfile) void {
+    var it = generated.packages.iterator();
+    while (it.next()) |entry| {
+        const pkg = entry.value_ptr;
+        if (pkg.source != .pantry or pkg.integrity == null) continue;
+        const locked = committed.packages.get(entry.key_ptr.*) orelse continue;
+        if (locked.source != .pantry or locked.integrity != null) continue;
+        allocator.free(pkg.integrity.?);
+        pkg.integrity = null;
+    }
+}
+
 fn finalizeCombinedWorkspaceLock(allocator: std.mem.Allocator, project_root: []const u8, generated_path: []const u8, frozen: bool, result: *types.CommandResult) !void {
     if (result.exit_code != 0) return;
     const committed_path = try std.fs.path.join(allocator, &.{ project_root, "pantry.lock" });
@@ -2206,6 +2243,7 @@ fn finalizeCombinedWorkspaceLock(allocator: std.mem.Allocator, project_root: []c
     defer if (committed) |*lockfile| lockfile.deinit(allocator);
     var generated = writer.readLockfile(allocator, generated_path) catch null;
     defer if (generated) |*lockfile| lockfile.deinit(allocator);
+    if (committed) |*existing| if (generated) |*candidate| acceptFirstArtifactHashes(allocator, existing, candidate);
     const matches = if (committed) |*existing|
         if (generated) |*candidate| writer.lockfilesEqual(existing, candidate) else false
     else
@@ -2417,6 +2455,7 @@ fn installCompanionDepsFile(
             &env_only_domains,
             options.frozen_lockfile and lockfile_path == null,
             lockfile_path,
+            options.frozen_lockfile,
         );
         if (options.frozen_lockfile and lockfile_path == null and lockfile_changed) {
             return .{
@@ -2439,6 +2478,9 @@ fn syncCompanionLockfile(
     env_only_domains: *const env_deps.DomainSet,
     frozen: bool,
     lockfile_path_override: ?[]const u8,
+    /// `--frozen-lockfile`, also when staging (where `frozen` is false
+    /// because the staged copy is compared afterwards instead).
+    frozen_integrity: bool,
 ) !bool {
     const lockfile_writer = @import("../../../packages/lockfile.zig");
     const owned_lockfile_path = if (lockfile_path_override == null)
@@ -2457,7 +2499,7 @@ fn syncCompanionLockfile(
         try lib.packages.Lockfile.init(allocator, "1.0.0");
     defer lockfile.deinit(allocator);
 
-    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results, env_only_domains);
+    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results, env_only_domains, frozen_integrity);
 
     const changed = if (original) |*existing|
         !lockfile_writer.lockfilesEqual(existing, &lockfile)
@@ -2481,6 +2523,10 @@ fn mergeCompanionLockfileEntries(
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
     env_only_domains: *const env_deps.DomainSet,
+    /// A frozen install keeps the integrity a same-version entry already has
+    /// (none included: a lock written before integrities were recorded
+    /// accepts the first, as `lockIntegrityMatches` does).
+    frozen: bool,
 ) !void {
     // Packages whose resolved version depends on which platform installs them,
     // so the sweep below can tell a stale pin from another platform's.
@@ -2548,9 +2594,19 @@ fn mergeCompanionLockfileEntries(
             keys_to_remove.deinit(allocator);
         }
 
+        // What the lock already records for this exact version, copied
+        // before the old entry is freed below.
+        var same_version_seen = false;
+        var same_version_integrity: ?[]const u8 = null;
+        defer if (same_version_integrity) |i| allocator.free(i);
+
         var package_it = lockfile.packages.iterator();
         while (package_it.next()) |entry| {
             if (!std.mem.eql(u8, entry.value_ptr.name, clean_name)) continue;
+            if (std.mem.eql(u8, entry.value_ptr.version, result.version) and !same_version_seen) {
+                same_version_seen = true;
+                if (entry.value_ptr.integrity) |i| same_version_integrity = try allocator.dupe(u8, i);
+            }
 
             // Unless it is another platform's pin of the same package.
             //
@@ -2581,8 +2637,16 @@ fn mergeCompanionLockfileEntries(
             .version = try allocator.dupe(u8, result.version),
             .source = if (std.mem.indexOfScalar(u8, clean_name, '.') != null) .pantry else .npm,
             .resolved = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version }),
-            // Set for pinned Pantry scopes (see pipeline.PackageResult).
-            .integrity = if (result.integrity) |i| try allocator.dupe(u8, i) else null,
+            // Set for pinned Pantry scopes and registry binaries (see
+            // pipeline.PackageResult). The same version keeps what it had
+            // when this install produced none, or when the lock is frozen.
+            .integrity = blk: {
+                const chosen: ?[]const u8 = if (frozen and same_version_seen)
+                    same_version_integrity
+                else
+                    result.integrity orelse same_version_integrity;
+                break :blk if (chosen) |i| try allocator.dupe(u8, i) else null;
+            },
         };
         const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, result.version });
         defer allocator.free(key);
@@ -2691,7 +2755,7 @@ test "companion deps replace stale system pins without dropping workspace packag
 
     var env_only = env_deps.DomainSet{ .allocator = allocator, .map = std.StringHashMap(void).init(allocator) };
     defer env_only.deinit();
-    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results, &env_only);
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results, &env_only, false);
 
     try t.expectEqualStrings("^1.3.14", lockfile.workspaces.get("").?.system.?.get("bun.sh").?);
     try t.expect(lockfile.packages.get("bun.sh@^1.3.4") == null);
@@ -2725,7 +2789,7 @@ test "a service inferred from .env stays out of the lock, with what it pulled in
 
     var env_only = try env_deps.inferredOnlyDomains(allocator, &inferred, &declared);
     defer env_only.deinit();
-    try mergeCompanionLockfileEntries(allocator, &lockfile, &declared, &results, &env_only);
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &declared, &results, &env_only, false);
 
     // The declared package is locked, as always.
     try t.expectEqualStrings("3.51.0", lockfile.packages.get("sqlite.org@3.51.0").?.version);
