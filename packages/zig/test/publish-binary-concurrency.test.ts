@@ -63,7 +63,7 @@ for (const { platforms, reject } of [
       }))
       const launch = (index: number) => {
         const child = Bun.spawn([binary, 'publish:binary', '--domain', domain, '--version', version, '--binary', paths[index]!, '--platform', platforms[index]!], {
-          env: { ...process.env, TMPDIR: scratch, PANTRY_REGISTRY_URL: `http://127.0.0.1:${server.port}`, PANTRY_REGISTRY_TOKEN: 'ptry_local_overlap_test' },
+          env: { ...process.env, TMPDIR: scratch, PANTRY_REGISTRY_URL: `http://127.0.0.1:${server.port}`, PANTRY_TOKEN: 'ptry_local_overlap_test' },
           stdout: 'pipe', stderr: 'pipe', timeout: 4000,
         })
         children.push(child)

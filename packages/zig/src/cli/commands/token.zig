@@ -56,9 +56,9 @@ pub fn effectiveRegistry(requested: ?[]const u8) []const u8 {
 }
 
 /// Environment variables consulted before the credentials file, in order.
-/// Both names are accepted because the registry server, the GitHub action and
-/// this CLI have each historically used one or the other.
-pub const env_names = [_][]const u8{ "PANTRY_REGISTRY_TOKEN", "PANTRY_TOKEN" };
+/// The token has one name everywhere: the registry server, the GitHub action
+/// and this CLI all read PANTRY_TOKEN.
+pub const env_names = [_][]const u8{"PANTRY_TOKEN"};
 
 /// Where a resolved credential came from — surfaced by `token list` and by
 /// publish errors, so "no authentication found" can say what it looked at.
@@ -430,7 +430,7 @@ pub fn missingCredentialMessage(allocator: std.mem.Allocator, ctx: MissingCreden
         \\{s}
         \\
         \\Nothing was set, so this is an absent token rather than a rejected one.
-        \\Searched, in order: --token, ${s}, ${s}, then {s}.
+        \\Searched, in order: --token, ${s}, then {s}.
         \\
         \\{s}
         \\  {s}/account
@@ -443,7 +443,6 @@ pub fn missingCredentialMessage(allocator: std.mem.Allocator, ctx: MissingCreden
     , .{
         headline,
         env_names[0],
-        env_names[1],
         credentials_path,
         mint,
         base,
@@ -477,7 +476,7 @@ fn escapeAnnotation(allocator: std.mem.Allocator, text: []const u8) ![]const u8 
 /// On GitHub Actions the message is also emitted as an error annotation, so it
 /// reaches the job summary and the pull request rather than being folded into
 /// a step's log — which is the whole reason callers were hand-rolling `[ -z
-/// "$PANTRY_REGISTRY_TOKEN" ] && echo "::error::..."` preflights in YAML.
+/// "$PANTRY_TOKEN" ] && echo "::error::..."` preflights in YAML.
 pub fn missingCredentialError(allocator: std.mem.Allocator, ctx: MissingCredential) !CommandResult {
     const message = try missingCredentialMessage(allocator, ctx);
     defer allocator.free(message);
@@ -784,7 +783,7 @@ test "a missing credential names the subject, the registry and what was searched
     try testing.expect(std.mem.indexOf(u8, message, ".com//account") == null);
     // Absent and rejected have different fixes; the old wording covered both.
     try testing.expect(std.mem.indexOf(u8, message, "absent token rather than a rejected one") != null);
-    try testing.expect(std.mem.indexOf(u8, message, "PANTRY_REGISTRY_TOKEN") != null);
+    try testing.expect(std.mem.indexOf(u8, message, "PANTRY_TOKEN") != null);
 }
 
 test "a missing credential still reads sensibly with no subject to name" {

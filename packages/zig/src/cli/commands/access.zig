@@ -11,7 +11,7 @@
 //! "restricted" }` at publish time. Its publisher then decides who can install
 //! it: registry accounts (by email), or package tokens - read-only credentials
 //! scoped to this one package, meant for a client's CI as
-//! `PANTRY_REGISTRY_TOKEN`.
+//! `PANTRY_TOKEN`.
 //!
 //! Every call goes to the registry named by `--registry`, else
 //! `PANTRY_REGISTRY_URL`, else the public registry, authenticated the way
@@ -238,7 +238,7 @@ fn signInMessage(arena: std.mem.Allocator, url: []const u8) []const u8 {
         \\
         \\  pantry token set --registry {s}
         \\
-        \\or set PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN, or pass --token.
+        \\or set PANTRY_TOKEN, or pass --token.
     , .{ url, url }) catch "Error: no credential for this registry.";
 }
 
@@ -393,10 +393,10 @@ pub fn tokenCreateCommand(allocator: std.mem.Allocator, opts: Options) !CommandR
         \\
         \\  {s}
         \\
-        \\It can install {s} and nothing else. Store it as PANTRY_REGISTRY_TOKEN in
+        \\It can install {s} and nothing else. Store it as PANTRY_TOKEN in
         \\the client's CI, e.g.:
         \\
-        \\  echo '{s}' | gh secret set PANTRY_REGISTRY_TOKEN --repo <owner>/<repo>
+        \\  echo '{s}' | gh secret set PANTRY_TOKEN --repo <owner>/<repo>
         \\
         \\Revoke it with:
         \\

@@ -91,7 +91,7 @@ it.skipIf(process.platform !== 'darwin' || !existsSync(PANTRY_BIN))('leaves macO
   // Async: the stand-in registry answers from this same event loop.
   const run = Bun.spawn([PANTRY_BIN, 'publish', '--registry', base], {
     cwd: pkg,
-    env: { ...process.env, HOME: home, PANTRY_REGISTRY_URL: base, PANTRY_REGISTRY_TOKEN: 'ptry_metadata_probe' },
+    env: { ...process.env, HOME: home, PANTRY_REGISTRY_URL: base, PANTRY_TOKEN: 'ptry_metadata_probe' },
     stdout: 'pipe',
     stderr: 'pipe',
   })

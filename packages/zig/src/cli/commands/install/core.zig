@@ -2882,7 +2882,7 @@ test "an unpinned 402 repeats what the registry said instead of a credential hin
     const message = helpers.gatedLookupMessage(t.allocator, error.PaymentRequired, "@hq/platform", "1.4.0").?;
     defer t.allocator.free(message);
     try t.expect(std.mem.startsWith(u8, message, "@hq/platform costs $9.00. Buy it with: pantry buy @hq/platform"));
-    try t.expect(std.mem.indexOf(u8, message, "PANTRY_REGISTRY_TOKEN") == null);
+    try t.expect(std.mem.indexOf(u8, message, "PANTRY_TOKEN") == null);
 
     // Taken once: the next gated message without a 402 body is the generic one.
     const generic = helpers.gatedLookupMessage(t.allocator, error.PaymentRequired, "@hq/platform", "1.4.0").?;

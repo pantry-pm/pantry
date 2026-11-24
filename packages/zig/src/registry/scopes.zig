@@ -491,9 +491,9 @@ pub fn describeFailureWithNote(
 
     const body = switch (failure) {
         .unauthorized => if (has_token)
-            try std.fmt.allocPrint(allocator, "{s} is private on {s} and the token sent was rejected (401). It may be expired or revoked: set PANTRY_REGISTRY_TOKEN to a current token with access.", .{ spec, host })
+            try std.fmt.allocPrint(allocator, "{s} is private on {s} and the token sent was rejected (401). It may be expired or revoked: set PANTRY_TOKEN to a current token with access.", .{ spec, host })
         else
-            try std.fmt.allocPrint(allocator, "{s} is private on {s} (401). Set PANTRY_REGISTRY_TOKEN to a token with access.", .{ spec, host }),
+            try std.fmt.allocPrint(allocator, "{s} is private on {s} (401). Set PANTRY_TOKEN to a token with access.", .{ spec, host }),
         .payment_required => if (payment_note) |note|
             try allocator.dupe(u8, note)
         else
@@ -502,7 +502,7 @@ pub fn describeFailureWithNote(
         .not_found => if (has_token)
             try std.fmt.allocPrint(allocator, "{s} is not available from {s} (404). Check the name, and that your token has access to it.", .{ spec, host })
         else
-            try std.fmt.allocPrint(allocator, "{s} is not available from {s} (404). It is private: set PANTRY_REGISTRY_TOKEN to a token with access.", .{ spec, host }),
+            try std.fmt.allocPrint(allocator, "{s} is not available from {s} (404). It is private: set PANTRY_TOKEN to a token with access.", .{ spec, host }),
         .no_matching_version => try std.fmt.allocPrint(allocator, "no version of {s} on {s} satisfies {s}.", .{ name, host, if (constraint.len == 0) "latest" else constraint }),
         .invalid_range => try std.fmt.allocPrint(allocator, "\"{s}\" is not a version or range pantry can resolve for {s} (use an exact version, ^, ~, comparators or latest).", .{ constraint, name }),
         .unavailable => try std.fmt.allocPrint(allocator, "could not reach {s} to resolve {s}.", .{ host, spec }),
@@ -1119,7 +1119,7 @@ test "pinned resolution: failure messages say what to do" {
     const allocator = testing.allocator;
     const msg = try describeFailure(allocator, .not_found, "@hq/platform", "1.4.0", "https://registry.pantry.dev", false, "@hq");
     defer allocator.free(msg);
-    try testing.expect(std.mem.indexOf(u8, msg, "@hq/platform@1.4.0 is not available from registry.pantry.dev (404). It is private: set PANTRY_REGISTRY_TOKEN") != null);
+    try testing.expect(std.mem.indexOf(u8, msg, "@hq/platform@1.4.0 is not available from registry.pantry.dev (404). It is private: set PANTRY_TOKEN") != null);
     try testing.expect(std.mem.indexOf(u8, msg, "no other registry was tried") != null);
 
     const paid = try describeFailure(allocator, .payment_required, "@hq/platform", "latest", "https://registry.pantry.dev", true, null);
@@ -1173,5 +1173,5 @@ test "payment note: anything else falls back to the generic 402 text" {
     try testing.expect(std.mem.startsWith(u8, noted, "@s/x costs $9.00. Buy it with: pantry buy @s/x"));
     try testing.expect(std.mem.indexOf(u8, noted, "no other registry was tried") != null);
     // Never the credential hint: the caller is signed in or not, it still has to buy.
-    try testing.expect(std.mem.indexOf(u8, noted, "PANTRY_REGISTRY_TOKEN") == null);
+    try testing.expect(std.mem.indexOf(u8, noted, "PANTRY_TOKEN") == null);
 }

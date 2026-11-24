@@ -258,7 +258,7 @@ fn generateToken(arena: std.mem.Allocator) ![]const u8 {
 fn readRemoteToken(arena: std.mem.Allocator, r: Remote) ?[]const u8 {
     const command = std.fmt.allocPrint(
         arena,
-        "grep -m1 '^PANTRY_REGISTRY_TOKEN=' '{s}' 2>/dev/null | cut -d= -f2-",
+        "grep -m1 '^PANTRY_TOKEN=' '{s}' 2>/dev/null | cut -d= -f2-",
         .{r.env_file},
     ) catch return null;
     const result = sshExec(arena, r, command) catch return null;
@@ -618,7 +618,7 @@ pub fn setupCommand(allocator: std.mem.Allocator, opts: SetupOptions) !CommandRe
     } else {
         style.print("==> Generating registry token...\n", .{});
         token = try generateToken(arena);
-        if (!try setEnv(arena, r, &.{try std.fmt.allocPrint(arena, "PANTRY_REGISTRY_TOKEN={s}", .{token})}))
+        if (!try setEnv(arena, r, &.{try std.fmt.allocPrint(arena, "PANTRY_TOKEN={s}", .{token})}))
             return CommandResult.err(allocator, "Could not write the token to the registry's environment file.");
         if (!try restart(arena, r))
             return CommandResult.err(allocator, "The token was written but the service did not restart cleanly.");
@@ -890,7 +890,7 @@ pub fn rotateTokenCommand(allocator: std.mem.Allocator, opts: RotateOptions) !Co
     style.print("    Token: {s}...\n", .{token[0..@min(token.len, 20)]});
 
     style.print("==> Updating {s}...\n", .{r.host});
-    if (!try setEnv(arena, r, &.{try std.fmt.allocPrint(arena, "PANTRY_REGISTRY_TOKEN={s}", .{token})}))
+    if (!try setEnv(arena, r, &.{try std.fmt.allocPrint(arena, "PANTRY_TOKEN={s}", .{token})}))
         return CommandResult.err(allocator, "Could not write the new token. Nothing else was changed.");
 
     style.print("==> Restarting {s}...\n", .{r.service});

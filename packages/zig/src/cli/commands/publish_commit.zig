@@ -669,7 +669,7 @@ fn publishCommitPackage(
     // configured object store (Hetzner).
     const auth_token = token orelse "";
     if (auth_token.len == 0) {
-        style.printError("PANTRY_REGISTRY_TOKEN is empty. Set a valid token for HTTP upload.\n", .{});
+        style.printError("PANTRY_TOKEN is empty. Set a valid token for HTTP upload.\n", .{});
         return error.MissingRegistryToken;
     }
     return uploadCommitViaHttp(allocator, pkg.name, sha, tarball_data, repo_url, pkg.version, options, auth_token);

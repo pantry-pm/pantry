@@ -3,7 +3,7 @@
  *
  * A project pins `@hq` to a Pantry-protocol registry (a local mock here) with
  * `"scopes"` in pantry.json, then installs `@hq/platform` the way a client's
- * CI does: `PANTRY_REGISTRY_TOKEN` set, `pantry install` in the project.
+ * CI does: `PANTRY_TOKEN` set, `pantry install` in the project.
  *
  * Asserted against the real binary:
  *   - ranges and exact pins resolve from `/packages/{name}/versions` by semver;
@@ -11,7 +11,7 @@
  *   - pantry.lock records `integrity: "sha256:<hex>"`, and a tarball that does
  *     not match the registry's checksum is refused;
  *   - without access (401, or the empty version list a private package shows
- *     a stranger) the install fails with the PANTRY_REGISTRY_TOKEN hint and
+ *     a stranger) the install fails with the PANTRY_TOKEN hint and
  *     nothing is installed - no npm, no fallback.
  *
  * Run with: bun test packages/zig/test/private_scopes_e2e.test.ts
@@ -183,7 +183,7 @@ async function install(project: string, token: string | null): Promise<{ code: n
     CI: '1',
   }
   if (token)
-    env.PANTRY_REGISTRY_TOKEN = token
+    env.PANTRY_TOKEN = token
   // Async spawn: the mock registry lives on this process's event loop.
   const proc = Bun.spawn({ cmd: [PANTRY_BIN, 'install'], cwd: project, env, stdout: 'pipe', stderr: 'pipe' })
   const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()])
@@ -235,7 +235,7 @@ describe('pinned scopes', () => {
     const project = writeProject('^1.2.0')
     const { code, output } = await install(project, null)
     expect(code).not.toBe(0)
-    expect(output).toContain('PANTRY_REGISTRY_TOKEN')
+    expect(output).toContain('PANTRY_TOKEN')
     expect(output).toContain('no other registry was tried')
     expect(installedVersion(project)).toBeNull()
   })
@@ -248,7 +248,7 @@ describe('pinned scopes', () => {
     const { code, output } = await install(project, null)
     expect(code).not.toBe(0)
     expect(output).toContain('is not available from')
-    expect(output).toContain('PANTRY_REGISTRY_TOKEN')
+    expect(output).toContain('PANTRY_TOKEN')
     expect(installedVersion(project)).toBeNull()
   })
 
@@ -262,7 +262,7 @@ describe('pinned scopes', () => {
     expect(output).toContain(`${PACKAGE} costs $9.00. Buy it with: pantry buy ${PACKAGE}`)
     expect(output).toContain('/packages/%40hq%2Fplatform/buy')
     expect(output).toContain('no other registry was tried')
-    expect(output).not.toContain('PANTRY_REGISTRY_TOKEN')
+    expect(output).not.toContain('PANTRY_TOKEN')
     expect(installedVersion(project)).toBeNull()
     // Only the pinned registry was asked.
     expect(requests.length).toBeGreaterThan(0)
@@ -362,7 +362,7 @@ describe('pantry access', () => {
     const issued = await access('token', PACKAGE, '--name', 'acme-ci', '--expires-in-days', '90')
     expect(issued.code, issued.output).toBe(0)
     expect(issued.output).toContain('ptry_pkg_new')
-    expect(issued.output).toContain('PANTRY_REGISTRY_TOKEN')
+    expect(issued.output).toContain('PANTRY_TOKEN')
     expect(JSON.parse(seen.find(r => r.method === 'POST')!.body)).toEqual({ name: 'acme-ci', expiresInDays: 90 })
 
     expect((await access('tokens', PACKAGE)).output).toContain('tok_1')

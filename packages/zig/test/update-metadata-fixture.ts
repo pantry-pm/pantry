@@ -62,7 +62,7 @@ export async function verifyMetadataUpdate(mode: 'unavailable' | 'empty' | 'malf
   const env: Record<string, string> = {
     HOME: process.env.HOME ?? homedir(), PATH: `${tools}${delimiter}/usr/bin${delimiter}/bin`, TMPDIR: root,
     XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'), PANTRY_ENV_DEPS: '0',
-    PANTRY_REGISTRY_TOKEN: 'ptry_owned_update_result', CI: '1', NO_COLOR: '1',
+    PANTRY_TOKEN: 'ptry_owned_update_result', CI: '1', NO_COLOR: '1',
   }
   let server: ReturnType<typeof Bun.serve> | undefined
   let primaryFailure: PrimaryFixtureFailure | undefined

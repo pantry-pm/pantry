@@ -101,7 +101,7 @@ fn signInMessage(arena: std.mem.Allocator, url: []const u8) []const u8 {
         \\
         \\  pantry token set --registry {s}
         \\
-        \\or set PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN, or pass --token.
+        \\or set PANTRY_TOKEN, or pass --token.
     , .{ url, url }) catch "Error: no credential for this registry.";
 }
 

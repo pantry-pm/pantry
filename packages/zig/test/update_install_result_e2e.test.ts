@@ -23,7 +23,7 @@ describe.skipIf(!binary || process.platform === 'win32')('source CLI update inst
       PANTRY_ENV_DEPS: '0',
       // Public fixture data outranks native stored credential fallback. Do not
       // forward parent auth variables or inspect headers/credential files.
-      PANTRY_REGISTRY_TOKEN: 'ptry_owned_update_result',
+      PANTRY_TOKEN: 'ptry_owned_update_result',
       NO_COLOR: '1',
       CI: '1',
     }

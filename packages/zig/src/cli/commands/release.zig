@@ -409,7 +409,7 @@ fn containsName(list: []const []const u8, name: []const u8) bool {
 ///
 /// Matching on PANTRY rather than on one fixed name is deliberate: a
 /// repository calls the secret whatever it likes — PANTRY_TOKEN,
-/// PANTRY_REGISTRY_TOKEN, HQ_PANTRY_TOKEN — and the workflow reading it is the
+/// PANTRY_TOKEN, HQ_PANTRY_TOKEN — and the workflow reading it is the
 /// only authority on which name this repository chose.
 fn collectPantrySecretRefs(
     arena: std.mem.Allocator,
@@ -503,7 +503,7 @@ const CredentialPreflight = enum {
 /// can authenticate. When it cannot, the failure surfaces minutes later inside
 /// a workflow log, as the registry's own "no credential" error, by which point
 /// the tag is pushed and the version spent. Repositories had started working
-/// around that by hand-writing `[ -z "$PANTRY_REGISTRY_TOKEN" ]` guards into
+/// around that by hand-writing `[ -z "$PANTRY_TOKEN" ]` guards into
 /// their YAML; this is the same guard, run early enough to be worth something.
 ///
 /// Everything here is read-only and costs nothing when a repository does not
@@ -674,15 +674,15 @@ test "the workflow scan finds whichever pantry secret names a repo chose" {
     var names = std.ArrayList([]const u8).empty;
     try collectPantrySecretRefs(arena,
         \\      env:
-        \\        PANTRY_REGISTRY_TOKEN: ${{ secrets.PANTRY_REGISTRY_TOKEN }}
+        \\        PANTRY_TOKEN: ${{ secrets.PANTRY_TOKEN }}
         \\        UNRELATED: ${{ secrets.NPM_TOKEN }}
         \\        OURS: ${{ secrets.HQ_PANTRY_TOKEN }}
-        \\        AGAIN: ${{ secrets.PANTRY_REGISTRY_TOKEN }}
+        \\        AGAIN: ${{ secrets.PANTRY_TOKEN }}
     , &names);
 
     // Two distinct names, and the repeat is not a third.
     try testing.expectEqual(@as(usize, 2), names.items.len);
-    try testing.expectEqualStrings("PANTRY_REGISTRY_TOKEN", names.items[0]);
+    try testing.expectEqualStrings("PANTRY_TOKEN", names.items[0]);
     try testing.expectEqualStrings("HQ_PANTRY_TOKEN", names.items[1]);
 }
 

@@ -42,7 +42,7 @@ let ownerToken = ''
 let strangerToken = ''
 let fixtures = ''
 let work = ''
-const savedRegistryToken = process.env.PANTRY_REGISTRY_TOKEN
+const savedRegistryToken = process.env.PANTRY_TOKEN
 
 function canExecute(command: string): boolean {
   try {
@@ -121,7 +121,7 @@ beforeAll(async () => {
     return
   }
 
-  process.env.PANTRY_REGISTRY_TOKEN = ADMIN_TOKEN
+  process.env.PANTRY_TOKEN = ADMIN_TOKEN
   fixtures = join(tmpdir(), `pantry-deprecate-fixtures-${Date.now()}`)
   mkdirSync(fixtures, { recursive: true })
 
@@ -144,8 +144,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server?.stop(true)
-  if (savedRegistryToken === undefined) delete process.env.PANTRY_REGISTRY_TOKEN
-  else process.env.PANTRY_REGISTRY_TOKEN = savedRegistryToken
+  if (savedRegistryToken === undefined) delete process.env.PANTRY_TOKEN
+  else process.env.PANTRY_TOKEN = savedRegistryToken
   if (fixtures) rmSync(fixtures, { recursive: true, force: true })
 })
 
@@ -178,7 +178,7 @@ describe('pantry deprecate', () => {
     expect(record?.settings).toMatchObject({ deprecated: true, deprecationMessage: MESSAGE })
 
     // The token can come from the environment, the way CI passes it.
-    const undone = await pantry(['deprecate', PACKAGE, '--undo'], { env: env({ PANTRY_REGISTRY_URL: base, PANTRY_REGISTRY_TOKEN: ownerToken }) })
+    const undone = await pantry(['deprecate', PACKAGE, '--undo'], { env: env({ PANTRY_REGISTRY_URL: base, PANTRY_TOKEN: ownerToken }) })
     expect(undone.code, undone.output).toBe(0)
     expect(undone.output).toContain(`${PACKAGE} is no longer deprecated.`)
     expect(((await (await fetch(`${base}/packages/@hq%2Fkit-probe/1.1.0`)).json()) as any).deprecated).toBeUndefined()
@@ -215,7 +215,7 @@ describe('installing a deprecated package', () => {
     expect((await pantry(['deprecate', PACKAGE, MESSAGE, '--registry', base, '--token', ownerToken])).code).toBe(0)
 
     const project = writeProject()
-    const install = await pantry(['install'], { cwd: project, env: env({ PANTRY_REGISTRY_TOKEN: ownerToken }) })
+    const install = await pantry(['install'], { cwd: project, env: env({ PANTRY_TOKEN: ownerToken }) })
     expect(install.code, install.output).toBe(0)
     expect(installedVersion(project)).toBe('1.1.0')
     expect(warnings(install.output)).toEqual([`warn: ${PACKAGE}@1.1.0 is deprecated: ${MESSAGE}`])
@@ -224,7 +224,7 @@ describe('installing a deprecated package', () => {
     // is already up to date resolves nothing, so has nothing to warn about.)
     expect(existsSync(join(project, 'pantry.lock'))).toBe(true)
     rmSync(join(project, 'pantry'), { recursive: true, force: true })
-    const ci = await pantry(['ci'], { cwd: project, env: env({ PANTRY_REGISTRY_TOKEN: ownerToken }) })
+    const ci = await pantry(['ci'], { cwd: project, env: env({ PANTRY_TOKEN: ownerToken }) })
     expect(ci.code, ci.output).toBe(0)
     expect(warnings(ci.output)).toEqual([`warn: ${PACKAGE}@1.1.0 is deprecated: ${MESSAGE}`])
     expect(installedVersion(project)).toBe('1.1.0')
@@ -236,7 +236,7 @@ describe('installing a deprecated package', () => {
     expect((await pantry(['deprecate', PACKAGE, '--undo', '--registry', base, '--token', ownerToken])).code).toBe(0)
 
     const project = writeProject()
-    const install = await pantry(['install'], { cwd: project, env: env({ PANTRY_REGISTRY_TOKEN: ownerToken }) })
+    const install = await pantry(['install'], { cwd: project, env: env({ PANTRY_TOKEN: ownerToken }) })
     expect(install.code, install.output).toBe(0)
     expect(installedVersion(project)).toBe('1.1.0')
     expect(warnings(install.output)).toEqual([])

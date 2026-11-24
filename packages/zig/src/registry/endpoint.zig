@@ -13,7 +13,7 @@
 //!      credential, so requests to your registry carry
 //!      `Authorization: Bearer <token>` — the token stored by
 //!      `pantry token set --registry https://registry.example.com`, or
-//!      `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN` from the environment.
+//!      `PANTRY_TOKEN` from the environment.
 //!
 //! A token only ever goes to the registry that issued it: the origin matches
 //! `PANTRY_REGISTRY_URL`, or `~/.pantry/credentials` holds an entry scoped to
@@ -53,7 +53,7 @@ const Resolved = struct {
     /// and any private package on the public registry are served against an
     /// account, so the token has to travel — to its own issuer and nowhere else.
     default_token: ?[]const u8 = null,
-    /// `default_token` came from PANTRY_REGISTRY_TOKEN / PANTRY_TOKEN. Set
+    /// `default_token` came from PANTRY_TOKEN. Set
     /// for a run, it outranks a credential stored in the file, as it does for
     /// `pantry publish`: a CI job's package token must not lose to a personal
     /// token left in ~/.pantry/credentials.
@@ -192,7 +192,7 @@ var pinned_list: std.ArrayList(Scoped) = .empty;
 ///
 ///   1. a `[https://registry.acme.example]` section in ~/.pantry/credentials —
 ///      a credential stored for exactly that registry;
-///   2. `PANTRY_REGISTRY_TOKEN` / `PANTRY_TOKEN` from the environment — how CI
+///   2. `PANTRY_TOKEN` from the environment — how CI
 ///      hands a client its read-only package token.
 ///
 /// The global (unscoped) credentials entry is deliberately not sent: it is the
