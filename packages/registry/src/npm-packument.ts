@@ -223,12 +223,12 @@ export class UpstreamPackuments {
 
   constructor(
     private readonly fetchUpstream: (name: string) => Promise<UpstreamPackument | null>,
-    private readonly ttlMs = 5 * 60_000,
-    private readonly timeoutMs = 3_000,
-    private readonly maxEntries = 1_000,
+    private readonly ttlMs: number = 5 * 60_000,
+    private readonly timeoutMs: number = 3_000,
+    private readonly maxEntries: number = 1_000,
   ) {}
 
-  async get(name: string, now = Date.now()): Promise<UpstreamPackument | null> {
+  async get(name: string, now: number = Date.now()): Promise<UpstreamPackument | null> {
     const copy = this.copies.get(name)
     if (copy && now - copy.at < this.ttlMs) return copy.doc
     const refresh = this.refresh(name)
