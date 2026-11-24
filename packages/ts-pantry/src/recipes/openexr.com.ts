@@ -21,6 +21,8 @@ export const recipe: Recipe = {
   dependencies: {
     'zlib.net': '^1',
     'openexr.com/imath': '*',
+    // libOpenEXRCore links libdeflate.so.0 (OpenEXR 3.2+ compresses with it).
+    'github.com/ebiggers/libdeflate': '^1',
     linux: {
       'gnu.org/gcc/libstdcxx': '14', // needed since 3.4.0
     },
