@@ -1,3 +1,33 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.220...v0.11.221)
+
+## ✨ Features
+
+- **registry**: serve npm packuments at /npm/{name} ([555cff5](https://github.com/pantry-pm/pantry/commit/555cff5)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **publish**: publish a workspace to the Pantry registry in parallel ([80d1ed0](https://github.com/pantry-pm/pantry/commit/80d1ed0)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **audit**: count each artifact's private shared libraries ([2b3717f](https://github.com/pantry-pm/pantry/commit/2b3717f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **recipes**: declare libxcrypt for apr and serf, ncurses for hwloc, build gdk-pixbuf without GIR ([0841d09](https://github.com/pantry-pm/pantry/commit/0841d09)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: keep a staged binary for the retry a 503 asks for ([d788bed](https://github.com/pantry-pm/pantry/commit/d788bed)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **build**: fetch GNU releases through the GNU mirror redirector ([8dbabaf](https://github.com/pantry-pm/pantry/commit/8dbabaf)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: give jpegxl its Imath and a highway it compiles with; show php's phar error ([96e975c](https://github.com/pantry-pm/pantry/commit/96e975c)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **recipes**: repair ELF loader paths for 25 more packages (batch 6) ([4ffe9c4](https://github.com/pantry-pm/pantry/commit/4ffe9c4)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **openexr**: declare the libdeflate runtime libOpenEXRCore links ([807e0b4](https://github.com/pantry-pm/pantry/commit/807e0b4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- bulk publishing to Pantry, and the npm vs Pantry release runs ([54536a2](https://github.com/pantry-pm/pantry/commit/54536a2)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.221 ([e821ff9](https://github.com/pantry-pm/pantry/commit/e821ff9)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.219...v0.11.220)
 
 ## ✨ Features
