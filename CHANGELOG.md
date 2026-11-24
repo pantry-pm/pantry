@@ -1,3 +1,37 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.221...v0.11.222)
+
+## ✨ Features
+
+- **publish**: repair a published artifact in place under its own version ([cb0c835](https://github.com/pantry-pm/pantry/commit/cb0c835)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **install**: reinstall registry binaries whose artifact was rebuilt in place ([dc2e691](https://github.com/pantry-pm/pantry/commit/dc2e691)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **audit**: record DT_NEEDED and tell harmless loader paths from broken ones ([200520f](https://github.com/pantry-pm/pantry/commit/200520f)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **hwloc**: link both wide ncurses libraries for lstopo-no-graphics ([08a1f94](https://github.com/pantry-pm/pantry/commit/08a1f94)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## ⚡ Performance Improvements
+
+- **install**: keep each package's registry metadata for the run ([988d58a](https://github.com/pantry-pm/pantry/commit/988d58a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: record batch 5-6 re-audit verdicts ([c76d64c](https://github.com/pantry-pm/pantry/commit/c76d64c)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- name the publish token PANTRY_TOKEN ([adc238f](https://github.com/pantry-pm/pantry/commit/adc238f)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💚 Continuous Integration
+
+- **registry**: move the box's publish token to PANTRY_TOKEN on deploy ([39548e0](https://github.com/pantry-pm/pantry/commit/39548e0)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.222 ([15d9c0a](https://github.com/pantry-pm/pantry/commit/15d9c0a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.220...v0.11.221)
 
 ## ✨ Features
