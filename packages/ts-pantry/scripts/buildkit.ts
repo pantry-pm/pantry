@@ -543,6 +543,26 @@ export function processScript(
  * Generate a complete bash build script from a YAML recipe
  * Based on brewkit's build-script.ts
  */
+/**
+ * The directory a dependency is staged under as `<root>/<domain>/<version>`,
+ * or null when its prefix does not have that shape. `key` is a
+ * `deps.<domain>.prefix` or `deps.<domain>@<version>.prefix` entry.
+ */
+export function dependencyInstallRoot(key: string, depPath: string, depPaths: Record<string, string>): string | null {
+  const match = /^deps\.(.+)\.prefix$/.exec(key)
+  if (!match) return null
+  const name = match[1]
+  const at = name.lastIndexOf('@')
+  const domain = at > 0 ? name.slice(0, at) : name
+  const version = depPaths[`deps.${name}.version`] || (at > 0 ? name.slice(at + 1) : '')
+  if (!version) return null
+  const suffix = `/${domain}/${version}`
+  const trimmed = depPath.replace(/\/+$/, '')
+  if (!trimmed.endsWith(suffix)) return null
+  const root = trimmed.slice(0, -suffix.length)
+  return root || null
+}
+
 export function generateBuildScript(
   recipe: PackageRecipe,
   pkg: string,
@@ -935,6 +955,9 @@ export function generateBuildScript(
   // relocation; pointing autom4te_perllibdir/AC_MACRODIR at the staged data dir bypasses
   // that entirely (the script reads `$ENV{autom4te_perllibdir} || <fallback>`).
   let autoconfDataDir = ''
+  // Directories that hold dependencies as `<root>/<domain>/<version>` (with
+  // the `v<version>` alias build-package.ts stages beside each one).
+  const depInstallRoots: string[] = []
 
   for (const [key, depPath] of Object.entries(depPaths)) {
     // Only use .prefix keys for PATH construction (skip .version, .version.major, etc.)
@@ -945,6 +968,8 @@ export function generateBuildScript(
     depRuntimeLibPaths.push(`${depPath}/lib`, `${depPath}/lib64`)
     if (key.startsWith('build-tools.')) continue
     depLibPaths.push(`${depPath}/lib`, `${depPath}/lib64`)
+    const installRoot = dependencyInstallRoot(key, depPath, depPaths)
+    if (installRoot) depInstallRoots.push(installRoot)
     depAclocalPaths.push(`${depPath}/share/aclocal`)
     if (key.includes('gnu.org/autoconf'))
       autoconfDataDir = `${depPath}/share/autoconf`
@@ -1009,7 +1034,18 @@ export function generateBuildScript(
         // (`go tool link`), which rejects C-linker flags like -Wl,-rpath,<dir> with
         // "flag provided but not defined". Go produces static binaries that don't need
         // dep-dylib rpaths anyway, and any cgo external-link flags go via CGO_LDFLAGS.
-        const rpathFlags = [...new Set(depLibPaths)].map(p => `-Wl,-rpath,${p}`).join(' ')
+        //
+        // Artifacts mirrored from pkgx keep pkgx's install names, which are
+        // relative to the package ROOT rather than to a lib dir:
+        // openssl.org 3.6.5 is `@rpath/openssl.org/v3.6.5/lib/libssl.3.dylib`.
+        // A per-lib-dir rpath can never resolve those, so every probe binary
+        // that links one aborts in dyld. PHP's `if iconv supports errno` is
+        // such a probe (it links $LIBS, which carries -lssl), so configure
+        // reported "'errno' is missing" for an iconv that was fine. Add the
+        // dependency root too, as pkgx's own build environment does
+        // (`-rpath $PKGX_DIR`). Like the lib-dir rpaths it is a build path
+        // that normalizeMachoRuntime deletes from the published binaries.
+        const rpathFlags = [...new Set([...depLibPaths, ...depInstallRoots])].map(p => `-Wl,-rpath,${p}`).join(' ')
         sections.push(`export LDFLAGS="${rpathFlags} \${LDFLAGS:-}"`)
       }
     }

@@ -6,7 +6,7 @@
 
 import { verifyDesktopInstall } from './desktop-artifacts'
 import type { ObjectStorageProvider } from '@stacksjs/ts-cloud'
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, statSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { execFileSync, execSync } from 'node:child_process'
 import type { BuildArchiveOptions } from '../../action/src/build-archive-cache'
 import { ArchiveChecksumError, obtainBuildArchive } from '../../action/src/build-archive-cache'
@@ -862,16 +862,62 @@ interface BuildDependencyStorage {
  * `bin/python3.11` loads `@loader_path/../../v3.11.16/lib/libpython3.11.dylib`.
  * Without the alias such a dependency cannot run during a build — qemu's
  * meson setup aborted in dyld on exactly that python.
+ *
+ * pkgx artifacts also name OTHER packages through pkgx's range directories:
+ * libzip.org 1.12.1 loads `@rpath/zlib.net/v1/lib/libz.dylib` and
+ * `@rpath/tukaani.org/xz/v5/lib/liblzma.dylib`. So every shorter prefix of the
+ * version gets an alias too (`v1`, `v1.4`, and `v8.3.0` for the Pantry
+ * revision 8.3.0.1), each naming the newest staged version it covers. Without
+ * them php's own sapi/cli/php aborted in dyld while generating phar.phar.
  */
 export function linkInstalledVersionAlias(depsDir: string, domain: string, version: string): void {
   if (version.startsWith('v')) return
-  const alias = join(depsDir, domain, `v${version}`)
+  const dir = join(depsDir, domain)
+  const exact = join(dir, `v${version}`)
   try {
-    lstatSync(alias)
-    return
+    lstatSync(exact)
   }
-  catch { /* absent: create it */ }
-  symlinkSync(version, alias)
+  catch {
+    symlinkSync(version, exact)
+  }
+  const staged = readdirSync(dir).filter((name) => {
+    if (!/^\d/.test(name)) return false
+    try {
+      return statSync(join(dir, name)).isDirectory()
+    }
+    catch {
+      return false
+    }
+  })
+  const parts = version.split('.')
+  for (let length = 1; length < parts.length; length++) {
+    const range = parts.slice(0, length).join('.')
+    // A staged version with exactly this name owns its v<version> alias.
+    if (staged.includes(range)) continue
+    const newest = staged.filter(name => name.startsWith(`${range}.`)).sort(compareStagedVersions).at(-1)
+    if (!newest) continue
+    const alias = join(dir, `v${range}`)
+    let current: string | null = null
+    try {
+      current = lstatSync(alias).isSymbolicLink() ? readlinkSync(alias) : alias
+    }
+    catch { /* absent */ }
+    if (current === newest) continue
+    if (current === alias) continue // a real directory: never replace it
+    if (current !== null) unlinkSync(alias)
+    symlinkSync(newest, alias)
+  }
+}
+
+function compareStagedVersions(a: string, b: string): number {
+  const left = a.split('.')
+  const right = b.split('.')
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const x = Number.parseInt(left[i] ?? '-1', 10)
+    const y = Number.parseInt(right[i] ?? '-1', 10)
+    if (x !== y) return (Number.isNaN(x) ? -1 : x) - (Number.isNaN(y) ? -1 : y)
+  }
+  return a.localeCompare(b)
 }
 
 export async function downloadDependencies(
