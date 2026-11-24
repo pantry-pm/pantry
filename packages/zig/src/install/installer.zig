@@ -5761,6 +5761,47 @@ test "native materialization: an ordinary rename failure never falls back to cop
     }
 }
 
+test "native materialization: an extraction that fails (disk full, corrupt archive) never touches the installed copy" {
+    // An artifact replacement extracts into private staging first and only
+    // renames over the installed version directory once that succeeded.
+    if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
+    const allocator = std.testing.allocator;
+    var pkg_cache = try PackageCache.init(allocator);
+    defer pkg_cache.deinit();
+    var installer = try Installer.init(allocator, &pkg_cache);
+    defer installer.deinit();
+    var fixture = try MaterializationFixture.init(allocator);
+    defer fixture.deinit();
+    try fixture.installOld();
+
+    // A truncated archive stands in for one cut short by a full disk.
+    const truncated = try std.fs.path.join(allocator, &.{ fixture.root, "truncated.tar.gz" });
+    defer allocator.free(truncated);
+    {
+        const original = try std.fs.path.join(allocator, &.{ fixture.root, "original.tar.gz" });
+        defer allocator.free(original);
+        const bytes = try io_helper.readFileAlloc(allocator, original, 64 * 1024 * 1024);
+        defer allocator.free(bytes);
+        const file = try io_helper.createFileAbsolute(truncated, .{ .truncate = true });
+        defer io_helper.closeFile(file);
+        try io_helper.writeAllToFile(file, bytes[0 .. bytes.len / 2]);
+    }
+
+    var staging = try verified_staging.Extraction.init(allocator, fixture.root);
+    const staging_root = try allocator.dupe(u8, staging.root);
+    defer allocator.free(staging_root);
+    try std.testing.expect(std.meta.isError(staging.extractVerified(truncated, "tar.gz", null, false)));
+    // Nothing unverified can be published, and the installed copy is as it was.
+    const validation = Installer.MaterializationValidation{ .installer = &installer, .domain = "google.com/chrome", .version = null };
+    var operations = MaterializationTestOperations{ .fixture = &fixture, .installer = &installer };
+    try std.testing.expectError(error.UnverifiedExtraction, materialization.publish(allocator, .{ .exclusive = .{ .extraction = &staging, .path = staging.payload } }, fixture.destination, &validation, &operations));
+    try fixture.expectOld();
+    try fixture.expectNoTransaction();
+    // And the failed staging is removed with it.
+    staging.deinit();
+    try std.testing.expectError(error.FileNotFound, io_helper.accessAbsolute(staging_root, .{}));
+}
+
 test "native materialization: a copy failing beyond 64KiB removes its candidate and leaves shared source and destination intact" {
     if (@import("builtin").os.tag == .windows) return error.SkipZigTest;
     const allocator = std.testing.allocator;

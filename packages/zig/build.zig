@@ -542,7 +542,7 @@ pub fn build(b: *std.Build) void {
     const artifact_refresh_step = b.step("test:artifact-refresh", "Reinstall registry binaries whose artifact the registry rebuilt in place");
     const artifact_refresh_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{ "artifact refresh:", "companion locks keep another platform's artifact hash" } });
     artifact_refresh_step.dependOn(&b.addRunArtifact(artifact_refresh_tests).step);
-    const artifact_metadata_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "registry metadata is kept per package", "native archive resume: registry selection", "a same-version pin keeps every platform's artifact hash", "lock entries keep each platform's artifact hash" } });
+    const artifact_metadata_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "registry metadata is kept per package", "native archive resume: registry selection", "a same-version pin keeps every platform's artifact hash", "lock entries keep each platform's artifact hash", "registry uploadedAt timestamps parse", "native materialization: an extraction that fails" } });
     artifact_refresh_step.dependOn(&b.addRunArtifact(artifact_metadata_tests).step);
     const zig_publish_step = b.step("test:zig-publish", "Publish build.zig.zon packages exactly as the action's publish: zig did");
     zig_publish_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = install_test_mod, .filters = &.{"zig publish:"} })).step);
@@ -553,6 +553,9 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
     const archive_resume_tests = b.addTest(.{ .root_module = archive_resume_mod, .filters = &.{ "native archive resume:", "transient failures are told apart" } });
+    // The registry lookup's own tests live in downloader.zig, reached from this root.
+    const artifact_registry_tests = b.addTest(.{ .root_module = archive_resume_mod, .filters = &.{ "registry metadata is kept per package", "registry uploadedAt timestamps parse" } });
+    artifact_refresh_step.dependOn(&b.addRunArtifact(artifact_registry_tests).step);
     const run_archive_resume_tests = b.addRunArtifact(archive_resume_tests);
     const archive_resume_step = b.step("test:archive-resume", "Resume quarantined native archives without weakening verification or deadlines");
     const library_paths_step = b.step("test:library-paths", "Keep installed Mach-O libraries usable by new compiler consumers");

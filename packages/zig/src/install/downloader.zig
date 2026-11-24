@@ -412,7 +412,73 @@ pub const S3PackageResult = struct {
     tarball_url: []const u8,
     version: []const u8,
     archive_identity: ?@import("archive_resume.zig").Identity = null,
+    /// When the registry last wrote this platform's artifact (its
+    /// `uploadedAt`), in milliseconds since the epoch; null when unrecorded.
+    uploaded_at_ms: ?i64 = null,
 };
+
+/// `2026-11-08T00:10:34.134Z` (an RFC 3339 / ISO 8601 UTC timestamp, the
+/// form the registry writes `uploadedAt` in, fraction and offset optional)
+/// as milliseconds since the epoch; null for anything else.
+pub fn parseTimestampMs(text: []const u8) ?i64 {
+    const t = std.mem.trim(u8, text, &std.ascii.whitespace);
+    if (t.len < 19 or t[4] != '-' or t[7] != '-' or (t[10] != 'T' and t[10] != 't' and t[10] != ' ') or t[13] != ':' or t[16] != ':') return null;
+    const year = std.fmt.parseInt(i64, t[0..4], 10) catch return null;
+    const month = std.fmt.parseInt(i64, t[5..7], 10) catch return null;
+    const day = std.fmt.parseInt(i64, t[8..10], 10) catch return null;
+    const hour = std.fmt.parseInt(i64, t[11..13], 10) catch return null;
+    const minute = std.fmt.parseInt(i64, t[14..16], 10) catch return null;
+    const second = std.fmt.parseInt(i64, t[17..19], 10) catch return null;
+    if (month < 1 or month > 12 or day < 1 or day > 31 or hour > 23 or minute > 59 or second > 60) return null;
+    var i: usize = 19;
+    var millis: i64 = 0;
+    if (i < t.len and t[i] == '.') {
+        i += 1;
+        var scale: i64 = 100;
+        const start = i;
+        while (i < t.len and std.ascii.isDigit(t[i])) : (i += 1) {
+            millis += (t[i] - '0') * scale;
+            scale = @divTrunc(scale, 10);
+        }
+        if (i == start) return null;
+    }
+    var offset_minutes: i64 = 0;
+    if (i < t.len) {
+        switch (t[i]) {
+            'Z', 'z' => i += 1,
+            '+', '-' => {
+                if (t.len < i + 6 or t[i + 3] != ':') return null;
+                const oh = std.fmt.parseInt(i64, t[i + 1 .. i + 3], 10) catch return null;
+                const om = std.fmt.parseInt(i64, t[i + 4 .. i + 6], 10) catch return null;
+                offset_minutes = (oh * 60 + om) * (if (t[i] == '-') @as(i64, -1) else 1);
+                i += 6;
+            },
+            else => return null,
+        }
+    }
+    if (i != t.len) return null;
+    // Days from the civil date (Howard Hinnant's algorithm).
+    const y = if (month <= 2) year - 1 else year;
+    const era = @divFloor(y, 400);
+    const yoe = y - era * 400;
+    const mp = @mod(month + 9, 12);
+    const doy = @divFloor(153 * mp + 2, 5) + day - 1;
+    const doe = yoe * 365 + @divFloor(yoe, 4) - @divFloor(yoe, 100) + doy;
+    const days = era * 146097 + doe - 719468;
+    const seconds = days * 86400 + hour * 3600 + minute * 60 + second - offset_minutes * 60;
+    return seconds * 1000 + millis;
+}
+
+test "registry uploadedAt timestamps parse to epoch milliseconds" {
+    try std.testing.expectEqual(@as(?i64, 0), parseTimestampMs("1970-01-01T00:00:00Z"));
+    try std.testing.expectEqual(@as(?i64, 1762560634134), parseTimestampMs("2025-11-08T00:10:34.134Z"));
+    try std.testing.expectEqual(@as(?i64, 1762560634000), parseTimestampMs("2025-11-08T01:10:34+01:00"));
+    try std.testing.expectEqual(@as(?i64, 951782400000), parseTimestampMs("2000-02-29T00:00:00Z"));
+    try std.testing.expect(parseTimestampMs("") == null);
+    try std.testing.expect(parseTimestampMs("2025-11-08") == null);
+    try std.testing.expect(parseTimestampMs("2025-13-08T00:00:00Z") == null);
+    try std.testing.expect(parseTimestampMs("2025-11-08T00:10:34.134Zjunk") == null);
+}
 
 fn zigDevBuildNumber(version: []const u8) ?u64 {
     const marker = "-dev.";
@@ -624,10 +690,16 @@ fn selectS3RegistryMetadata(allocator: std.mem.Allocator, version_constraint: []
         }
     }
 
+    const uploaded_at_ms: ?i64 = if (platform_info.object.get("uploadedAt")) |value|
+        (if (value == .string) parseTimestampMs(value.string) else null)
+    else
+        null;
+
     return S3PackageResult{
         .tarball_url = tarball_url,
         .version = version_dupe,
         .archive_identity = archive_identity,
+        .uploaded_at_ms = uploaded_at_ms,
     };
 }
 
@@ -643,7 +715,7 @@ test "native archive resume: registry selection retains the complete immutable i
     var digest: [32]u8 = undefined;
     std.crypto.hash.sha2.Sha256.hash("abcdefghij", &digest, .{});
     const metadata = try std.fmt.allocPrint(allocator,
-        \\{{"versions":{{"1.0.0":{{"platforms":{{"{s}":{{"tarball":"binaries/fixture.tar.gz","sha256":"{s}","size":10}}}}}}}}}}
+        \\{{"versions":{{"1.0.0":{{"platforms":{{"{s}":{{"tarball":"binaries/fixture.tar.gz","sha256":"{s}","size":10,"uploadedAt":"2025-11-08T00:10:34.134Z"}}}}}}}}}}
     , .{ platform, std.fmt.bytesToHex(digest, .lower) });
     defer allocator.free(metadata);
     const selected = (try selectS3RegistryMetadata(allocator, "1.0.0", metadata)).?;
@@ -652,6 +724,7 @@ test "native archive resume: registry selection retains the complete immutable i
     try std.testing.expectEqual(@as(u64, 10), selected.archive_identity.?.size);
     try std.testing.expectEqualSlices(u8, &digest, &selected.archive_identity.?.sha256);
     try std.testing.expectEqualStrings("https://registry.pantry.dev/binaries/fixture.tar.gz", selected.tarball_url);
+    try std.testing.expectEqual(@as(?i64, 1762560634134), selected.uploaded_at_ms);
 }
 
 // The resolver is a unit test, not an availability probe for the live

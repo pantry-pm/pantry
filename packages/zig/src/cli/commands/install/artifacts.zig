@@ -18,8 +18,31 @@ const Hooks = struct {
     /// null for a global tree.
     project_root: ?[]const u8,
     verbose: bool,
+    /// Where a replacement also writes: download staging and the download
+    /// cache (they may be on other filesystems than the tree).
+    staging_dir: ?[]const u8 = null,
+    cache_dir: ?[]const u8 = null,
 
-    fn registrySha256(context: *anyopaque, domain: []const u8, version: []const u8) anyerror!?artifact_refresh.Digest {
+    fn init(installer: *install.Installer, project_root: ?[]const u8, verbose: bool) Hooks {
+        const allocator = installer.allocator;
+        const home = lib.Paths.home(allocator) catch null;
+        defer if (home) |h| allocator.free(h);
+        return .{
+            .installer = installer,
+            .project_root = project_root,
+            .verbose = verbose,
+            // As installer.zig stages every native download.
+            .staging_dir = if (home) |h| std.fmt.allocPrint(allocator, "{s}/.pantry/.tmp", .{h}) catch null else null,
+            .cache_dir = lib.Paths.cache(allocator) catch null,
+        };
+    }
+
+    fn deinit(self: *Hooks) void {
+        if (self.staging_dir) |d| self.installer.allocator.free(d);
+        if (self.cache_dir) |d| self.installer.allocator.free(d);
+    }
+
+    fn registryArtifact(context: *anyopaque, domain: []const u8, version: []const u8) anyerror!?artifact_refresh.RegistryArtifact {
         const self: *Hooks = @ptrCast(@alignCast(context));
         const allocator = self.installer.allocator;
         const found = (try install.downloader.lookupS3Registry(allocator, domain, version)) orelse return null;
@@ -28,7 +51,21 @@ const Hooks = struct {
         // Only that exact version's artifact says anything about this copy.
         if (!std.mem.eql(u8, found.version, version)) return null;
         const identity = found.archive_identity orelse return null;
-        return identity.sha256;
+        return .{ .sha256 = identity.sha256, .size = identity.size, .uploaded_at_ms = found.uploaded_at_ms };
+    }
+
+    /// The least free space among the tree, download staging and the
+    /// download cache: the check asks every filesystem for the whole
+    /// requirement, which only errs towards leaving a copy as it is.
+    fn freeSpace(context: *anyopaque, dir: []const u8) ?u64 {
+        const self: *Hooks = @ptrCast(@alignCast(context));
+        var least: ?u64 = artifact_refresh.freeBytesNear(dir);
+        for ([_]?[]const u8{ self.staging_dir, self.cache_dir }) |maybe| {
+            const path = maybe orelse continue;
+            const free = artifact_refresh.freeBytesNear(path) orelse continue;
+            least = if (least) |l| @min(l, free) else free;
+        }
+        return least;
     }
 
     fn reinstall(context: *anyopaque, domain: []const u8, version: []const u8, digest: artifact_refresh.Digest) anyerror!void {
@@ -47,11 +84,11 @@ const Hooks = struct {
     }
 
     fn hooks(self: *Hooks) artifact_refresh.Hooks {
-        return .{ .context = self, .registrySha256 = registrySha256, .reinstall = reinstall };
+        return .{ .context = self, .registryArtifact = registryArtifact, .reinstall = reinstall, .freeSpace = freeSpace };
     }
 };
 
-fn printReport(report: artifact_refresh.Report) void {
+fn printReport(report: artifact_refresh.Report, verbose: bool) void {
     for (report.changes) |change| {
         if (change.from != null) {
             style.print("  {s}~{s} {s} {s} {s}rebuilt artifact{s}\n", .{ style.dim, style.reset, change.domain, change.version, style.dim, style.reset });
@@ -59,9 +96,22 @@ fn printReport(report: artifact_refresh.Report) void {
             style.print("  {s}~{s} {s} {s} {s}re-fetched artifact (no recorded hash){s}\n", .{ style.dim, style.reset, change.domain, change.version, style.dim, style.reset });
         }
     }
-    for (report.failures) |failure| {
-        style.printWarn("Could not replace {s}@{s} with its rebuilt artifact: {s}\n", .{ failure.domain, failure.version, @errorName(failure.err) });
+    for (report.skipped) |skip| {
+        var need_buf: [32]u8 = undefined;
+        var have_buf: [32]u8 = undefined;
+        style.printWarn("{s} {s}: not enough free space to replace (need {s}, have {s}); left as is\n", .{
+            skip.domain,
+            skip.version,
+            artifact_refresh.formatBytes(&need_buf, skip.need),
+            artifact_refresh.formatBytes(&have_buf, skip.have),
+        });
     }
+    for (report.failures) |failure| {
+        style.printWarn("{s} {s}: could not replace with its rebuilt artifact ({s}); left as is\n", .{ failure.domain, failure.version, @errorName(failure.err) });
+    }
+    // Adopting an unmarked copy changes nothing on disk but its marker.
+    if (verbose and report.adopted > 0)
+        style.print("  {s}{d} installed package(s) recorded as their current artifact, nothing re-fetched{s}\n", .{ style.dim, report.adopted, style.reset });
 }
 
 /// The frozen-lockfile failure: every locked hash the registry no longer
@@ -122,7 +172,8 @@ pub fn refreshProject(allocator: std.mem.Allocator, options: types.InstallOption
     defer installer.deinit();
     installer.modules_dir = options.modules_dir;
     installer.verbose = options.verbose;
-    var context = Hooks{ .installer = &installer, .project_root = root, .verbose = options.verbose };
+    var context = Hooks.init(&installer, root, options.verbose);
+    defer context.deinit();
 
     const report = artifact_refresh.reconcile(allocator, .{
         .tree = tree,
@@ -135,7 +186,7 @@ pub fn refreshProject(allocator: std.mem.Allocator, options: types.InstallOption
     };
     defer report.deinit(allocator);
     if (report.mismatches.len > 0) return try frozenMismatchResult(allocator, report.mismatches);
-    printReport(report);
+    printReport(report, options.verbose);
     return null;
 }
 
@@ -146,11 +197,12 @@ pub fn refreshGlobal(allocator: std.mem.Allocator, installer: *install.Installer
     const tree = std.fs.path.join(allocator, &.{ global_dir, "packages" }) catch return;
     defer allocator.free(tree);
     io_helper.accessAbsolute(tree, .{}) catch return;
-    var context = Hooks{ .installer = installer, .project_root = null, .verbose = installer.verbose };
+    var context = Hooks.init(installer, null, installer.verbose);
+    defer context.deinit();
     const report = artifact_refresh.reconcile(allocator, .{ .tree = tree, .only_domains = names }, context.hooks()) catch |err| {
         if (installer.verbose) style.print("  ! Could not check for rebuilt artifacts: {s}\n", .{@errorName(err)});
         return;
     };
     defer report.deinit(allocator);
-    printReport(report);
+    printReport(report, installer.verbose);
 }

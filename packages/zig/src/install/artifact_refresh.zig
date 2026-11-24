@@ -36,6 +36,7 @@
 //! reported and nothing changes.
 
 const std = @import("std");
+const builtin = @import("builtin");
 const io_helper = @import("../io_helper.zig");
 const generated = @import("../packages/generated.zig");
 const lockfile_io = @import("../packages/lockfile.zig");
@@ -126,18 +127,187 @@ pub fn copyMatches(recorded: ?Digest, expected: ?Digest) bool {
     return std.mem.eql(u8, &have, &want);
 }
 
+/// What the registry says about exactly one version's artifact here.
+pub const RegistryArtifact = struct {
+    sha256: Digest,
+    /// The archive's size in bytes (0 when the record has none).
+    size: u64 = 0,
+    /// The record's `uploadedAt`, ms since the epoch; null when it has none.
+    uploaded_at_ms: ?i64 = null,
+};
+
 pub const Hooks = struct {
     context: *anyopaque,
-    /// The registry's sha256 for exactly `domain@version` on this platform,
+    /// The registry's record for exactly `domain@version` on this platform,
     /// or null when the binary registry has no such artifact (or publishes
     /// no checksum for it). An error is a failed lookup and skips the
     /// package. Called from several threads at once.
-    registrySha256: *const fn (context: *anyopaque, domain: []const u8, version: []const u8) anyerror!?Digest,
+    registryArtifact: *const fn (context: *anyopaque, domain: []const u8, version: []const u8) anyerror!?RegistryArtifact,
     /// Install exactly `domain@version` from fresh bytes verified against
     /// `digest`, replacing the version directory atomically (its `vN` and
     /// `.bin` links follow, as for any install) and leaving its marker.
     reinstall: *const fn (context: *anyopaque, domain: []const u8, version: []const u8, digest: Digest) anyerror!void,
+    /// Free bytes a replacement of the version directory `dir` can use:
+    /// the least free space among the filesystems it writes to (download
+    /// staging, download cache, the tree). null when unknown.
+    freeSpace: *const fn (context: *anyopaque, dir: []const u8) ?u64 = systemFreeSpace,
+    /// When `dir` was created (its birth time), ms since the epoch; null
+    /// when the filesystem or OS does not record one.
+    birthTimeMs: *const fn (context: *anyopaque, dir: []const u8) ?i64 = systemBirthTime,
+    /// Bytes of regular files under `dir`; null when it cannot be measured.
+    treeSize: *const fn (context: *anyopaque, dir: []const u8) ?u64 = systemTreeSize,
 };
+
+// ----------------------------------------------------------------------------
+// Filesystem facts the space check and adoption rely on
+// ----------------------------------------------------------------------------
+
+fn pathZ(buf: *[std.fs.max_path_bytes:0]u8, path: []const u8) ?[*:0]const u8 {
+    if (path.len >= buf.len) return null;
+    @memcpy(buf[0..path.len], path);
+    buf[path.len] = 0;
+    return buf[0..path.len :0];
+}
+
+/// Free bytes available to an unprivileged writer on the filesystem holding
+/// `path`, or null where it cannot be asked.
+pub fn freeBytes(path: []const u8) ?u64 {
+    var buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    const z = pathZ(&buf, path) orelse return null;
+    // Only the leading fields are declared; the call writes into a buffer
+    // larger than either OS's whole struct.
+    var raw: [4096]u8 align(16) = undefined;
+    switch (builtin.os.tag) {
+        .macos => {
+            const Prefix = extern struct { f_bsize: u32, f_iosize: i32, f_blocks: u64, f_bfree: u64, f_bavail: u64 };
+            const name = if (builtin.cpu.arch == .x86_64) "statfs$INODE64" else "statfs";
+            const statfs = @extern(*const fn ([*:0]const u8, *anyopaque) callconv(.c) c_int, .{ .name = name });
+            if (statfs(z, &raw) != 0) return null;
+            const s: *const Prefix = @ptrCast(&raw);
+            return std.math.mul(u64, s.f_bavail, s.f_bsize) catch std.math.maxInt(u64);
+        },
+        .linux => {
+            if (@sizeOf(usize) != 8) return null;
+            const Prefix = extern struct { f_bsize: u64, f_frsize: u64, f_blocks: u64, f_bfree: u64, f_bavail: u64 };
+            const statvfs = @extern(*const fn ([*:0]const u8, *anyopaque) callconv(.c) c_int, .{ .name = "statvfs" });
+            if (statvfs(z, &raw) != 0) return null;
+            const s: *const Prefix = @ptrCast(&raw);
+            const unit = if (s.f_frsize != 0) s.f_frsize else s.f_bsize;
+            return std.math.mul(u64, s.f_bavail, unit) catch std.math.maxInt(u64);
+        },
+        else => return null,
+    }
+}
+
+/// `freeBytes` of `path`, or of its nearest existing ancestor (a staging
+/// directory that is only created when a download starts).
+pub fn freeBytesNear(path: []const u8) ?u64 {
+    var current = path;
+    while (true) {
+        if (io_helper.accessAbsolute(current, .{})) |_| return freeBytes(current) else |_| {}
+        current = std.fs.path.dirname(current) orelse return null;
+    }
+}
+
+/// When `dir` was created: statx(STATX_BTIME) on Linux, st_birthtime on
+/// macOS. Never mtime or ctime, which a later write inside the directory
+/// moves (an older client's same-version reinstall rewrites
+/// `.pantry-library-paths` there). null where no birth time is recorded.
+///
+/// Linux's btime is the inode's creation and nothing moves it. APFS moves a
+/// birth time back when an mtime earlier than it is set, so a version
+/// directory that took its mtime from the archive (tar does that) reports
+/// the archive's build time there. Either way it is never later than the
+/// directory's real creation, so adoption can only err towards re-fetching.
+pub fn birthTimeMs(dir: []const u8) ?i64 {
+    var buf: [std.fs.max_path_bytes:0]u8 = undefined;
+    const z = pathZ(&buf, dir) orelse return null;
+    switch (builtin.os.tag) {
+        .macos => {
+            var st: std.c.Stat = undefined;
+            if (std.c.stat(z, &st) != 0) return null;
+            const t = st.birthtimespec;
+            if (t.sec <= 0) return null;
+            return @as(i64, t.sec) * 1000 + @divTrunc(@as(i64, t.nsec), 1_000_000);
+        },
+        .linux => {
+            const linux = std.os.linux;
+            var stx: linux.Statx = undefined;
+            const rc = linux.statx(linux.AT.FDCWD, z, linux.AT.SYMLINK_NOFOLLOW, .{ .BTIME = true }, &stx);
+            if (linux.errno(rc) != .SUCCESS or !stx.mask.BTIME or stx.btime.sec <= 0) return null;
+            return stx.btime.sec * 1000 + @divTrunc(@as(i64, stx.btime.nsec), 1_000_000);
+        },
+        else => return null,
+    }
+}
+
+/// Bytes of regular files under `dir`, links not followed; null when the
+/// directory cannot be read.
+pub fn treeBytes(dir: []const u8) ?u64 {
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    if (dir.len > buf.len) return null;
+    @memcpy(buf[0..dir.len], dir);
+    var total: u64 = 0;
+    sumTree(&buf, dir.len, &total) catch return null;
+    return total;
+}
+
+fn sumTree(buf: *[std.fs.max_path_bytes]u8, len: usize, total: *u64) !void {
+    var dir = try io_helper.openDirAbsoluteForIteration(buf[0..len]);
+    defer dir.close();
+    var it = dir.iterate();
+    while (try it.next()) |entry| {
+        if (len + 1 + entry.name.len > buf.len) return error.NameTooLong;
+        buf[len] = '/';
+        @memcpy(buf[len + 1 ..][0..entry.name.len], entry.name);
+        const child_len = len + 1 + entry.name.len;
+        switch (entry.kind) {
+            .directory => try sumTree(buf, child_len, total),
+            .file => {
+                const stat = io_helper.cwd().statFile(io_helper.io, buf[0..child_len], .{ .follow_symlinks = false }) catch continue;
+                total.* +|= stat.size;
+            },
+            else => {},
+        }
+    }
+}
+
+fn systemFreeSpace(_: *anyopaque, dir: []const u8) ?u64 {
+    return freeBytesNear(dir);
+}
+
+fn systemBirthTime(_: *anyopaque, dir: []const u8) ?i64 {
+    return birthTimeMs(dir);
+}
+
+fn systemTreeSize(_: *anyopaque, dir: []const u8) ?u64 {
+    return treeBytes(dir);
+}
+
+/// Bytes a replacement needs free before it starts, on every filesystem it
+/// writes to. The archive is held twice at once while a resumable download
+/// is published from its partial file into staging (the second copy is also
+/// what the download cache keeps for a small archive), the extracted tree
+/// sits in staging beside the archive, and the installed copy is removed
+/// only after the new one is in place, so its space is not available. The
+/// extracted size is taken from the copy being replaced, or a conservative
+/// multiple of the archive when it cannot be measured.
+pub fn requiredSpace(archive_size: u64, installed_size: ?u64, margin: u64) u64 {
+    const extracted = installed_size orelse archive_size *| 5;
+    return (archive_size *| 2) +| extracted +| margin;
+}
+
+/// `12.3 GiB`.
+pub fn formatBytes(buf: []u8, bytes: u64) []const u8 {
+    const units = [_][]const u8{ "B", "KiB", "MiB", "GiB", "TiB" };
+    var value: f64 = @floatFromInt(bytes);
+    var unit: usize = 0;
+    while (value >= 1024 and unit + 1 < units.len) : (unit += 1) value /= 1024;
+    return if (unit == 0)
+        std.fmt.bufPrint(buf, "{d} B", .{bytes}) catch "?"
+    else
+        std.fmt.bufPrint(buf, "{d:.1} {s}", .{ value, units[unit] }) catch "?";
+}
 
 pub const Options = struct {
     /// The directory holding `<domain>/v<version>`: `<project>/pantry`, or a
@@ -154,6 +324,12 @@ pub const Options = struct {
     offline: bool = false,
     /// Consider only these domains (a global install of named packages).
     only_domains: ?[]const []const u8 = null,
+    /// Free space left over after a replacement, on top of what it needs.
+    space_margin: u64 = 512 * 1024 * 1024,
+    /// Adoption needs the tree created at least this long after the
+    /// artifact's upload, so a clock running a little ahead cannot pass a
+    /// tree installed just before an overwrite as one installed after it.
+    adopt_clock_margin_ms: i64 = 10 * 60 * 1000,
     max_concurrency: usize = 8,
 };
 
@@ -181,6 +357,14 @@ pub const Failure = struct {
     err: anyerror,
 };
 
+/// A replacement not started for want of free space; the copy stays.
+pub const SpaceSkip = struct {
+    domain: []const u8,
+    version: []const u8,
+    need: u64,
+    have: u64,
+};
+
 pub const Report = struct {
     changes: []Change = &.{},
     /// Frozen only. When any is set, nothing was installed or written.
@@ -188,8 +372,17 @@ pub const Report = struct {
     /// Reinstalls that failed: the installed copy and its lock entry stay
     /// as they were, and the next install tries again.
     failures: []Failure = &.{},
+    /// Replacements skipped because the disk could not hold them.
+    skipped: []SpaceSkip = &.{},
+    /// Unmarked copies recognised as current and marked, not re-fetched.
+    adopted: usize = 0,
 
     pub fn deinit(self: Report, allocator: std.mem.Allocator) void {
+        for (self.skipped) |k| {
+            allocator.free(k.domain);
+            allocator.free(k.version);
+        }
+        allocator.free(self.skipped);
         for (self.changes) |c| {
             allocator.free(c.domain);
             allocator.free(c.version);
@@ -218,7 +411,7 @@ const Candidate = struct {
     /// The installed marker; null when installed without one.
     marker: ?Digest = null,
     /// Filled by the registry phase.
-    registry: ?Digest = null,
+    registry: ?RegistryArtifact = null,
 
     fn deinit(self: Candidate, allocator: std.mem.Allocator) void {
         allocator.free(self.domain);
@@ -324,7 +517,7 @@ const LookupContext = struct {
             const i = self.next.fetchAdd(1, .monotonic);
             if (i >= self.candidates.len) return;
             const c = &self.candidates[i];
-            c.registry = self.hooks.registrySha256(self.hooks.context, c.domain, c.version) catch null;
+            c.registry = self.hooks.registryArtifact(self.hooks.context, c.domain, c.version) catch null;
         }
     }
 };
@@ -397,15 +590,17 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
     var changes: std.ArrayList(Change) = .empty;
     var mismatches: std.ArrayList(Mismatch) = .empty;
     var failures: std.ArrayList(Failure) = .empty;
+    var skipped: std.ArrayList(SpaceSkip) = .empty;
+    var adopted: usize = 0;
     errdefer {
-        (Report{ .changes = changes.toOwnedSlice(allocator) catch &.{}, .mismatches = mismatches.toOwnedSlice(allocator) catch &.{}, .failures = failures.toOwnedSlice(allocator) catch &.{} }).deinit(allocator);
+        (Report{ .changes = changes.toOwnedSlice(allocator) catch &.{}, .mismatches = mismatches.toOwnedSlice(allocator) catch &.{}, .failures = failures.toOwnedSlice(allocator) catch &.{}, .skipped = skipped.toOwnedSlice(allocator) catch &.{} }).deinit(allocator);
     }
 
     // A frozen install installs exactly what the lock names or fails; it
     // decides before touching anything.
     if (options.frozen) {
         for (candidates.items) |c| {
-            const registry = c.registry orelse continue;
+            const registry = (c.registry orelse continue).sha256;
             const locked = c.locked orelse continue;
             if (eqlDigest(locked, registry)) continue;
             const domain = try allocator.dupe(u8, c.domain);
@@ -421,17 +616,37 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
 
     var lock_changed = false;
     for (candidates.items) |*c| {
-        const registry = c.registry orelse continue;
+        const record = c.registry orelse continue;
+        const registry = record.sha256;
+
+        var dir_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const dir = std.fmt.bufPrint(&dir_buf, "{s}/{s}/v{s}", .{ options.tree, c.domain, c.version }) catch continue;
 
         // An installed copy with no marker was installed by a client that
-        // recorded nothing, possibly from the very bytes the registry has
-        // since replaced, and the archive hash cannot be recovered from an
-        // extracted tree. It is reinstalled once: from the download cache
-        // when that holds the current archive (checked by sha256), else
-        // from the registry. That is the price of letting a runner converged
-        // by an older client pick up a repaired artifact on its next
-        // install, and from then on the marker makes this a hash compare.
-        const stale = c.installed and (if (c.marker) |m| !eqlDigest(m, registry) else true);
+        // recorded nothing, and the archive hash cannot be recovered from an
+        // extracted tree. It is adopted (marked as the registry's current
+        // artifact, nothing downloaded or extracted) when the registry last
+        // wrote that artifact before the copy was created: an artifact not
+        // uploaded since the tree was installed cannot have been replaced
+        // under it, so the tree holds the current bytes. The creation time
+        // is the directory's birth time, never mtime or ctime: an older
+        // client's same-version reinstall rewrites `.pantry-library-paths`
+        // inside it and moves both. One case is not caught: an older client
+        // that installed after an overwrite from bytes it already held (a
+        // download cache filled before the overwrite, or an older global
+        // copy) made a new directory of old bytes. Without a birth time or
+        // an `uploadedAt`, the copy is fetched again instead (space
+        // permitting), and from then on the marker makes this a hash compare.
+        var stale = c.installed and (if (c.marker) |m| !eqlDigest(m, registry) else true);
+        if (stale and c.marker == null) adopt: {
+            const uploaded = record.uploaded_at_ms orelse break :adopt;
+            const born = hooks.birthTimeMs(hooks.context, dir) orelse break :adopt;
+            if (uploaded +| options.adopt_clock_margin_ms >= born) break :adopt;
+            writeMarker(dir, registry) catch break :adopt;
+            c.marker = registry;
+            stale = false;
+            adopted += 1;
+        }
         // This platform's locked hash moves only when it is there and wrong.
         // A missing key is filled in below, in memory, and reaches disk only
         // if the lock is written for a real change.
@@ -440,6 +655,19 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
         if (!stale and !lock_moves and !lock_missing) continue;
 
         if (stale) {
+            // Never start a replacement the disk cannot finish: the copy in
+            // use stays, and a non-frozen install goes on without it.
+            if (hooks.freeSpace(hooks.context, dir)) |have| {
+                const need = requiredSpace(record.size, hooks.treeSize(hooks.context, dir), options.space_margin);
+                if (have < need) {
+                    const domain = try allocator.dupe(u8, c.domain);
+                    errdefer allocator.free(domain);
+                    const version = try allocator.dupe(u8, c.version);
+                    errdefer allocator.free(version);
+                    try skipped.append(allocator, .{ .domain = domain, .version = version, .need = need, .have = have });
+                    continue;
+                }
+            }
             hooks.reinstall(hooks.context, c.domain, c.version, registry) catch |err| {
                 const domain = try allocator.dupe(u8, c.domain);
                 errdefer allocator.free(domain);
@@ -481,6 +709,8 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
     return .{
         .changes = try changes.toOwnedSlice(allocator),
         .failures = try failures.toOwnedSlice(allocator),
+        .skipped = try skipped.toOwnedSlice(allocator),
+        .adopted = adopted,
     };
 }
 
@@ -506,18 +736,31 @@ const TestHooks = struct {
     root: []const u8,
     /// Whether the registry serves `zlib.net@1.3.1` (the repaired build).
     served: bool = true,
+    /// The record's archive size and `uploadedAt`.
+    size: u64 = 100 * 1024 * 1024,
+    uploaded_at_ms: ?i64 = null,
+    /// What the filesystem reports: free bytes, a birth time for every
+    /// installed directory, and the installed copy's size.
+    free: ?u64 = std.math.maxInt(u64),
+    born_ms: ?i64 = null,
+    installed_size: ?u64 = 300 * 1024 * 1024,
     lookups: std.atomic.Value(usize) = .init(0),
     installs: std.ArrayList([]const u8) = .empty,
     fail_install: bool = false,
     mutex: io_helper.Mutex = .{},
 
-    fn registrySha256(context: *anyopaque, domain: []const u8, version: []const u8) anyerror!?Digest {
+    fn registryArtifact(context: *anyopaque, domain: []const u8, version: []const u8) anyerror!?RegistryArtifact {
         const self: *TestHooks = @ptrCast(@alignCast(context));
         _ = self.lookups.fetchAdd(1, .monotonic);
-        if (std.mem.eql(u8, domain, "zlib.net") and std.mem.eql(u8, version, "1.3.1")) return if (self.served) digestOf(new_bytes) else null;
-        if (std.mem.eql(u8, domain, "openssl.org")) return digestOf("openssl");
-        if (std.mem.eql(u8, domain, "bun.com")) return digestOf("bun");
-        return null;
+        const sha: Digest = if (std.mem.eql(u8, domain, "zlib.net") and std.mem.eql(u8, version, "1.3.1"))
+            (if (self.served) digestOf(new_bytes) else return null)
+        else if (std.mem.eql(u8, domain, "openssl.org"))
+            digestOf("openssl")
+        else if (std.mem.eql(u8, domain, "bun.com"))
+            digestOf("bun")
+        else
+            return null;
+        return .{ .sha256 = sha, .size = self.size, .uploaded_at_ms = self.uploaded_at_ms };
     }
 
     fn reinstall(context: *anyopaque, domain: []const u8, version: []const u8, digest: Digest) anyerror!void {
@@ -532,8 +775,30 @@ const TestHooks = struct {
         try self.installs.append(testing.allocator, try std.fmt.allocPrint(testing.allocator, "{s}@{s}", .{ domain, version }));
     }
 
+    fn freeSpace(context: *anyopaque, _: []const u8) ?u64 {
+        const self: *TestHooks = @ptrCast(@alignCast(context));
+        return self.free;
+    }
+
+    fn birthTime(context: *anyopaque, _: []const u8) ?i64 {
+        const self: *TestHooks = @ptrCast(@alignCast(context));
+        return self.born_ms;
+    }
+
+    fn treeSize(context: *anyopaque, _: []const u8) ?u64 {
+        const self: *TestHooks = @ptrCast(@alignCast(context));
+        return self.installed_size;
+    }
+
     fn hooks(self: *TestHooks) Hooks {
-        return .{ .context = self, .registrySha256 = registrySha256, .reinstall = reinstall };
+        return .{
+            .context = self,
+            .registryArtifact = registryArtifact,
+            .reinstall = reinstall,
+            .freeSpace = freeSpace,
+            .birthTimeMs = birthTime,
+            .treeSize = treeSize,
+        };
     }
 
     fn deinit(self: *TestHooks) void {
@@ -904,6 +1169,160 @@ test "artifact refresh: a copy without a marker under a locked hash is re-fetche
     try testing.expectEqual(@as(usize, 1), hooks.installs.items.len);
     try testing.expectEqual(@as(usize, 1), report.changes.len);
     try testing.expect(report.changes[0].from == null);
+}
+
+test "artifact refresh: a copy older than its artifact's upload is fetched; one created after it is adopted" {
+    const day: i64 = 24 * 60 * 60 * 1000;
+    const uploaded: i64 = 1_762_560_634_134;
+
+    // Installed (born) a day after the artifact was last uploaded: the bytes
+    // cannot have been replaced since, so the copy is marked, not fetched.
+    var f: Fixture = .{ .tmp = undefined };
+    try f.init(.{}, null);
+    defer f.deinit();
+    const before = try f.lockBytes();
+    defer testing.allocator.free(before);
+    var adopt = TestHooks{ .root = f.root, .uploaded_at_ms = uploaded, .born_ms = uploaded + day };
+    defer adopt.deinit();
+    const adopted = try f.reconcileWith(&adopt, false);
+    defer adopted.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), adopted.adopted);
+    try testing.expectEqual(@as(usize, 0), adopt.installs.items.len);
+    try testing.expectEqual(@as(usize, 0), adopted.changes.len);
+    try testing.expect(eqlDigest(f.installedMarker().?, digestOf(new_bytes)));
+    // Adoption writes the marker only; the lock (no key here) is untouched.
+    const after = try f.lockBytes();
+    defer testing.allocator.free(after);
+    try testing.expectEqualStrings(before, after);
+
+    // Born before the upload (the artifact was overwritten after this copy
+    // was installed): fetched.
+    var g: Fixture = .{ .tmp = undefined };
+    try g.init(.{}, null);
+    defer g.deinit();
+    var older = TestHooks{ .root = g.root, .uploaded_at_ms = uploaded, .born_ms = uploaded - day };
+    defer older.deinit();
+    const fetched = try g.reconcileWith(&older, false);
+    defer fetched.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 0), fetched.adopted);
+    try testing.expectEqual(@as(usize, 1), older.installs.items.len);
+
+    // Born just after the upload, inside the clock margin: fetched.
+    var h: Fixture = .{ .tmp = undefined };
+    try h.init(.{}, null);
+    defer h.deinit();
+    var close = TestHooks{ .root = h.root, .uploaded_at_ms = uploaded, .born_ms = uploaded + 60 * 1000 };
+    defer close.deinit();
+    const close_report = try h.reconcileWith(&close, false);
+    defer close_report.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), close.installs.items.len);
+
+    // No birth time (a filesystem without one), or no uploadedAt: fetched.
+    var i: Fixture = .{ .tmp = undefined };
+    try i.init(.{}, null);
+    defer i.deinit();
+    var no_birth = TestHooks{ .root = i.root, .uploaded_at_ms = uploaded, .born_ms = null };
+    defer no_birth.deinit();
+    const no_birth_report = try i.reconcileWith(&no_birth, false);
+    defer no_birth_report.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), no_birth.installs.items.len);
+
+    var j: Fixture = .{ .tmp = undefined };
+    try j.init(.{}, null);
+    defer j.deinit();
+    var no_upload = TestHooks{ .root = j.root, .uploaded_at_ms = null, .born_ms = uploaded + day };
+    defer no_upload.deinit();
+    const no_upload_report = try j.reconcileWith(&no_upload, false);
+    defer no_upload_report.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), no_upload.installs.items.len);
+
+    // A copy with a marker is never adopted over: a wrong marker is fetched.
+    var k: Fixture = .{ .tmp = undefined };
+    try k.init(.{}, digestOf(old_bytes));
+    defer k.deinit();
+    var marked = TestHooks{ .root = k.root, .uploaded_at_ms = uploaded, .born_ms = uploaded + day };
+    defer marked.deinit();
+    const marked_report = try k.reconcileWith(&marked, false);
+    defer marked_report.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 0), marked_report.adopted);
+    try testing.expectEqual(@as(usize, 1), marked.installs.items.len);
+}
+
+test "artifact refresh: a replacement the disk cannot hold is skipped and the copy left as is" {
+    const old = digestOf(old_bytes);
+    const mib: u64 = 1024 * 1024;
+    // need = 2 x 100 MiB archive + 300 MiB installed + 512 MiB margin = 1012 MiB.
+    try testing.expectEqual(1012 * mib, requiredSpace(100 * mib, 300 * mib, 512 * mib));
+    // Unmeasurable installed size: five times the archive stands in.
+    try testing.expectEqual(1212 * mib, requiredSpace(100 * mib, null, 512 * mib));
+
+    var f: Fixture = .{ .tmp = undefined };
+    try f.init(.{ .linux = old }, old);
+    defer f.deinit();
+    const before = try f.lockBytes();
+    defer testing.allocator.free(before);
+
+    var short = TestHooks{ .root = f.root, .free = 1011 * mib };
+    defer short.deinit();
+    const skipped = try f.reconcileWith(&short, false);
+    defer skipped.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), skipped.skipped.len);
+    try testing.expectEqualStrings("zlib.net", skipped.skipped[0].domain);
+    try testing.expectEqualStrings("1.3.1", skipped.skipped[0].version);
+    try testing.expectEqual(1012 * mib, skipped.skipped[0].need);
+    try testing.expectEqual(1011 * mib, skipped.skipped[0].have);
+    try testing.expectEqual(@as(usize, 0), short.installs.items.len);
+    try testing.expectEqual(@as(usize, 0), skipped.changes.len);
+    try testing.expectEqual(@as(usize, 0), skipped.failures.len);
+    // Left as is: the copy, its marker and the lock.
+    try testing.expect(eqlDigest(f.installedMarker().?, old));
+    const after = try f.lockBytes();
+    defer testing.allocator.free(after);
+    try testing.expectEqualStrings(before, after);
+
+    var line_buf: [32]u8 = undefined;
+    try testing.expectEqualStrings("1012.0 MiB", formatBytes(&line_buf, 1012 * mib));
+    try testing.expectEqualStrings("512 B", formatBytes(&line_buf, 512));
+
+    // Enough space: replaced.
+    var room = TestHooks{ .root = f.root, .free = 1012 * mib };
+    defer room.deinit();
+    const replaced = try f.reconcileWith(&room, false);
+    defer replaced.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 0), replaced.skipped.len);
+    try testing.expectEqual(@as(usize, 1), room.installs.items.len);
+    try testing.expect(eqlDigest(f.installedMarker().?, digestOf(new_bytes)));
+}
+
+test "artifact refresh: the filesystem facts it relies on can be read here" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buf[0..try tmp.dir.realPath(io_helper.io, &buf)];
+    try tmp.dir.createDirPath(io_helper.io, "v1.0.0/bin");
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "v1.0.0/bin/tool", .data = "0123456789" });
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "v1.0.0/README", .data = "abcde" });
+    const dir = try std.fmt.allocPrint(testing.allocator, "{s}/v1.0.0", .{root});
+    defer testing.allocator.free(dir);
+
+    try testing.expectEqual(@as(?u64, 15), treeBytes(dir));
+    if (builtin.os.tag == .macos or builtin.os.tag == .linux) {
+        try testing.expect(freeBytes(root).? > 0);
+        // A staging directory that does not exist yet is measured where it
+        // would be created.
+        const missing = try std.fmt.allocPrint(testing.allocator, "{s}/not/yet/here", .{root});
+        defer testing.allocator.free(missing);
+        try testing.expectEqual(freeBytes(root) != null, freeBytesNear(missing) != null);
+    }
+    if (builtin.os.tag == .macos) {
+        // APFS records a birth time; a write inside the directory (what an
+        // older client's reinstall does to `.pantry-library-paths`) moves
+        // its mtime but never its birth.
+        const born = birthTimeMs(dir).?;
+        try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "v1.0.0/.pantry-library-paths", .data = "x" });
+        try testing.expectEqual(born, birthTimeMs(dir).?);
+    }
+    try testing.expect(birthTimeMs("/no/such/pantry/dir") == null);
 }
 
 test "artifact refresh: integrity strings, cached archives and shared copies" {
