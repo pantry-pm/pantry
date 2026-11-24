@@ -1,3 +1,42 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.222...v0.11.223)
+
+## ✨ Features
+
+- **elf-repair**: withdraw unpublished loader-path revisions to next-release ([a2feafc](https://github.com/pantry-pm/pantry/commit/a2feafc)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: track in-place overwrites and next-release deferrals in the ledger ([167ab4d](https://github.com/pantry-pm/pantry/commit/167ab4d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **publish**: accept the BFD date GNU Binutils appends to its release ([714adc9](https://github.com/pantry-pm/pantry/commit/714adc9)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **recipes**: tcl-lang finds Tk 9's library, php runs phar unmodified; withdraw five unpopular failed revisions ([b5bad0e](https://github.com/pantry-pm/pantry/commit/b5bad0e)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **install**: record registry artifact hashes per platform in pantry.lock ([85f04d1](https://github.com/pantry-pm/pantry/commit/85f04d1)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **ts-pantry**: annotate two exports for isolated declarations ([bc40812](https://github.com/pantry-pm/pantry/commit/bc40812)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: read the publish token from PANTRY_TOKEN only ([ecb7766](https://github.com/pantry-pm/pantry/commit/ecb7766)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## ♻️ Code Refactoring
+
+- **ts-pantry**: read the registry token from PANTRY_TOKEN only ([bc1d77e](https://github.com/pantry-pm/pantry/commit/bc1d77e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **action**: export the registry token as PANTRY_TOKEN only ([f19100a](https://github.com/pantry-pm/pantry/commit/f19100a)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **cli**: read the registry token from PANTRY_TOKEN only ([b7c9aca](https://github.com/pantry-pm/pantry/commit/b7c9aca)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: request in-place overwrites of the first 25 repaired base builds ([f307b0b](https://github.com/pantry-pm/pantry/commit/f307b0b)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- PANTRY_TOKEN is the token's only name ([eabf2b1](https://github.com/pantry-pm/pantry/commit/eabf2b1)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 💚 Continuous Integration
+
+- name the publish token PANTRY_TOKEN in workflows ([f954a3b](https://github.com/pantry-pm/pantry/commit/f954a3b)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.223 ([3d141cf](https://github.com/pantry-pm/pantry/commit/3d141cf)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.221...v0.11.222)
 
 ## ✨ Features
