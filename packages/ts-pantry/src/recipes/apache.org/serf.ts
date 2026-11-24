@@ -13,6 +13,8 @@ export const recipe: Recipe = {
     'zlib.net': '^1.2',
     'kerberos.org': '^1.20',
     'libexpat.github.io': '^2',
+    // libapr-1 and libaprutil-1 link libcrypt.so.1, which minimal Linux images no longer ship.
+    linux: { 'github.com/besser82/libxcrypt': '^4' },
   },
   buildDependencies: {
     'python.org': '~3.11',

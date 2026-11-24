@@ -17,6 +17,10 @@ export const recipe: Recipe = {
     'hwloc-ps',
     'lstopo-no-graphics',
   ],
+  dependencies: {
+    // lstopo-no-graphics draws its text UI with ncursesw.
+    'invisible-island.net/ncurses': '*',
+  },
   buildDependencies: {
     'gnu.org/autoconf': '*',
     'gnu.org/libtool': '*',

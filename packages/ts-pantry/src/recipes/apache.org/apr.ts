@@ -6,6 +6,10 @@ export const recipe: Recipe = {
   description: 'Mirror of Apache Portable Runtime',
   github: 'https://github.com/apache/apr',
   programs: ['apr-1-config'],
+  dependencies: {
+    // libapr-1 links libcrypt.so.1, which minimal Linux images no longer ship.
+    linux: { 'github.com/besser82/libxcrypt': '^4' },
+  },
   versionSource: {
     type: 'github-tags',
     repo: 'apache/apr',

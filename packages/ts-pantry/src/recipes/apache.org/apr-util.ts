@@ -13,6 +13,8 @@ export const recipe: Recipe = {
   // optional backends that pkgx wires in at build time.
   dependencies: {
     'apache.org/apr': '*',
+    // libapr-1 and libaprutil-1 link libcrypt.so.1, which minimal Linux images no longer ship.
+    linux: { 'github.com/besser82/libxcrypt': '^4' },
   },
   buildDependencies: {
     'apache.org/apr': '*',

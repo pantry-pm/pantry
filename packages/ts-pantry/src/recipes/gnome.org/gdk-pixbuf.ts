@@ -21,7 +21,6 @@ export const recipe: Recipe = {
     'mesonbuild.com': '1',
     'ninja-build.org': '1',
     'freedesktop.org/pkg-config': '^0.29',
-    'gnome.org/gobject-introspection': '1',
     'python.org': '>=3<3.12',
   },
   distributable: {
@@ -48,6 +47,9 @@ export const recipe: Recipe = {
         '-Ddocumentation=false',
         '-Dglycin=disabled',
         '-Dthumbnailer=disabled',
+        // The published builds carry no GIR or typelib, and gobject-introspection
+        // 1.86 expects GModule-2.0.gir from a glib built with introspection.
+        '-Dintrospection=disabled',
       ],
     },
   },
