@@ -866,10 +866,12 @@ wait for its upload and then again for the version to become readable, and a
 package cannot go out before the packages it depends on are readable, so a
 workspace publishes in dependency layers, one wait per layer. The Pantry
 registry answers a publish with the version already installable, so every
-package uploads in parallel and nothing waits on anything else: the 89
-packages of the Stacks framework publish in about ten seconds. A version the
-registry already holds is skipped, so a rerun after a failure publishes only
-what is still missing.
+package uploads in parallel and nothing waits on anything else. The Stacks
+framework's 90 packages publish to Pantry in 82 seconds from CI; the same
+release run took 13 minutes to put them on npm
+([v0.75.672](https://github.com/stacksjs/stacks/actions/runs/45340373214)).
+A version the registry already holds is skipped, so a rerun after a failure
+publishes only what is still missing.
 
 Publishing needs a token with publish rights to the names
 (`PANTRY_TOKEN`, or `pantry token set`). The registry has no OIDC

@@ -156,9 +156,9 @@
       </div>
       <div class="bg-[var(--bg-subtle)] border rounded-lg p-6" style="border-color: var(--accent);">
         <p class="text-xs uppercase tracking-widest mb-3" style="color: var(--accent);">After: Stacks on Pantry</p>
-        <p class="text-3xl font-bold font-mono mb-1" style="color: var(--accent);">10 s</p>
-        <p class="mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">to publish the same 89 packages with one <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">pantry publish</code>, every package uploading in parallel and installable the moment it returns. Bun and npm install them from <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">/npm/</code>.</p>
-        <a href="https://github.com/stacksjs/stacks/actions/workflows/release.yml" class="hvr-accent text-sm" style="color: var(--accent);" target="_blank" rel="noopener">view the Pantry release runs &rarr;</a>
+        <p class="text-3xl font-bold font-mono mb-1" style="color: var(--accent);">82 s</p>
+        <p class="mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">to publish all 90 packages of v0.75.672 with one <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">pantry publish</code>, every package installable the moment its upload returned. The same run then spent 13 minutes putting the set on npm. Bun and npm install from Pantry through <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">/npm/</code>.</p>
+        <a href="https://github.com/stacksjs/stacks/actions/runs/45340373214" class="hvr-accent text-sm" style="color: var(--accent);" target="_blank" rel="noopener">view the Pantry release run &rarr;</a>
       </div>
     </div>
   </div>
