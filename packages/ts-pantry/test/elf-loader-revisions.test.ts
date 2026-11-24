@@ -92,3 +92,17 @@ describe('classifyTarget', () => {
     expect(classifyTarget(target, [row('linux-arm64'), row('linux-x86-64', { needed: undefined })], []).harmless).toBe(false)
   })
 })
+
+describe('withdrawing an unpublished revision', () => {
+  test('removes only that release from the recipe and the package versions', async () => {
+    const { removeRecipeRevision, removePackageVersion } = await import('../scripts/elf-loader-revisions')
+    const source = `export const recipe = {\n  domain: 'x.org/y',\n  name: 'y',\n  revisions: { '1.0.0': 1, '2.0.0': 1 },\n  revisionReasons: { '1.0.0': 'elf-loader-paths', '2.0.0': 'elf-loader-paths' },\n}\n`
+    const once = removeRecipeRevision(source, '2.0.0')
+    expect(once).toContain(`revisions: { '1.0.0': 1 },`)
+    expect(once).toContain(`revisionReasons: { '1.0.0': 'elf-loader-paths' },`)
+    const twice = removeRecipeRevision(once, '1.0.0')
+    expect(twice).not.toContain('revisions')
+    expect(twice).toContain(`name: 'y',\n}`)
+    expect(removePackageVersion(`  versions: [\n    '2.0.0.1',\n    '2.0.0',\n  ] as const,\n`, '2.0.0.1')).toBe(`  versions: [\n    '2.0.0',\n  ] as const,\n`)
+  })
+})

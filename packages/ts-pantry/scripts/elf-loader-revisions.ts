@@ -236,6 +236,33 @@ export function writeRecipeRevision(source: string, revisions: PackageRevisions,
   return out
 }
 
+/**
+ * The recipe without the loader-path revision of `release`: a revision that
+ * never published, withdrawn so the catalog does not advertise it and the
+ * pipeline stops rebuilding it. Other revisions and reasons stay.
+ */
+export function removeRecipeRevision(source: string, release: string): string {
+  const revisions = parseRevisions(source)
+  const reasons = parseReasons(source)
+  if (!(release in revisions)) return source
+  if (reasons[release] !== 'elf-loader-paths') throw new Error(`${release} is not an elf-loader-paths revision`)
+  delete revisions[release]
+  delete reasons[release]
+  let out = source
+  out = Object.keys(revisions).length
+    ? out.replace(/^\s{2}revisions:\s*\{[^}]*\},?$/m, `  revisions: ${objectLiteral(revisions)},`)
+    : out.replace(/^\s{2}revisions:\s*\{[^}]*\},?\n/m, '')
+  out = Object.keys(reasons).length
+    ? out.replace(/^\s{2}revisionReasons:\s*\{[^}]*\},?$/m, `  revisionReasons: ${objectLiteral(reasons)},`)
+    : out.replace(/^\s{2}revisionReasons:\s*\{[^}]*\},?\n/m, '')
+  return out
+}
+
+/** The package metadata without a withdrawn revision identity. */
+export function removePackageVersion(source: string, revision: string): string {
+  return source.replace(new RegExp(`^\\s*'${revision.replace(/\./g, '\\.')}',\\n`, 'm'), '')
+}
+
 /** The package metadata with the revision identity ahead of the release it rebuilds. */
 export function writePackageVersion(source: string, release: string, revision: string): string {
   if (arrayItems(source, 'versions').includes(revision)) return source
@@ -386,6 +413,27 @@ async function main(): Promise<void> {
       row.inPlace = { status: 'pending', since }
       if (row.method === 'in-place') row.status = 'pending'
       console.log(`${domain}@${row.oldBuild}`)
+    }
+    writeLedger(ledgerPath, ledger)
+    return
+  }
+
+  if (command === 'withdraw') {
+    // Withdraw unpublished loader-path revisions, leaving the package to its
+    // next upstream release (`next-release`, with --note/--reason).
+    for (const domain of positionals) {
+      const row = ledger.find(r => r.domain === domain)
+      if (!row?.revision) throw new Error(`${domain} has no revision in the ledger`)
+      if (row.status === 'published' || row.status === 'verified') throw new Error(`${domain}@${row.revision} is published; it stays`)
+      const recipe = recipeFile(domain)
+      const pkg = packageFile(domain)
+      if (recipe) writeFileSync(recipe, removeRecipeRevision(readFileSync(recipe, 'utf8'), row.oldBuild))
+      if (pkg) writeFileSync(pkg, removePackageVersion(readFileSync(pkg, 'utf8'), row.revision))
+      row.note = `${values.note ?? 'fixed on next release'} (revision ${row.revision} withdrawn unpublished${row.note ? `; last failure: ${row.note}` : ''})`
+      row.revision = ''
+      row.status = 'next-release'
+      if (values.reason) row.reason = values.reason
+      console.log(`${domain}: withdrawn`)
     }
     writeLedger(ledgerPath, ledger)
     return
