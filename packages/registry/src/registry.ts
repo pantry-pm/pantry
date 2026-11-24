@@ -34,6 +34,16 @@ function isSafeVersion(v: string): boolean {
   return typeof v === 'string' && v.length > 0 && v.length <= 64 && /^[a-zA-Z0-9._+-]+$/.test(v)
 }
 
+function isLocalTarball(url: URL, base: URL): boolean {
+  if (url.origin === base.origin)
+    return url.pathname.startsWith(`${base.pathname.replace(/\/$/, '')}/`)
+
+  // Both public Pantry origins have been used in stored artifact metadata.
+  // Sending either to HTTP from the production registry calls this service again.
+  const productionOrigins = ['https://pantry.dev', 'https://registry.pantry.dev']
+  return productionOrigins.includes(base.origin) && productionOrigins.includes(url.origin)
+}
+
 function isBlockedHost(hostname: string): boolean {
   const lower = hostname.toLowerCase()
   // Exact matches
@@ -279,7 +289,8 @@ export class Registry {
         // route, not a storage key. This yields the identical key for
         // legacy records (whose tarballUrl was the raw key path), so
         // existing downloads are unaffected.
-        if (metadata.tarballUrl.startsWith(this.config.baseUrl)) {
+        const tarballUrlObj = new URL(metadata.tarballUrl)
+        if (isLocalTarball(tarballUrlObj, new URL(this.config.baseUrl))) {
           const safeName = sanitizePackageName(name)
           const key = `packages/pantry/${safeName}/${version}/${safeName}-${version}.tgz`
           // Content-addressed keys keep concurrent uploads and flattened scope
@@ -305,14 +316,14 @@ export class Registry {
         }
 
         // Otherwise, fetch from the URL (validate HTTPS to prevent SSRF)
-        const tarballUrlObj = new URL(metadata.tarballUrl)
         if (tarballUrlObj.protocol !== 'https:' || isBlockedHost(tarballUrlObj.hostname)) {
           throw new Error(`Blocked tarball URL: ${tarballUrlObj.hostname}`)
         }
-        const response = await fetch(metadata.tarballUrl)
+        const response = await fetch(metadata.tarballUrl, { signal: AbortSignal.timeout(15_000) })
         if (response.ok) {
           return response.arrayBuffer()
         }
+        await response.body?.cancel()
       }
       catch {
         // Fall through to npm fallback

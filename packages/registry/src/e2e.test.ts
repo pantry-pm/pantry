@@ -316,6 +316,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
         ['https://registry.npmjs.org/a/-/a-1.0.0.tgz', new Uint8Array([1, 2, 3])],
         ['https://registry.npmjs.org/b/-/b-2.0.0.tgz', new Uint8Array([4, 5, 6, 7])],
         [`${internalBaseUrl}/packages/tool/3.0.0/tarball`, new Uint8Array([8, 9])],
+        [`${internalBaseUrl}/packages/other-tool/4.0.0/tarball`, new Uint8Array([13, 14])],
         ['https://pantry-registry.s3.amazonaws.com/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz', new Uint8Array([10, 11, 12])],
       ])
       let upstreamRequests = 0
@@ -347,6 +348,7 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
               { name: 'b', version: '2.0.0', tarball: 'https://registry.npmjs.org/b/-/b-2.0.0.tgz' },
               { name: 'tool', version: '3.0.0', tarball: 'https://registry.pantry.dev/packages/tool/3.0.0/tarball' },
               { name: 'curl.se', version: '8.12.0', tarball: 'https://pantry-registry.s3.amazonaws.com/binaries/curl.se/8.12.0/darwin-arm64/curl.se-8.12.0.tar.gz' },
+              { name: 'other-tool', version: '4.0.0', tarball: 'https://pantry.dev/packages/other-tool/4.0.0/tarball' },
             ],
           }),
         })
@@ -360,18 +362,21 @@ describe('e2e: binary proxy + analytics + dashboard', () => {
         expect(entries.get('packages/1.tgz')).toEqual(new Uint8Array([4, 5, 6, 7]))
         expect(entries.get('packages/2.tgz')).toEqual(new Uint8Array([8, 9]))
         expect(entries.get('packages/3.tgz')).toEqual(new Uint8Array([10, 11, 12]))
+        expect(entries.get('packages/4.tgz')).toEqual(new Uint8Array([13, 14]))
 
         const manifestBytes = entries.get('manifest.json')
         expect(manifestBytes).toBeDefined()
         const manifest = JSON.parse(new TextDecoder().decode(manifestBytes!))
-        expect(manifest.packages).toHaveLength(4)
+        expect(manifest.packages).toHaveLength(5)
         expect(manifest.packages[0]).toMatchObject({ name: 'a', version: '1.0.0', file: 'packages/0.tgz' })
         expect(manifest.packages[1]).toMatchObject({ name: 'b', version: '2.0.0', file: 'packages/1.tgz' })
         expect(manifest.packages[2]).toMatchObject({ name: 'tool', version: '3.0.0', file: 'packages/2.tgz' })
         expect(manifest.packages[3]).toMatchObject({ name: 'curl.se', version: '8.12.0', file: 'packages/3.tgz' })
-        expect(upstreamRequests).toBe(4)
+        expect(upstreamRequests).toBe(5)
         expect(requestedUrls).toContain(`${internalBaseUrl}/packages/tool/3.0.0/tarball`)
         expect(requestedUrls).not.toContain('https://registry.pantry.dev/packages/tool/3.0.0/tarball')
+        expect(requestedUrls).toContain(`${internalBaseUrl}/packages/other-tool/4.0.0/tarball`)
+        expect(requestedUrls).not.toContain('https://pantry.dev/packages/other-tool/4.0.0/tarball')
       }
       finally {
         globalThis.fetch = realFetch

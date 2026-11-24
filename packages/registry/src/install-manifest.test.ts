@@ -107,4 +107,17 @@ describe('install manifest', () => {
     expect((await registry.getStoredVersion(name, version))!.install).toEqual({})
     expect(reads).toBe(2)
   })
+
+  it('inspects artifacts published under the old public registry origin through storage', async () => {
+    const registry = createLocalRegistry('https://pantry.dev')
+    const tarball = await archive({ 'package/package.json': JSON.stringify(manifest) })
+    await registry.publish({ name: manifest.name, version: manifest.version, publishedAt: '' }, tarball)
+    const record = (await registry.metadata.getPackage(manifest.name))!.versions[manifest.version]!
+    delete record.install
+    record.tarballUrl = record.tarballUrl.replace('https://pantry.dev/', 'https://registry.pantry.dev/')
+    const stored = await registry.getStoredVersion(manifest.name, manifest.version)
+    expect(stored!.install?.dependencies).toEqual(manifest.dependencies)
+    const downloaded = await registry.downloadTarball(manifest.name, manifest.version)
+    expect(downloaded).toEqual(tarball)
+  })
 })

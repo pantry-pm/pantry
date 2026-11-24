@@ -5487,7 +5487,7 @@ function isAllowedBulkTarballUrl(value: string): boolean {
       return true
     }
 
-    if (url.hostname === 'registry.pantry.dev') {
+    if (url.origin === 'https://registry.pantry.dev' || url.origin === 'https://pantry.dev') {
       return url.pathname.startsWith('/binaries/')
         || /^\/packages\/[^/]+\/[^/]+\/tarball$/.test(url.pathname)
         || /^\/commits\/[^/]+\/[^/]+\/tarball$/.test(url.pathname)
@@ -5512,7 +5512,7 @@ function isAllowedBulkTarballUrl(value: string): boolean {
 
 function internalBulkTarballUrl(value: string, internalBaseUrl: string): string {
   const url = new URL(value)
-  if (url.hostname !== 'registry.pantry.dev')
+  if (url.origin !== 'https://registry.pantry.dev' && url.origin !== 'https://pantry.dev')
     return value
 
   return new URL(`${url.pathname}${url.search}`, `${internalBaseUrl.replace(/\/$/, '')}/`).href
