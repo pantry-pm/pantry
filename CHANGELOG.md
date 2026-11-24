@@ -1,3 +1,24 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.225...v0.11.226)
+
+## 🐛 Bug Fixes
+
+- **elizaOS**: depend on bun.com, where bun's recipe lives ([e2c6e8a](https://github.com/pantry-pm/pantry/commit/e2c6e8a)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: an in-place repair is done once its broken platforms are replaced ([72c1819](https://github.com/pantry-pm/pantry/commit/72c1819)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: request in-place overwrites of 25 more repaired base builds ([eb485a7](https://github.com/pantry-pm/pantry/commit/eb485a7)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: 74 in-place replacements re-audited clean ([0efdd6d](https://github.com/pantry-pm/pantry/commit/0efdd6d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **elf-repair**: repair the four vendored-binary packages in place ([cab28c6](https://github.com/pantry-pm/pantry/commit/cab28c6)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.226 ([1cd7480](https://github.com/pantry-pm/pantry/commit/1cd7480)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.224...v0.11.225)
 
 ## 🐛 Bug Fixes
