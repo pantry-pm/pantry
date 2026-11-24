@@ -96,9 +96,9 @@ export const phpPackage = {
     'ijg.org^9',
     'gnu.org/sed^4',
     'openldap.org^2',
-    'gnu.org/gcc/libstdcxx^14',
     'darwin:sourceware.org/bzip2^1',
     'darwin:zlib.net^1',
+    'linux:gnu.org/gcc/libstdcxx^14',
   ] as const,
   /**
   * Build dependencies for this package.

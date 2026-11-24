@@ -50,10 +50,17 @@ export const recipe: Recipe = {
     'ijg.org': '^9',
     'gnu.org/sed': '^4',
     'openldap.org': '^2',
-    'gnu.org/gcc/libstdcxx': '^14',
     darwin: {
       'sourceware.org/bzip2': '^1',
       'zlib.net': '^1',
+    },
+    // GNU libstdc++ is the Linux C++ runtime only. On darwin clang++ compiles
+    // intl against libc++'s headers, but PHP_REQUIRE_CXX adds -lstdc++ and
+    // libtool resolves that to this package's libstdc++.la when it is staged,
+    // so phpdbg failed to link (`std::bad_array_new_length` undefined). Left
+    // out, clang maps -lstdc++ to the SDK's libc++ as the headers expect.
+    linux: {
+      'gnu.org/gcc/libstdcxx': '^14',
     },
   },
   buildDependencies: {
