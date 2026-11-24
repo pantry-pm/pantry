@@ -157,13 +157,13 @@ function download(url: string, dest: string, headers: Record<string, string> = {
 /**
  * Obtain a bearer token for a registry host + repository scope. Implements the
  * standard Docker token flow (the 401 WWW-Authenticate challenge) and uses
- * PANTRY_REGISTRY_TOKEN for the pantry registry.
+ * PANTRY_TOKEN for the pantry registry.
  */
 async function authToken(host: string, repository: string, actions: string): Promise<string | undefined> {
   const base = host === 'pantry' ? PANTRY_REGISTRY : `https://${host}`
   // Pantry registry: static token auth.
   if (base === PANTRY_REGISTRY) {
-    const tok = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN
+    const tok = process.env.PANTRY_TOKEN
     return tok || undefined
   }
 

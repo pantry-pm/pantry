@@ -371,10 +371,10 @@ function configureBox(ip: string, boxIndex: number, boxCount: number): void {
   try {
     const localEnv = join(homedir(), '.pantry-hetzner.env')
     const tok = existsSync(localEnv)
-      ? (readFileSync(localEnv, 'utf8').match(/^PANTRY_REGISTRY_TOKEN=(.+)$/m)?.[1] || '').trim()
+      ? (readFileSync(localEnv, 'utf8').match(/^PANTRY_TOKEN=(.+)$/m)?.[1] || '').trim()
       : ''
     if (tok)
-      ssh(ip, `grep -q '^PANTRY_REGISTRY_TOKEN=' /root/.pantry-hetzner.env 2>/dev/null || printf 'PANTRY_REGISTRY_TOKEN=%s\\n' '${tok}' >> /root/.pantry-hetzner.env`)
+      ssh(ip, `grep -q '^PANTRY_TOKEN=' /root/.pantry-hetzner.env 2>/dev/null || printf 'PANTRY_TOKEN=%s\\n' '${tok}' >> /root/.pantry-hetzner.env`)
   }
   catch { /* non-fatal: reporting just stays off if the local token is missing */ }
   sshWrite(ip, '/root/fleet-daemon.sh', daemonScript(boxIndex, boxCount))

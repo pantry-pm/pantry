@@ -13,7 +13,7 @@ const DISABLED = process.env.PANTRY_BUILD_REPORT === '0'
 // inject fake status. Builders authenticate with the registry token (same one used
 // for publishing). If it isn't set the POSTs just 401 and reporting is silently
 // skipped — the build itself is unaffected (reporting is fire-and-forget).
-const REPORT_TOKEN = process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN || process.env.PANTRY_BUILD_REPORT_TOKEN || ''
+const REPORT_TOKEN = process.env.PANTRY_TOKEN || process.env.PANTRY_BUILD_REPORT_TOKEN || ''
 function reportHeaders(): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
   if (REPORT_TOKEN)

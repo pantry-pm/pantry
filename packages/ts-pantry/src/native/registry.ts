@@ -23,7 +23,7 @@ interface RegistryDependencies {
 }
 
 async function registryCredential(root: string, url: string, env: NodeJS.ProcessEnv, command: NativeCommand): Promise<string> {
-  const configured = env.PANTRY_REGISTRY_TOKEN || env.PANTRY_TOKEN
+  const configured = env.PANTRY_TOKEN
   if (configured) return configured
   // The CLI owns credential precedence and the private credentials-file format.
   const stored = succeeded('Read Pantry registry credential', await command('pantry', ['token', 'get', '--registry', url], { cwd: root, env })).stdout.trim()

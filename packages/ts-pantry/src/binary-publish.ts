@@ -74,9 +74,9 @@ function registryConfig(options: PublishBinaryArtifactOptions): { registryUrl: s
     || process.env.REGISTRY_URL
     || 'https://registry.pantry.dev'
   ).replace(/\/+$/, '')
-  const token = options.token || process.env.PANTRY_REGISTRY_TOKEN || process.env.PANTRY_TOKEN || ''
+  const token = options.token || process.env.PANTRY_TOKEN || ''
   if (!token)
-    throw new Error('PANTRY_REGISTRY_TOKEN or PANTRY_TOKEN is required for binary publication')
+    throw new Error('PANTRY_TOKEN is required for binary publication')
   return { registryUrl, token }
 }
 
