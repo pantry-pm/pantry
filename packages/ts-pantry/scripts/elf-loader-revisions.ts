@@ -13,6 +13,8 @@
  *   bun scripts/elf-loader-revisions.ts apply --audit audit.jsonl --ledger L --batch 1 domain...
  *   bun scripts/elf-loader-revisions.ts mark  --ledger L --status published domain...
  *   bun scripts/elf-loader-revisions.ts classify --audit audit.jsonl --needed needed.jsonl [--write]
+ *   bun scripts/elf-loader-revisions.ts inplace [--audit audit.jsonl --batch N] [--since ISO] [--reason R] domain...
+ *   bun scripts/elf-loader-revisions.ts defer --audit audit.jsonl [--note N] [--reason R] domain...
  */
 
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -54,8 +56,24 @@ export interface LedgerRow {
   revision: string
   platforms: string[]
   batch: number | null
-  status: 'pending' | 'published' | 'verified' | 'failed' | 'skipped'
+  status: 'pending' | 'published' | 'verified' | 'failed' | 'skipped' | 'next-release'
   note?: string
+  /**
+   * How the repair reaches clients. `revision`: a new build identity
+   * (`X.N`, `X.pantryN`). `in-place`: the artifact of `oldBuild` itself is
+   * replaced (build-all-packages --repair-in-place) and clients refetch on
+   * its sha256 change. Rows written before this field are revisions.
+   */
+  method?: 'revision' | 'in-place'
+  /** Why the package was or was not repaired now (popularity evidence). */
+  reason?: string
+  /**
+   * The in-place overwrite of `oldBuild`: the whole repair for an `in-place`
+   * row, and the backward repair of a `revision` row, so exact pins and older
+   * locks get correct bytes too. `since` is when it was requested; a served
+   * artifact uploaded after it is the replacement.
+   */
+  inPlace?: { status: 'pending' | 'published' | 'verified' | 'failed', since: string, note?: string }
 }
 
 export function readAudit(path: string): AuditRow[] {
@@ -275,7 +293,7 @@ export function writeLedger(path: string, rows: readonly LedgerRow[]): void {
   const summary: Record<string, number> = {}
   for (const row of sorted) summary[row.status] = (summary[row.status] ?? 0) + 1
   writeFileSync(path, `${JSON.stringify({
-    description: 'Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN, repaired by elf-loader-paths revisions (scripts/elf-loader-revisions.ts, audited with scripts/audit-elf-rpaths.ts).',
+    description: 'Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.',
     summary,
     packages: sorted,
   }, null, 2)}\n`)
@@ -299,6 +317,8 @@ async function main(): Promise<void> {
       note: { type: 'string' },
       needed: { type: 'string' },
       write: { type: 'boolean', default: false },
+      since: { type: 'string' },
+      reason: { type: 'string' },
     },
   })
   const ledgerPath = values.ledger!
@@ -329,6 +349,58 @@ async function main(): Promise<void> {
       if (!missing.length && row.status === 'pending') row.status = 'published'
       console.log(`${row.domain}@${row.revision}: ${missing.length ? `missing ${missing.join(',')}` : 'served'} (${row.status})`)
     }
+    // In-place overwrites: every Linux platform `oldBuild` is served on now
+    // carries an artifact uploaded after the request.
+    for (const row of ledger) {
+      if (row.inPlace?.status !== 'pending') continue
+      const response = await fetch(`https://registry.pantry.dev/binaries/${row.domain}/metadata.json`)
+      if (!response.ok) continue
+      const metadata = await response.json() as { versions?: Record<string, { platforms?: Record<string, { sha256?: string, uploadedAt?: string }> }> }
+      const platforms = Object.entries(metadata.versions?.[row.oldBuild]?.platforms ?? {}).filter(([p]) => p.startsWith('linux-'))
+      const stale = platforms.filter(([, r]) => !r.uploadedAt || r.uploadedAt < row.inPlace!.since).map(([p]) => p)
+      if (platforms.length && !stale.length) {
+        row.inPlace.status = 'published'
+        if (row.method === 'in-place' && row.status === 'pending') row.status = 'published'
+      }
+      console.log(`${row.domain}@${row.oldBuild} in place: ${stale.length ? `not yet on ${stale.join(',')}` : 'replaced'} (${row.inPlace.status})`)
+    }
+    writeLedger(ledgerPath, ledger)
+    return
+  }
+
+  if (command === 'inplace') {
+    // Request in-place overwrites of each domain's `oldBuild` (a revision row's
+    // backward repair, or a new in-place row with --audit and --batch).
+    const since = values.since ?? new Date().toISOString()
+    const targets = values.audit ? brokenTargets(readAudit(values.audit)) : []
+    for (const domain of positionals) {
+      let row = ledger.find(r => r.domain === domain)
+      if (!row) {
+        const target = targets.find(t => t.domain === domain)
+        if (!target) throw new Error(`${domain} is neither in the ledger nor a broken target in --audit`)
+        row = { domain, oldBuild: target.version, revision: '', platforms: target.platforms, batch: values.batch ? Number(values.batch) : null, status: 'pending', method: 'in-place' }
+        ledger.push(row)
+      }
+      row.method ??= 'revision'
+      if (values.reason) row.reason = values.reason
+      row.inPlace = { status: 'pending', since }
+      if (row.method === 'in-place') row.status = 'pending'
+      console.log(`${domain}@${row.oldBuild}`)
+    }
+    writeLedger(ledgerPath, ledger)
+    return
+  }
+
+  if (command === 'defer') {
+    // Track targets left to their next upstream release, which the pipeline
+    // builds with normalised loader paths and checked programs anyway.
+    if (!values.audit) throw new Error('--audit <progress.jsonl> is required')
+    const targets = brokenTargets(readAudit(values.audit))
+    const listed = new Set(positionals)
+    for (const target of targets) {
+      if (!listed.has(target.domain) || ledger.some(r => r.domain === target.domain)) continue
+      ledger.push({ domain: target.domain, oldBuild: target.version, revision: '', platforms: target.platforms, batch: null, status: 'next-release', note: values.note ?? 'fixed on next release', ...(values.reason ? { reason: values.reason } : {}) })
+    }
     writeLedger(ledgerPath, ledger)
     return
   }
@@ -338,7 +410,36 @@ async function main(): Promise<void> {
     // (audit-elf-rpaths.ts --scope newest) finds no broken loader path.
     if (!values.audit) throw new Error('--audit <re-audit progress.jsonl> is required')
     const rows = readAudit(values.audit) as Array<AuditRow & { executables?: string[] }>
+    const judge = (row: LedgerRow, audited: Array<AuditRow & { executables?: string[] }>): { status: 'verified' | 'failed', note?: string } => {
+      const bad = audited.filter(r => r.findings.some(f => f.issues.length))
+      const file = packageFile(row.domain)
+      const [major = '', minor = '', patch = ''] = row.oldBuild.split('.')
+      const declared = (file ? arrayItems(readFileSync(file, 'utf8'), 'programs') : [])
+        .map(p => p.replace(/\{\{\s*version\.major\s*\}\}/g, major).replace(/\{\{\s*version\.minor\s*\}\}/g, minor)
+          .replace(/\{\{\s*version\.patch\s*\}\}/g, patch).replace(/\{\{\s*version(?:\.raw)?\s*\}\}/g, row.oldBuild))
+        .filter(p => !p.includes('{{'))
+      const lacking = audited.flatMap(r => r.executables ? declared.filter(p => !r.executables!.includes(p)).map(p => `${p} (${r.platform})`) : [])
+      if (bad.length) return { status: 'failed', note: `re-audit still finds broken loader paths on ${bad.map(r => r.platform).join(',')}` }
+      if (lacking.length) return { status: 'failed', note: `the replacement lacks declared programs: ${lacking.join(', ')}` }
+      return { status: 'verified' }
+    }
+    // In-place overwrites: the re-audit must have read the replacement itself.
     for (const row of ledger) {
+      if (row.inPlace?.status !== 'published' && !(values.status === 'recheck' && row.inPlace?.status === 'verified')) continue
+      const audited = rows.filter(r => r.domain === row.domain && r.version === row.oldBuild && !r.error && (r as AuditRow & { uploadedAt?: string }).uploadedAt! >= row.inPlace!.since)
+      if (!audited.length) continue
+      const verdict = judge(row, audited)
+      row.inPlace.status = verdict.status
+      if (verdict.note) row.inPlace.note = verdict.note
+      else delete row.inPlace.note
+      if (row.method === 'in-place') {
+        row.status = verdict.status
+        if (verdict.note) row.note = verdict.note
+      }
+      console.log(`${row.domain}@${row.oldBuild} in place: ${verdict.status}`)
+    }
+    for (const row of ledger) {
+      if (row.method === 'in-place') continue
       if (row.status !== 'published' && !(values.status === 'recheck' && row.status === 'verified')) continue
       const audited = rows.filter(r => r.domain === row.domain && r.version === row.revision && !r.error)
       if (!audited.length) continue
