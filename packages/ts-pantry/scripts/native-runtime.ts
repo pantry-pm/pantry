@@ -111,6 +111,29 @@ function preserveLicenses(prefix: string, dependency: RuntimePackage): string[] 
 }
 
 /** Copy the actual recursively required SONAMEs from declared runtime packages only. */
+/**
+ * `name` as `file`'s own `$ORIGIN`-relative RPATH/RUNPATH would find it,
+ * when that is a file inside `root`; otherwise undefined.
+ */
+export function originSibling(root: string, file: string, name: string, patchelf = 'patchelf'): string | undefined {
+  let loaderPath: string
+  try {
+    loaderPath = execFileSync(patchelf, ['--print-rpath', file], { encoding: 'utf8' }).trim()
+  }
+  catch {
+    return undefined
+  }
+  for (const entry of loaderPath.split(':')) {
+    const match = /^\$(?:ORIGIN|\{ORIGIN\})(\/.*)?$/.exec(entry)
+    if (!match) continue
+    const candidate = join(dirname(file), match[1] ?? '', name)
+    if (!existsSync(candidate)) continue
+    const actual = realpathSync(candidate)
+    if (inside(root, actual)) return actual
+  }
+  return undefined
+}
+
 export function bundleRuntimeLibraries(
   prefix: string,
   platform: string,
@@ -188,6 +211,15 @@ export function bundleRuntimeLibraries(
       const name = basename(dependencyName)
       const candidates = index.get(name) || []
       if (candidates.length === 0 && linux && linuxStandardLibraries.test(name)) continue
+      // A vendored binary (an npm prebuilt such as sharp's .node beside its
+      // libvips package) finds its siblings through its own $ORIGIN loader
+      // path, inside this artifact. The loader resolves those; so do we, and
+      // check what they need in turn, leaving the vendor's layout as it is.
+      const sibling = candidates.length === 0 && linux ? originSibling(root, file, name, patchelf) : undefined
+      if (sibling) {
+        queue.push(sibling)
+        continue
+      }
       if (candidates.length === 0) {
         missing.add(`Undeclared or missing runtime library ${dependencyName} required by ${relative(root, file)}`)
         continue
