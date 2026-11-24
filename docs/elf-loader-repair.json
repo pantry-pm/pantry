@@ -109,18 +109,19 @@
     {
       "domain": "gnu.org/sed",
       "oldBuild": "4.10",
-      "revision": "4.10.1",
+      "revision": "",
       "platforms": [
         "linux-x86-64"
       ],
       "batch": 1,
       "status": "verified",
-      "method": "revision",
+      "method": "in-place",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
         "status": "verified",
         "since": "2026-11-24T04:46:01Z"
-      }
+      },
+      "note": "repaired in place under 4.10; the earlier revision 4.10.1 read as the vendor's next patch release and was retired from the registry (retiredVersions), so a real upstream 4.10.1 resolves to the vendor's release"
     },
     {
       "domain": "gnu.org/tar",
@@ -2107,19 +2108,20 @@
     {
       "domain": "re2c.org",
       "oldBuild": "4.6",
-      "revision": "4.6.1",
+      "revision": "",
       "platforms": [
         "linux-arm64",
         "linux-x86-64"
       ],
       "batch": 6,
       "status": "verified",
-      "method": "revision",
+      "method": "in-place",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
         "status": "verified",
         "since": "2026-11-24T05:09:22Z"
-      }
+      },
+      "note": "repaired in place under 4.6; the earlier revision 4.6.1 read as the vendor's next patch release and was retired from the registry (retiredVersions), so a real upstream 4.6.1 resolves to the vendor's release"
     },
     {
       "domain": "speex.org",
