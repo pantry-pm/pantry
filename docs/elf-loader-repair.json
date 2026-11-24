@@ -1,10 +1,9 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
-    "verified": 135,
+    "verified": 136,
     "next-release": 479,
     "failed": 1,
-    "pending": 1,
     "skipped": 1
   },
   "packages": [
@@ -6066,11 +6065,11 @@
         "linux-x86-64"
       ],
       "batch": null,
-      "status": "pending",
+      "status": "verified",
       "reason": "vendored binaries: the normaliser now repairs wheels and npm prebuilts, so the current build is replaced in place rather than left broken",
       "method": "in-place",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T06:56:39Z"
       }
     },
