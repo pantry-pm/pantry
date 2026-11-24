@@ -56,6 +56,7 @@ describe('install manifest', () => {
 
     const stored = await registry.getStoredVersion(manifest.name, manifest.version)
     expect(stored!.dependencies).toEqual({ '@stacksjs/cli': '0.75.700' })
+    expect((stored as any).integrity).toBe(`sha512-${new Bun.CryptoHasher('sha512').update(tarball).digest('base64')}`)
     expect((stored as any).bin).toEqual({ buddy: './dist/cli.js' })
 
     const packument = await buildPackument({
@@ -102,9 +103,11 @@ describe('install manifest', () => {
 
     expect((await registry.getStoredVersion(name, version))!.install).toBeUndefined()
     const [first, second] = await Promise.all([registry.getStoredVersion(name, version), registry.getStoredVersion(name, version)])
-    expect(first!.install).toEqual({})
-    expect(second!.install).toEqual({})
-    expect((await registry.getStoredVersion(name, version))!.install).toEqual({})
+    // No install fields, but the archive's integrity, which is what marks it inspected.
+    const inspected = { integrity: `sha512-${new Bun.CryptoHasher('sha512').update(tarball).digest('base64')}` }
+    expect(first!.install).toEqual(inspected)
+    expect(second!.install).toEqual(inspected)
+    expect((await registry.getStoredVersion(name, version))!.install).toEqual(inspected)
     expect(reads).toBe(2)
   })
 

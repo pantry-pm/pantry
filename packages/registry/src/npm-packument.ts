@@ -107,7 +107,8 @@ export function packumentVersion(metadata: PackageMetadata, tarballUrl: string):
   const scripts = manifest.scripts
   if (scripts && typeof scripts === 'object' && LIFECYCLE_INSTALL_SCRIPTS.some(name => name in (scripts as object)))
     version.hasInstallScript = true
-  version.dist = { tarball: tarballUrl, ...npmDist(metadata.checksum) }
+  const integrity = (metadata as unknown as Record<string, unknown>).integrity
+  version.dist = { tarball: tarballUrl, ...npmDist(metadata.checksum), ...(typeof integrity === 'string' ? { integrity } : {}) }
   return version
 }
 
@@ -133,7 +134,10 @@ export function mergeUpstream(
   upstream: UpstreamPackument | null,
 ): Record<string, unknown> {
   if (!upstream?.versions) return packument
-  const ours = packument.versions as Record<string, unknown>
+  // Pantry's entry stands only where its bytes are npm's: a version both hold
+  // with different archives is npm's, because that is what lockfiles name.
+  const ours = Object.fromEntries(Object.entries(packument.versions as Record<string, unknown>)
+    .filter(([version, entry]) => !(version in upstream.versions!) || sameArtifact(entry, upstream.versions![version])))
   const versions = { ...upstream.versions, ...ours }
   const time = { ...upstream.time, ...(packument.time as Record<string, string>) }
   const tags = packument['dist-tags'] as Record<string, string>
@@ -145,6 +149,18 @@ export function mergeUpstream(
     versions,
     'time': { ...time, modified: time[latest] ?? time.modified },
   }
+}
+
+/** The `dist.integrity` of a packument version, if it has one. */
+export function distIntegrity(entry: unknown): string | undefined {
+  const integrity = (entry as { dist?: { integrity?: unknown } } | null)?.dist?.integrity
+  return typeof integrity === 'string' ? integrity : undefined
+}
+
+/** Whether two packument versions name the same archive (same sha512 integrity). */
+export function sameArtifact(ours: unknown, theirs: unknown): boolean {
+  const mine = distIntegrity(ours)
+  return !!mine && mine.startsWith('sha512-') && mine === distIntegrity(theirs)
 }
 
 /**

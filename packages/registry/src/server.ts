@@ -10,7 +10,7 @@ import { installRegistryShutdown } from './shutdown'
 import type { RegistryConfig, AuthStorage, PackagePaywall, PackageRecord, SearchResult } from './types'
 import { Registry, createLocalRegistry, createRegistryFromEnv } from './registry'
 import type { UpstreamPackument } from './npm-packument'
-import { buildPackument, mergeUpstream, npmRegistryPath, npmRegistryUrl, npmTarballPath, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
+import { buildPackument, mergeUpstream, npmRegistryPath, npmRegistryUrl, npmTarballPath, packumentVersionOrTag, sameArtifact, UpstreamPackuments } from './npm-packument'
 import { PackageVersionExistsError } from './publication'
 import { verifyExistingPublication } from './publication-verification'
 import { createAnalytics, type AnalyticsStorage, type AnalyticsCategory } from './analytics'
@@ -1505,7 +1505,17 @@ export function createHandler(
         const exposure = await packageExposure(req, registry, npmTarball.name)
         if (exposure === 'hidden')
           return Response.json({ error: 'Not found' }, { status: 404, headers: corsHeaders })
-        const held = exposure !== 'public' || await registry.metadata.getPackageVersion(npmTarball.name, npmTarball.version)
+        // Pantry's own copy only where it is npm's bytes, or npm has none: a
+        // lockfile entry without a URL recorded npm's integrity (see sameArtifact).
+        const stored = await registry.getStoredVersion(npmTarball.name, npmTarball.version)
+        let held = exposure !== 'public' || !!stored
+        if (held && exposure === 'public' && registry.npmFallbackEnabled) {
+          const theirs = (await upstreamPackuments.get(npmTarball.name))?.versions?.[npmTarball.version]
+          const ours = stored && typeof (stored as unknown as { integrity?: unknown }).integrity === 'string'
+            ? { dist: { integrity: (stored as unknown as { integrity: string }).integrity } }
+            : null
+          if (theirs && !sameArtifact(ours, theirs)) held = false
+        }
         const location = held
           ? `${baseUrl}/packages/${encodeURIComponent(npmTarball.name)}/${encodeURIComponent(npmTarball.version)}/tarball`
           : `${npmRegistryUrl(npmTarball.name)}/-/${encodeURIComponent(npmTarball.file)}`

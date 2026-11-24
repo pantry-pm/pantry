@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import type { PackageMetadata } from './types'
-import { buildPackument, compareVersions, latestOf, mergeUpstream, npmDist, npmRegistryPath, npmRegistryUrl, npmTarballPath, packumentVersionOrTag, UpstreamPackuments } from './npm-packument'
+import { buildPackument, compareVersions, latestOf, mergeUpstream, npmDist, npmRegistryPath, npmRegistryUrl, npmTarballPath, packumentVersionOrTag, sameArtifact, UpstreamPackuments } from './npm-packument'
 
 function source(versions: Record<string, Partial<PackageMetadata> & Record<string, unknown>>) {
   return {
@@ -69,11 +69,12 @@ describe('npm packument', () => {
     expect(await buildPackument(source({}), 'left-pad', 'https://registry.pantry.dev')).toBeNull()
   })
 
-  it('keeps versions only npm has, with Pantry winning a version both hold', async () => {
-    const packument = await buildPackument(source({ '0.75.665': { checksum: `sha256:${'c'.repeat(64)}` } }), 'stacks', 'https://registry.pantry.dev') as any
+  it('keeps versions only npm has, with Pantry serving a version whose archive npm shares', async () => {
+    const integrity = `sha512-${'c'.repeat(86)}==`
+    const packument = await buildPackument(source({ '0.75.665': { checksum: `sha256:${'c'.repeat(64)}`, integrity } as any }), 'stacks', 'https://registry.pantry.dev') as any
     const merged = mergeUpstream(packument, {
       'dist-tags': { latest: '0.75.664', canary: '0.76.0-canary.1' },
-      'versions': { '0.75.600': { version: '0.75.600' }, '0.75.665': { version: '0.75.665', dist: { tarball: 'https://registry.npmjs.org/x.tgz' } } },
+      'versions': { '0.75.600': { version: '0.75.600' }, '0.75.665': { version: '0.75.665', dist: { tarball: 'https://registry.npmjs.org/x.tgz', integrity } } },
       'time': { '0.75.600': '2026-10-01T00:00:00.000Z' },
     }) as any
     expect(Object.keys(merged.versions).sort()).toEqual(['0.75.600', '0.75.665'])
@@ -140,5 +141,29 @@ describe('npm packument', () => {
     expect(npmTarballPath('/npm/left-pad/-/left-pad-1.0.0.zip')).toBeNull()
     expect(npmTarballPath('/npm/left-pad')).toBeNull()
     expect(npmRegistryPath('/npm/left-pad/-/left-pad-1.3.0.tgz')).toBeNull()
+  })
+
+  it('keeps Pantry\'s entry only where it is npm\'s archive', async () => {
+    const same = 'sha512-' + 'A'.repeat(86) + '=='
+    const packument = await buildPackument(source({
+      '1.0.0': { integrity: same } as any,
+      '1.0.1': { integrity: 'sha512-' + 'B'.repeat(86) + '==' } as any,
+      '1.0.2': { integrity: 'sha512-' + 'C'.repeat(86) + '==' } as any,
+    }), 'lib', 'https://pantry.dev') as any
+    expect(packument.versions['1.0.0'].dist.integrity).toBe(same)
+    const merged = mergeUpstream(packument, {
+      'dist-tags': { latest: '1.0.1' },
+      'versions': {
+        '1.0.0': { version: '1.0.0', dist: { tarball: 'https://registry.npmjs.org/lib/-/lib-1.0.0.tgz', integrity: same } },
+        '1.0.1': { version: '1.0.1', dist: { tarball: 'https://registry.npmjs.org/lib/-/lib-1.0.1.tgz', integrity: 'sha512-' + 'D'.repeat(86) + '==' } },
+      },
+    }) as any
+    // Same bytes: Pantry serves it. Different bytes: npm's, which lockfiles name. Only on Pantry: Pantry's.
+    expect(merged.versions['1.0.0'].dist.tarball).toStartWith('https://pantry.dev/')
+    expect(merged.versions['1.0.1'].dist.tarball).toStartWith('https://registry.npmjs.org/')
+    expect(merged.versions['1.0.2'].dist.tarball).toStartWith('https://pantry.dev/')
+    expect(sameArtifact({ dist: { integrity: same } }, { dist: { integrity: same } })).toBe(true)
+    expect(sameArtifact({ dist: { integrity: 'sha256-x' } }, { dist: { integrity: 'sha256-x' } })).toBe(false)
+    expect(sameArtifact(null, { dist: { integrity: same } })).toBe(false)
   })
 })

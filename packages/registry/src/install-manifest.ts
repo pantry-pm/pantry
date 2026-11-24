@@ -33,6 +33,15 @@ const INSTALL_FIELDS = [
 /** The lifecycle scripts an install runs; the rest of `scripts` is not install metadata. */
 const INSTALL_SCRIPTS = ['preinstall', 'install', 'postinstall'] as const
 
+/**
+ * The archive's integrity in npm's form (`sha512-<base64>`), recorded with the
+ * install fields so a Pantry copy can be compared with npm's copy of the same
+ * version: when they differ, npm's is the one lockfiles already name.
+ */
+export function artifactIntegrity(tarball: ArrayBuffer): string {
+  return `sha512-${new Bun.CryptoHasher('sha512').update(tarball).digest('base64')}`
+}
+
 /** The install fields of a manifest (an empty object when it has none). */
 export function installManifestOf(manifest: unknown): InstallManifest {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) return {}

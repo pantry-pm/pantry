@@ -1,4 +1,4 @@
-import { packagedInstallManifest } from './install-manifest'
+import { artifactIntegrity, packagedInstallManifest } from './install-manifest'
 import type {
   CommitPublish,
   CommitPublishSummary,
@@ -173,7 +173,7 @@ export class Registry {
    */
   async getStoredVersion(name: string, version: string): Promise<PackageMetadata | null> {
     const metadata = await this.metadataStorage.getPackageVersion(name, version)
-    if (!metadata || metadata.install !== undefined) return metadata
+    if (!metadata || typeof metadata.install?.integrity === 'string') return metadata
 
     const key = `${name}@${version}`
     const pending = this.pendingInstallMetadata.get(key)
@@ -197,7 +197,7 @@ export class Registry {
       // A verified tarball with no manifest has no install fields. Persist
       // that result like a new publication does. A missing download is retried.
       if (!install && checksumOf(tarball) !== metadata.checksum) return metadata
-      const fields = install ?? {}
+      const fields = { ...(install ?? metadata.install ?? {}), integrity: artifactIntegrity(tarball) }
       await this.metadataStorage.setVersionInstall(name, version, fields)
       return { ...metadata, ...fields, install: fields }
     }
@@ -372,7 +372,7 @@ export class Registry {
       ...metadata,
       // From the published bytes, not the request: the package.json in the
       // tarball is what an installer extracts.
-      install: packagedInstallManifest(tarball, metadata.name, metadata.version) ?? {},
+      install: { ...(packagedInstallManifest(tarball, metadata.name, metadata.version) ?? {}), integrity: artifactIntegrity(tarball) },
       tarballUrl,
       checksum,
       publishedAt: new Date().toISOString(),
