@@ -1,3 +1,13 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.229...v0.11.230)
+
+## 🔧 Chores
+
+- release v0.11.230 ([352c827](https://github.com/pantry-pm/pantry/commit/352c827)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.228...v0.11.229)
 
 ## ✨ Features
