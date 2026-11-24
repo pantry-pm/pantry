@@ -216,3 +216,59 @@ test('versioned dependency prefix entries search the managed library directories
   fixElfRpaths(dir, tool)
   expect(readFileSync(`${library}.rpath`, 'utf8')).toBe(once)
 })
+
+describe('vendored ELF loader paths', () => {
+  test('drops only the broken entries of binaries outside the normalised directories', async () => {
+    const { fixVendoredElfRpaths, vendoredLoaderPath } = await import('../scripts/fix-up')
+    expect(vendoredLoaderPath('$ORIGIN:')).toBe('$ORIGIN')
+    expect(vendoredLoaderPath('$ORIGIN/../nvidia/cuda_nvrtc/lib:/../lib')).toBe('$ORIGIN/../nvidia/cuda_nvrtc/lib')
+    expect(vendoredLoaderPath('lib:../lib')).toBe('')
+    expect(vendoredLoaderPath('$ORIGIN/../lib:/usr/lib/x86_64-linux-gnu')).toBeNull()
+    expect(vendoredLoaderPath('')).toBeNull()
+
+    const dir = mkdtempSync(join(tmpdir(), 'vendored-elf-'))
+    tempDirs.push(dir)
+    const tool = join(dir, 'patchelf')
+    // Records every call; --print-rpath answers from <file>.rpath.
+    writeFileSync(tool, `#!/bin/sh
+echo "$*" >> "${dir}/calls"
+case "$1" in
+  --print-rpath) cat "$2.rpath" 2>/dev/null ;;
+  --remove-rpath) : > "$2.rpath" ;;
+  --force-rpath) printf '%s' "$3" > "$4.rpath" ;;
+  --set-rpath) printf '%s' "$2" > "$3.rpath" ;;
+esac
+`)
+    chmodSync(tool, 0o755)
+    const wheel = join(dir, 'venv', 'lib', 'python3.11', 'site-packages', 'nvidia', 'cuda_nvrtc', 'lib')
+    const npm = join(dir, 'node_modules', 'node-llama-cpp', 'llama', 'localBuilds', 'linux-x64', 'Release')
+    const owned = join(dir, 'lib')
+    for (const path of [wheel, npm, owned]) mkdirSync(path, { recursive: true })
+    const files = {
+      cuda: join(wheel, 'libnvrtc.so.12'),
+      ggml: join(npm, 'libggml-cpu.so'),
+      relative: join(npm, 'llama-addon.node'),
+      sound: join(wheel, 'libsound.so'),
+      owned: join(owned, 'libowned.so'),
+    }
+    for (const file of Object.values(files)) dynamicElf(file)
+    writeFileSync(`${files.cuda}.rpath`, '$ORIGIN/../../nvjitlink/lib:/../lib')
+    writeFileSync(`${files.ggml}.rpath`, '$ORIGIN:')
+    writeFileSync(`${files.relative}.rpath`, 'Release')
+    writeFileSync(`${files.sound}.rpath`, '$ORIGIN')
+    writeFileSync(`${files.owned}.rpath`, ':')
+    chmodSync(files.ggml, 0o555)
+
+    const rewritten = fixVendoredElfRpaths(dir, tool).sort()
+    expect(rewritten).toEqual([files.cuda, files.ggml, files.relative].sort())
+    expect(readFileSync(`${files.cuda}.rpath`, 'utf8')).toBe('$ORIGIN/../../nvjitlink/lib')
+    expect(readFileSync(`${files.ggml}.rpath`, 'utf8')).toBe('$ORIGIN')
+    expect(readFileSync(`${files.relative}.rpath`, 'utf8')).toBe('')
+    // Sound vendored files and the directories fixElfRpaths owns are left alone.
+    expect(readFileSync(`${files.sound}.rpath`, 'utf8')).toBe('$ORIGIN')
+    expect(readFileSync(`${files.owned}.rpath`, 'utf8')).toBe(':')
+    expect(statSync(files.ggml).mode & 0o777).toBe(0o555)
+    // A second pass finds nothing to do.
+    expect(fixVendoredElfRpaths(dir, tool)).toEqual([])
+  })
+})

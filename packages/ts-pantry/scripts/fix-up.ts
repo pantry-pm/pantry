@@ -12,6 +12,7 @@ import { execFileSync, execSync } from 'node:child_process'
 import { join, relative, dirname, extname, basename, sep } from 'node:path'
 import { bundleRuntimeLibraries, normalizeMachoRuntime, writeRuntimeProvenance, type RuntimePackage } from './native-runtime'
 import { isDynamicMachO } from './macho'
+import { readElfLoaderPaths } from './audit-elf-rpaths'
 
 /**
  * Run all post-build fix-ups on a package prefix
@@ -48,6 +49,10 @@ export async function fixUp(prefix: string, platform: string, skips: string[] = 
     })()
     if (osName === 'darwin' && !skips.includes('fix-machos')) normalizeMachoRuntime(prefix, isDynamicMachO, [...nativeFiles])
     else if (osName === 'linux' && !skips.includes('fix-patchelf')) fixElfRpaths(prefix, 'patchelf', [...nativeFiles])
+    if (osName === 'linux') {
+      const vendored = fixVendoredElfRpaths(prefix)
+      if (vendored.length) console.log(`  Dropped broken loader path entries from ${vendored.length} vendored ELF file(s)`)
+    }
     writeRuntimeProvenance(prefix, bundled)
 
     // Fix pkg-config files
@@ -111,6 +116,91 @@ export function fixElfRpaths(prefix: string, patchelf = 'patchelf', additionalFi
     if (actual !== root && !actual.startsWith(root + sep)) throw new Error('Native runtime resource escapes artifact')
     normalize(file)
   }
+}
+
+/** The directories fixElfRpaths owns; the rest of the tree is vendored. */
+const NORMALIZED_ELF_DIRS = ['bin', 'sbin', 'lib', 'lib64', 'libexec']
+
+/**
+ * A vendored loader path without the entries that search where they should
+ * not: an empty entry (the working directory), a relative one (resolved
+ * against the working directory) and an `$ORIGIN` expanded away (`/../lib`,
+ * so `/lib`). Sound entries keep their order. Null when nothing changes; an
+ * empty string when nothing is left.
+ */
+export function vendoredLoaderPath(value: string): string | null {
+  // patchelf prints nothing for a file without RPATH or RUNPATH.
+  if (value === '') return null
+  const entries = value.split(':')
+  const kept = entries.filter(entry => entry !== ''
+    && entry !== '/..' && !entry.startsWith('/../')
+    && (entry.startsWith('/') || /^\$(?:\{)?(?:ORIGIN|LIB|PLATFORM)(?:\})?(?:\/|$)/.test(entry)))
+  return kept.length === entries.length ? null : kept.join(':')
+}
+
+/**
+ * Vendored ELF files elsewhere in the package tree: Python wheels under
+ * `venv/`, npm prebuilts under `node_modules/`, any upstream binary outside
+ * the directories fixElfRpaths rewrites. Their layouts are their own, so
+ * only the broken entries are dropped (the tag, RPATH or RUNPATH, stays),
+ * and a file whose loader path is sound is not touched at all. Runs even
+ * where a recipe skips fix-patchelf: an entry that searches the working
+ * directory is a hazard whatever else the recipe preserves. Returns the
+ * files it rewrote.
+ */
+export function fixVendoredElfRpaths(prefix: string, patchelf = 'patchelf'): string[] {
+  const rewritten: string[] = []
+  if (!existsSync(prefix)) return rewritten
+  const root = realpathSync(prefix)
+  const visit = (filePath: string): void => {
+    // Vendored trees carry test fixtures and truncated or foreign images; one
+    // the loader could never map has no loader path to repair.
+    let dynamic = false
+    try { dynamic = isDynamicElf(filePath) }
+    catch { return }
+    if (!dynamic) return
+    const actual = realpathSync(filePath)
+    if (actual !== root && !actual.startsWith(root + sep)) return
+    let existing: string
+    try {
+      existing = execFileSync(patchelf, ['--print-rpath', filePath], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+    }
+    catch {
+      console.log(`  ⚠️  patchelf cannot read vendored ${relative(root, actual)}; left as built`)
+      return
+    }
+    const next = vendoredLoaderPath(existing)
+    if (next === null) return
+    const runpath = elfUsesRunpath(filePath)
+    const mode = statSync(filePath).mode & 0o7777
+    const lent = (mode & 0o200) === 0
+    if (lent) chmodSync(filePath, mode | 0o200)
+    try {
+      if (next === '') execFileSync(patchelf, ['--remove-rpath', filePath], { stdio: 'pipe' })
+      else execFileSync(patchelf, [...(runpath ? [] : ['--force-rpath']), '--set-rpath', next, filePath], { stdio: 'pipe' })
+    }
+    catch (cause) {
+      throw new Error(`Cannot normalize the ELF loader path of vendored ${filePath}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause })
+    }
+    finally {
+      if (lent) chmodSync(filePath, mode)
+    }
+    if (execFileSync(patchelf, ['--print-rpath', filePath], { encoding: 'utf8' }).trim() !== next)
+      throw new Error(`Cannot normalize the ELF loader path of vendored ${filePath}: rewritten loader path did not match`)
+    rewritten.push(filePath)
+  }
+  for (const entry of readdirSync(prefix, { withFileTypes: true })) {
+    if (NORMALIZED_ELF_DIRS.includes(entry.name)) continue
+    const path = join(prefix, entry.name)
+    if (entry.isDirectory()) walkFiles(path, visit)
+    else if (entry.isFile()) visit(path)
+  }
+  return rewritten
+}
+
+/** Whether the dynamic section names DT_RUNPATH (29) rather than DT_RPATH. */
+function elfUsesRunpath(filePath: string): boolean {
+  return readElfLoaderPaths(readFileSync(filePath))?.runpath !== undefined
 }
 
 /** Read only ELF headers; static executables and object files need no rewrite. */

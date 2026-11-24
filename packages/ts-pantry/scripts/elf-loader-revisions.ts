@@ -408,10 +408,13 @@ async function main(): Promise<void> {
         row = { domain, oldBuild: target.version, revision: '', platforms: target.platforms, batch: values.batch ? Number(values.batch) : null, status: 'pending', method: 'in-place' }
         ledger.push(row)
       }
-      row.method ??= 'revision'
+      row.method ??= row.revision ? 'revision' : 'in-place'
       if (values.reason) row.reason = values.reason
       row.inPlace = { status: 'pending', since }
-      if (row.method === 'in-place') row.status = 'pending'
+      if (row.method === 'in-place') {
+        row.status = 'pending'
+        delete row.note
+      }
       console.log(`${domain}@${row.oldBuild}`)
     }
     writeLedger(ledgerPath, ledger)

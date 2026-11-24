@@ -33,7 +33,7 @@ import { basename, dirname, join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
 import { createObjectStorageClient } from '@stacksjs/ts-cloud'
 import { reportBuild, reportBuildLog } from './report-build'
-import { fixElfRpaths, fixUp } from './fix-up'
+import { fixElfRpaths, fixUp, fixVendoredElfRpaths } from './fix-up'
 import { selectPublishedFiles, writeProgramInterfaces, writeRuntimeEnvironment } from './published-files'
 import { uploadToS3 as uploadToS3Impl } from './upload-to-s3.ts'
 import { BINARY_SYNC_DOMAIN_SET } from './binary-sync-packages.ts'
@@ -1927,7 +1927,10 @@ async function tryPkgxMirror(domain: string, version: string, platform: string, 
 /** Target-aware publication normalization, without altering signed Mach-O apps. */
 export function normalizeMirroredArtifact(installDir: string, domain: string, versionDir: string, platform: string, patchelf = 'patchelf'): void {
   relocateMirroredPaths(installDir, domain, versionDir)
-  if (platform.startsWith('linux-')) fixElfRpaths(installDir, patchelf)
+  if (platform.startsWith('linux-')) {
+    fixElfRpaths(installDir, patchelf)
+    fixVendoredElfRpaths(installDir, patchelf)
+  }
 }
 
 /**
