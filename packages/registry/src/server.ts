@@ -778,11 +778,11 @@ export function createHandler(
         }, { headers: corsHeaders })
       }
 
-      // Readiness includes the scanner because production publication fails
-      // closed when it is unavailable. Keep /health as a process-liveness check.
+      // Readiness follows publication admission and scanner availability.
+      // Keep /health as a process-liveness check so a drain is still healthy.
       if (path === '/ready') {
         const scannerHealth = await malwareScanner.health()
-        const ready = !scannerHealth.required || scannerHealth.ready
+        const ready = !drainingAdmission && (!scannerHealth.required || scannerHealth.ready)
         return Response.json({
           status: ready ? 'ready' : 'not-ready',
           timestamp: new Date().toISOString(),

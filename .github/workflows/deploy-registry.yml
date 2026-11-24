@@ -123,6 +123,9 @@ jobs:
             LEGACY_RESCAN_MAX_BYTES="$8"
             REHEARSE_SCANNER_OUTAGE="$9"
             EGRESS_BUDGET_TB="${10}"
+            RECOVERY_UNIT="${SERVICE}-recovery.service"
+            RECOVERY_TIMER="${SERVICE}-recovery.timer"
+            LIFECYCLE_LOCK="/run/lock/${SERVICE}-lifecycle.lock"
             case "$BINARY_SCAN_ATTESTATION" in
               true|false) ;;
               *)
@@ -137,6 +140,21 @@ jobs:
                 exit 1
                 ;;
             esac
+
+            # Let a legacy watchdog finish before replacing it with one that
+            # uses the same lifecycle lock. Restore its schedule if the
+            # upgrade fails before the new timer is running.
+            if systemctl is-active --quiet "$RECOVERY_TIMER" &&
+              [[ "$(systemctl show --property=ExecStart --value "$RECOVERY_UNIT")" != *"$LIFECYCLE_LOCK"* ]]; then
+              trap 'systemctl start --quiet "$RECOVERY_TIMER"' EXIT
+              systemctl stop "$RECOVERY_TIMER"
+              while systemctl is-active --quiet "$RECOVERY_UNIT" ||
+                [[ "$(systemctl show --property=ActiveState --value "$RECOVERY_UNIT")" =~ ^(activating|deactivating|reloading)$ ]]; do
+                sleep 2
+              done
+            fi
+            exec 9>"$LIFECYCLE_LOCK"
+            flock 9
 
             BUN=$(command -v bun || echo /root/.bun/bin/bun)
 
@@ -398,6 +416,8 @@ jobs:
             # Debian package maintenance explicitly stops clamd while replacing
             # it. An explicit stop also suppresses Restart=always on dependent
             # services, so recover both services after maintenance completes.
+            # The lifecycle lock also keeps recovery out of the publication
+            # rehearsal while an authorized deployment still owns the service.
             printf '%s\n' \
               '[Unit]' \
               'Description=Recover Pantry Registry malware scanning services' \
@@ -406,7 +426,7 @@ jobs:
               '[Service]' \
               'Type=oneshot' \
               "ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service'" \
-              "ExecStart=/bin/bash -c 'systemctl start clamav-daemon.service ${SERVICE}.service; probe() { for attempt in 1 2 3; do /usr/bin/curl -fsS --connect-timeout 3 --max-time 8 http://127.0.0.1:${PORT}/health >/dev/null && return 0; sleep 2; done; return 1; }; probe && exit 0; echo \"[recover] UNHEALTHY: :${PORT}/health failed 3 probes; restarting clamav-daemon + ${SERVICE}\"; systemctl restart clamav-daemon.service; systemctl restart ${SERVICE}.service; sleep 8; probe && { echo \"[recover] RECOVERED\"; exit 0; }; echo \"[recover] STILL UNHEALTHY after restart - needs a human\"; exit 1'" \
+              "ExecStart=/usr/bin/flock -n -E 0 ${LIFECYCLE_LOCK} /bin/bash -c 'systemctl start clamav-daemon.service ${SERVICE}.service; probe() { for attempt in 1 2 3; do /usr/bin/curl -fsS --connect-timeout 3 --max-time 8 http://127.0.0.1:${PORT}/health >/dev/null && return 0; sleep 2; done; return 1; }; probe && exit 0; echo \"[recover] UNHEALTHY: :${PORT}/health failed 3 probes; restarting clamav-daemon + ${SERVICE}\"; systemctl restart clamav-daemon.service; systemctl restart ${SERVICE}.service; sleep 8; probe && { echo \"[recover] RECOVERED\"; exit 0; }; echo \"[recover] STILL UNHEALTHY after restart - needs a human\"; exit 1'" \
               'SuccessExitStatus=0 1' \
               > "/etc/systemd/system/${SERVICE}-recovery.service"
             # OnCalendar, not OnBootSec+OnUnitActiveSec. systemd derives the next
@@ -436,7 +456,8 @@ jobs:
             systemctl unmask --runtime clamav-freshclam clamav-daemon clamav-daemon.socket
             systemctl unmask clamav-freshclam clamav-daemon clamav-daemon.socket
             systemctl enable --quiet clamav-freshclam clamav-daemon
-            systemctl enable --now --quiet "${SERVICE}-recovery.timer"
+            systemctl enable --now --quiet "$RECOVERY_TIMER"
+            trap - EXIT
             systemctl restart clamav-freshclam || true
             systemctl restart clamav-daemon
             systemctl is-active --quiet clamav-daemon

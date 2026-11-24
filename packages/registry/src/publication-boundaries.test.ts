@@ -122,6 +122,17 @@ describe('first-party publication boundaries', () => {
     expect(workflow).toContain('systemctl show clamav-daemon --property=MemorySwapMax --value')
     expect(workflow).toContain('systemctl restart clamav-daemon')
     expect(workflow).toContain("ExecCondition=/bin/sh -c '! systemctl is-active --quiet apt-daily-upgrade.service'")
+    // Recovery and deployment share one lock. A timer on an existing host
+    // must first stop scheduling its old, unlocked recovery unit.
+    expect(workflow).toContain('LIFECYCLE_LOCK="/run/lock/${SERVICE}-lifecycle.lock"')
+    expect(workflow).toContain('trap \'systemctl start --quiet "$RECOVERY_TIMER"\' EXIT')
+    expect(workflow).toContain('systemctl stop "$RECOVERY_TIMER"')
+    expect(workflow).toContain('while systemctl is-active --quiet "$RECOVERY_UNIT"')
+    expect(workflow).toContain('exec 9>"$LIFECYCLE_LOCK"')
+    expect(workflow).toContain('ExecStart=/usr/bin/flock -n -E 0 ${LIFECYCLE_LOCK}')
+    expect(workflow.indexOf('flock 9')).toBeGreaterThan(workflow.indexOf('systemctl stop "$RECOVERY_TIMER"'))
+    expect(workflow.indexOf('flock 9')).toBeLessThan(workflow.indexOf('git reset --hard'))
+    expect(workflow.indexOf('systemctl enable --now --quiet "$RECOVERY_TIMER"')).toBeLessThan(workflow.indexOf('trap - EXIT'))
     // The recovery unit restarts BOTH services and reports the outcome. An
     // earlier version only restarted the registry and exited silently, so a
     // wedged clamd stayed wedged and the timer reported success either way.
