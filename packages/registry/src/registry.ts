@@ -56,6 +56,7 @@ export class Registry {
   private config: RegistryConfig
   private tarballStorage: TarballStorage
   private metadataStorage: MetadataStorage
+  private pendingInstallMetadata = new Map<string, Promise<PackageMetadata>>()
 
   /** Embedders can verify that a dedicated registry never resolves foreign packages. */
   get npmFallbackEnabled(): boolean { return this.config.npmFallback === true }
@@ -163,12 +164,32 @@ export class Registry {
   async getStoredVersion(name: string, version: string): Promise<PackageMetadata | null> {
     const metadata = await this.metadataStorage.getPackageVersion(name, version)
     if (!metadata || metadata.install !== undefined) return metadata
+
+    const key = `${name}@${version}`
+    const pending = this.pendingInstallMetadata.get(key)
+    if (pending) return pending
+
+    const inspection = this.fillVersionInstallMetadata(name, version, metadata)
+    this.pendingInstallMetadata.set(key, inspection)
+    try {
+      return await inspection
+    }
+    finally {
+      this.pendingInstallMetadata.delete(key)
+    }
+  }
+
+  private async fillVersionInstallMetadata(name: string, version: string, metadata: PackageMetadata): Promise<PackageMetadata> {
     try {
       const tarball = await this.downloadTarball(name, version, { recordDownload: false, allowFallback: false })
-      const install = tarball ? packagedInstallManifest(tarball, name, version) : null
-      if (!install) return metadata
-      await this.metadataStorage.setVersionInstall(name, version, install)
-      return { ...metadata, ...install, install }
+      if (!tarball) return metadata
+      const install = packagedInstallManifest(tarball, name, version)
+      // A verified tarball with no manifest has no install fields. Persist
+      // that result like a new publication does. A missing download is retried.
+      if (!install && checksumOf(tarball) !== metadata.checksum) return metadata
+      const fields = install ?? {}
+      await this.metadataStorage.setVersionInstall(name, version, fields)
+      return { ...metadata, ...fields, install: fields }
     }
     catch (error) {
       console.warn(`Could not read install fields for ${name}@${version}: ${(error as Error).message}`)

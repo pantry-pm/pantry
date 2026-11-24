@@ -84,4 +84,27 @@ describe('install manifest', () => {
     expect((await registry.metadata.getPackageVersion(manifest.name, manifest.version))!.install!.bin).toEqual({ buddy: './dist/cli.js' })
     expect((await registry.getPackage(manifest.name, manifest.version))!.dependencies).toEqual({ '@stacksjs/cli': '0.75.700' })
   })
+
+  it('shares a legacy Pantry source inspection and remembers that it has no install fields', async () => {
+    const registry = createLocalRegistry('http://localhost:4999')
+    const name = '@test/platform'
+    const version = '1.0.42'
+    const tarball = await archive({ 'platform.json': JSON.stringify({ name, version }), 'source/config.ts': 'export default {}' })
+    await registry.publish({ name, version, publishedAt: '' }, tarball)
+    const record = await registry.metadata.getPackage(name)
+    delete record!.versions[version]!.install
+    const download = registry.downloadTarball.bind(registry)
+    let reads = 0
+    registry.downloadTarball = async (...args) => {
+      if (++reads === 1) return null
+      return download(...args)
+    }
+
+    expect((await registry.getStoredVersion(name, version))!.install).toBeUndefined()
+    const [first, second] = await Promise.all([registry.getStoredVersion(name, version), registry.getStoredVersion(name, version)])
+    expect(first!.install).toEqual({})
+    expect(second!.install).toEqual({})
+    expect((await registry.getStoredVersion(name, version))!.install).toEqual({})
+    expect(reads).toBe(2)
+  })
 })
