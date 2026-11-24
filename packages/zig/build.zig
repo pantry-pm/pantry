@@ -561,6 +561,9 @@ pub fn build(b: *std.Build) void {
     const library_paths_step = b.step("test:library-paths", "Keep installed Mach-O libraries usable by new compiler consumers");
     const library_paths_tests = b.addTest(.{ .root_module = lib_test_mod, .filters = &.{ "install.libfixer.", "library normalization" } });
     library_paths_step.dependOn(&b.addRunArtifact(library_paths_tests).step);
+    const ca_certs_step = b.step("test:ca-certs", "Link the CA bundle beside every installed OpenSSL, bundled ones included");
+    const ca_certs_tests = b.addTest(.{ .root_module = lib_test_mod, .filters = &.{"install.ca_certs."} });
+    ca_certs_step.dependOn(&b.addRunArtifact(ca_certs_tests).step);
     archive_resume_step.dependOn(&run_archive_resume_tests.step);
     const binary_platform_step = b.step("test:binary-platform", "Keep native registry URLs on the requested operating system");
     const binary_platform_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{"binary registry platform:"} });

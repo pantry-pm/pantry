@@ -1040,9 +1040,16 @@ pub const Installer = struct {
         }
 
         // An OpenSSL finds its CA bundle at `<prefix>/ssl/cert.pem`, which only
-        // curl.se/ca-certs provides; link the two whichever arrives second.
-        if (install_path.len > 0 and (std.mem.eql(u8, domain, "openssl.org") or std.mem.eql(u8, domain, "curl.se/ca-certs"))) {
-            if (ca_certs.treeRootOf(install_path, domain)) |root| ca_certs.linkBundles(self.allocator, root);
+        // curl.se/ca-certs provides; so does every package that bundles its
+        // own libcrypto (php.net, python.org). Link them whichever arrives
+        // second: a new bundle relinks the tree, any other package itself.
+        if (install_path.len > 0) {
+            if (ca_certs.treeRootOf(install_path, domain)) |root| {
+                if (std.mem.eql(u8, domain, "curl.se/ca-certs"))
+                    ca_certs.linkBundles(self.allocator, root)
+                else
+                    ca_certs.linkInstalled(self.allocator, root, install_path, domain);
+            }
         }
 
         // Scripts mirrored from pkgx name their interpreter as `#!/usr/bin/env
