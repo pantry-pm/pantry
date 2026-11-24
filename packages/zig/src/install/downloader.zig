@@ -474,16 +474,94 @@ pub fn lookupS3Registry(
     domain: []const u8,
     version_constraint: []const u8,
 ) !?S3PackageResult {
+    if (metadata_cache.get(allocator, domain)) |cached| {
+        defer if (cached) |body| allocator.free(body);
+        const body = cached orelse return null;
+        return selectS3RegistryMetadata(allocator, version_constraint, body);
+    }
     const metadata_url = try std.fmt.allocPrint(allocator, "https://registry.pantry.dev/binaries/{s}/metadata.json", .{domain});
     defer allocator.free(metadata_url);
     const response = try io_helper.httpGetStatusTimeout(allocator, metadata_url, 30_000);
     defer response.deinit(allocator);
-    if (response.status == 404) return null;
+    if (response.status == 404) {
+        metadata_cache.put(domain, null);
+        return null;
+    }
     if (!response.ok()) {
         style.print("  Registry metadata HTTP {d} for {s}\n", .{ response.status, domain });
         return if (response.status == 401 or response.status == 403) error.RegistryAuthenticationRequired else error.RegistryUnavailable;
     }
+    metadata_cache.put(domain, response.body);
     return selectS3RegistryMetadata(allocator, version_constraint, response.body);
+}
+
+/// One `metadata.json` per package per run.
+///
+/// An install asks about the same package several times: the artifact check
+/// before the install (install/artifact_refresh.zig) compares every installed
+/// package's sha256 with the registry's, and the reinstall it may start, the
+/// dependency walk and the resolver then look the same package up again. Each
+/// answer is kept briefly so those are one request, not four. Only a 200 or a
+/// 404 is kept; a failure is asked again. Entries expire, so a long-lived
+/// process does not go on reading an artifact the registry has since replaced.
+const metadata_cache = struct {
+    const ttl_ms: i64 = 60_000;
+    const Entry = struct { body: ?[]u8, fetched_ms: i64 };
+
+    var mutex: io_helper.Mutex = .{};
+    var entries: std.StringHashMapUnmanaged(Entry) = .empty;
+    // Process-lifetime storage, independent of whichever allocator a caller
+    // (possibly a leak-checking test allocator) happens to pass.
+    const storage = std.heap.smp_allocator;
+
+    fn nowMs() i64 {
+        const ts = io_helper.clockGettimeMonotonic();
+        return @as(i64, @intCast(ts.sec)) * 1000 + @divFloor(@as(i64, @intCast(ts.nsec)), 1_000_000);
+    }
+
+    /// null: not cached. Some(null): the registry answered 404. Some(body):
+    /// a copy of the body owned by the caller.
+    fn get(allocator: std.mem.Allocator, domain: []const u8) ??[]u8 {
+        mutex.lock();
+        defer mutex.unlock();
+        const entry = entries.get(domain) orelse return null;
+        if (nowMs() - entry.fetched_ms > ttl_ms) return null;
+        const body = entry.body orelse return @as(?[]u8, null);
+        return allocator.dupe(u8, body) catch return null;
+    }
+
+    fn put(domain: []const u8, body: ?[]const u8) void {
+        const owned_body: ?[]u8 = if (body) |b| (storage.dupe(u8, b) catch return) else null;
+        mutex.lock();
+        defer mutex.unlock();
+        const gop = entries.getOrPut(storage, domain) catch {
+            if (owned_body) |b| storage.free(b);
+            return;
+        };
+        if (gop.found_existing) {
+            if (gop.value_ptr.body) |old| storage.free(old);
+        } else {
+            gop.key_ptr.* = storage.dupe(u8, domain) catch {
+                entries.removeByPtr(gop.key_ptr);
+                if (owned_body) |b| storage.free(b);
+                return;
+            };
+        }
+        gop.value_ptr.* = .{ .body = owned_body, .fetched_ms = nowMs() };
+    }
+};
+
+test "registry metadata is kept per package for the run" {
+    const allocator = std.testing.allocator;
+    try std.testing.expect(metadata_cache.get(allocator, "fixture.test/cache-miss") == null);
+    metadata_cache.put("fixture.test/absent", null);
+    const absent = metadata_cache.get(allocator, "fixture.test/absent").?;
+    try std.testing.expect(absent == null);
+    metadata_cache.put("fixture.test/present", "{\"versions\":{}}");
+    metadata_cache.put("fixture.test/present", "{\"versions\":{\"1\":{}}}");
+    const body = metadata_cache.get(allocator, "fixture.test/present").?.?;
+    defer allocator.free(body);
+    try std.testing.expectEqualStrings("{\"versions\":{\"1\":{}}}", body);
 }
 
 fn selectS3RegistryMetadata(allocator: std.mem.Allocator, version_constraint: []const u8, metadata: []const u8) !?S3PackageResult {
