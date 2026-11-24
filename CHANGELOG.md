@@ -1,3 +1,38 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.228...v0.11.229)
+
+## ✨ Features
+
+- **php**: build gd with JPEG, WebP, FreeType and AVIF support ([e81a25e](https://github.com/pantry-pm/pantry/commit/e81a25e)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🐛 Bug Fixes
+
+- **install**: link the CA bundle beside every bundled OpenSSL ([0877021](https://github.com/pantry-pm/pantry/commit/0877021)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: serve npm's copy of a version whose Pantry archive differs ([f237858](https://github.com/pantry-pm/pantry/commit/f237858)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **publish**: pack Pantry registry publishes exactly like npm publishes ([4baab28](https://github.com/pantry-pm/pantry/commit/4baab28)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: serve the tarball path Bun builds under /npm/ ([9a8a646](https://github.com/pantry-pm/pantry/commit/9a8a646)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **php**: link libc++ on darwin; GNU libstdc++ is Linux-only ([1f07a03](https://github.com/pantry-pm/pantry/commit/1f07a03)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **runtime**: bundle the Mach-O provider a binary actually linked ([dd298b6](https://github.com/pantry-pm/pantry/commit/dd298b6)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **buildkit**: resolve pkgx install names in darwin configure probes ([9bdbe11](https://github.com/pantry-pm/pantry/commit/9bdbe11)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: repackage pkgx fallbacks without blocking the event loop ([b7e1995](https://github.com/pantry-pm/pantry/commit/b7e1995)) _(by Chris Breuer <chris@stacksjs.com>)_
+- **registry**: serialize recovery and release rehearsals ([53c373c](https://github.com/pantry-pm/pantry/commit/53c373c)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **publish**: give a large artifact's completion a budget that grows with its size ([db5c49d](https://github.com/pantry-pm/pantry/commit/db5c49d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: keep Pantry tarball reads off the public gateway ([40f7800](https://github.com/pantry-pm/pantry/commit/40f7800)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: declare packument cache parameter types ([31dc92b](https://github.com/pantry-pm/pantry/commit/31dc92b)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: cache verified packages with no install metadata ([a6eb216](https://github.com/pantry-pm/pantry/commit/a6eb216)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- **registry**: redirect npm-only names and merge npm's versions from a cache ([a52053e](https://github.com/pantry-pm/pantry/commit/a52053e)) _(by Chris <chrisbreuer93@gmail.com>)_
+- **registry**: keep each version's dependencies, bins and platform fields ([c450472](https://github.com/pantry-pm/pantry/commit/c450472)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.229 ([d37ba1d](https://github.com/pantry-pm/pantry/commit/d37ba1d)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.539 ([76d591e](https://github.com/pantry-pm/pantry/commit/76d591e)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+- update craft to 0.0.538 ([4e83edf](https://github.com/pantry-pm/pantry/commit/4e83edf)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.227...v0.11.228)
 
 ## ✨ Features
