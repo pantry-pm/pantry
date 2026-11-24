@@ -8,8 +8,8 @@
  *
  * @install `pantry install php.net`
  * @homepage https://www.php.net/
- * @dependencies `gnu.org/bison^3`, `re2c.org^3`, `apache.org/apr^1`, ... (+29 more) (includes platform-specific dependencies)
- * @buildDependencies `freetype.org`, `gnu.org/libtool`, `darwin:tukaani.org/xz` (includes platform-specific dependencies) - required only when building from source
+ * @dependencies `gnu.org/bison^3`, `re2c.org^3`, `apache.org/apr^1`, ... (+31 more) (includes platform-specific dependencies)
+ * @buildDependencies `gnu.org/libtool`, `darwin:tukaani.org/xz` (includes platform-specific dependencies) - required only when building from source
  *
  * @example
  * ```typescript
@@ -93,7 +93,9 @@ export const phpPackage = {
     'gnome.org/libxslt>=1.1.0',
     'libpng.org^1',
     'google.com/webp^1',
-    'ijg.org^9',
+    'libjpeg-turbo.org^2',
+    'freetype.org^2',
+    'github.com/AOMediaCodec/libavif^1',
     'gnu.org/sed^4',
     'openldap.org^2',
     'darwin:sourceware.org/bzip2^1',
@@ -106,7 +108,6 @@ export const phpPackage = {
   * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:gnu.org/gcc`).
   */
   buildDependencies: [
-    'freetype.org',
     'gnu.org/libtool',
     'darwin:tukaani.org/xz',
   ] as const,

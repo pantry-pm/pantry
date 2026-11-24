@@ -45,9 +45,14 @@ export const recipe: Recipe = {
     // Match PHP's upstream XSL requirement; the retired cap selected a second
     // XML/XSLT ABI beside libpq's current declared dependency graph.
     'gnome.org/libxslt': '>=1.1.0',
+    // gd's image formats (--with-jpeg/--with-webp/--with-freetype/--with-avif).
+    // libjpeg-turbo ^2 is the JPEG ABI libavif and libtiff already carry, so
+    // the closure holds one libjpeg rather than ijg's beside it.
     'libpng.org': '^1',
     'google.com/webp': '^1',
-    'ijg.org': '^9',
+    'libjpeg-turbo.org': '^2',
+    'freetype.org': '^2',
+    'github.com/AOMediaCodec/libavif': '^1',
     'gnu.org/sed': '^4',
     'openldap.org': '^2',
     darwin: {
@@ -64,7 +69,6 @@ export const recipe: Recipe = {
     },
   },
   buildDependencies: {
-    'freetype.org': '*',
     'gnu.org/libtool': '*',
     darwin: {
       'tukaani.org/xz': '*',
@@ -92,7 +96,7 @@ export const recipe: Recipe = {
     ],
     env: {
       'CPP': 'clang -E',
-      'ARGS': ['--prefix={{prefix}}', '--disable-rpath', '--enable-bcmath', '--enable-calendar', '--enable-dba', '--enable-exif', '--enable-ftp', '--enable-fpm', '--enable-gd', '--enable-intl', '--enable-mbregex', '--enable-mbstring', '--enable-mysqlnd', '--enable-pcntl', '--enable-phpdbg', '--enable-phpdbg-readline', '--enable-shmop', '--enable-soap', '--enable-sockets', '--enable-sysvmsg', '--enable-sysvsem', '--enable-sysvshm', '--without-pear', '--with-curl', '--with-external-pcre', '--with-ffi', '--with-gettext={{deps.gnu.org/gettext.prefix}}', '--with-gmp={{deps.gnu.org/gmp.prefix}}', '--with-iconv={{deps.gnu.org/libiconv.prefix}}', '--with-kerberos', '--with-layout=GNU', '--with-libxml', '--with-libedit', '--with-openssl', '--with-pdo-sqlite', '--with-pgsql={{deps.postgresql.org.prefix}}', '--with-pdo-pgsql={{deps.postgresql.org.prefix}}', '--with-pdo-mysql=mysqlnd', '--with-mysqli=mysqlnd', '--with-pic', '--with-sodium', '--with-sqlite3', '--with-xsl', '--with-zip', '--with-zlib', '--disable-dtrace', '--without-ldap-sasl', '--without-ndbm', '--without-gdbm'],
+      'ARGS': ['--prefix={{prefix}}', '--disable-rpath', '--enable-bcmath', '--enable-calendar', '--enable-dba', '--enable-exif', '--enable-ftp', '--enable-fpm', '--enable-gd', '--with-jpeg', '--with-webp', '--with-freetype', '--with-avif', '--enable-intl', '--enable-mbregex', '--enable-mbstring', '--enable-mysqlnd', '--enable-pcntl', '--enable-phpdbg', '--enable-phpdbg-readline', '--enable-shmop', '--enable-soap', '--enable-sockets', '--enable-sysvmsg', '--enable-sysvsem', '--enable-sysvshm', '--without-pear', '--with-curl', '--with-external-pcre', '--with-ffi', '--with-gettext={{deps.gnu.org/gettext.prefix}}', '--with-gmp={{deps.gnu.org/gmp.prefix}}', '--with-iconv={{deps.gnu.org/libiconv.prefix}}', '--with-kerberos', '--with-layout=GNU', '--with-libxml', '--with-libedit', '--with-openssl', '--with-pdo-sqlite', '--with-pgsql={{deps.postgresql.org.prefix}}', '--with-pdo-pgsql={{deps.postgresql.org.prefix}}', '--with-pdo-mysql=mysqlnd', '--with-mysqli=mysqlnd', '--with-pic', '--with-sodium', '--with-sqlite3', '--with-xsl', '--with-zip', '--with-zlib', '--disable-dtrace', '--without-ldap-sasl', '--without-ndbm', '--without-gdbm'],
       'darwin': {
         CC: 'clang',
         CXX: 'clang++',
@@ -109,6 +113,7 @@ export const recipe: Recipe = {
       'test "$(php-config --version)" = "{{version}}"',
       'php -r \'if (PHP_VERSION !== "{{version}}") exit(1);\'',
       'php -r \'foreach (["bcmath", "curl", "ffi", "gd", "intl", "mbstring", "mysqli", "pdo_mysql", "pdo_pgsql", "pdo_sqlite", "pgsql", "Phar", "sodium", "sqlite3", "xsl", "zip"] as $module) { if (!extension_loaded($module)) { fwrite(STDERR, "Missing extension: $module\\n"); exit(1); } }\'',
+      'php -r \'$gd = gd_info(); foreach (["JPEG Support", "WebP Support", "FreeType Support", "AVIF Support", "PNG Support"] as $format) { if (empty($gd[$format])) { fwrite(STDERR, "gd lacks $format\\n"); exit(1); } }\'',
       `cat > transform.php <<'PANTRY_PHP'
 <?php
 $style = new DOMDocument;
