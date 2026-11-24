@@ -107,6 +107,17 @@ export const MAX_BACKOFF_MS: number = 30_000
 export const DEFAULT_CLIENT_ATTEMPTS: number
   = Math.ceil(DEFAULT_CLIENT_DEADLINE_MS / MAX_BACKOFF_MS) + 10
 
+/**
+ * How long to wait for one upload's completion. Sealing, downloading for the
+ * scan and scanning all grow with the archive, and a scan can queue behind
+ * others: a 2.2GB elizaOS artifact was still completing when the flat hour
+ * ran out, twice. Past 500MB each further 25MB adds a minute, up to four hours.
+ */
+export function completionDeadlineMs(size: number | undefined): number {
+  const extraMinutes = Math.max(0, Math.ceil(((size ?? 0) - 500 * 1024 * 1024) / (25 * 1024 * 1024)))
+  return Math.min(4 * 60 * 60_000, DEFAULT_CLIENT_DEADLINE_MS + extraMinutes * 60_000)
+}
+
 export function completionError(response: Response, completed: any): Error {
   const retryable = completed.retryable ? ' (retryable)' : ''
   // Include what the scanner reported. A bare MALWARE_SCAN_UNAVAILABLE says
@@ -399,7 +410,11 @@ export async function publishBinaryArtifact(
   uploadArgs.push('-T', options.filePath, initiated.uploadUrl)
   execFileSync('curl', uploadArgs, { stdio: ['ignore', 'ignore', 'inherit'] })
 
-  const completed = await completeBinaryUpload(registryUrl, initiated.uploadId, auth)
+  const deadlineMs = completionDeadlineMs(options.size)
+  const completed = await completeBinaryUpload(registryUrl, initiated.uploadId, auth, {
+    deadlineMs,
+    attempts: Math.ceil(deadlineMs / MAX_BACKOFF_MS) + 10,
+  })
   if (completed.scan?.artifactSha256 !== sha256 || completed.scan?.verdict !== 'clean')
     throw new Error('Registry returned an invalid binary malware-scan attestation')
   return completed as PublishedBinaryArtifact

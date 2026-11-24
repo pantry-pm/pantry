@@ -572,3 +572,12 @@ describe('archive framing', () => {
     }
   })
 })
+
+test('a large artifact gets a completion budget that grows with its size', async () => {
+  const { completionDeadlineMs, DEFAULT_CLIENT_DEADLINE_MS } = await import('../src/binary-publish')
+  expect(completionDeadlineMs(100 * 1024 * 1024)).toBe(DEFAULT_CLIENT_DEADLINE_MS)
+  expect(completionDeadlineMs(undefined)).toBe(DEFAULT_CLIENT_DEADLINE_MS)
+  // 2.2GB: about 70 minutes on top of the hour.
+  expect(completionDeadlineMs(2233 * 1024 * 1024)).toBe(DEFAULT_CLIENT_DEADLINE_MS + 70 * 60_000)
+  expect(completionDeadlineMs(50 * 1024 * 1024 * 1024)).toBe(4 * 60 * 60_000)
+})
