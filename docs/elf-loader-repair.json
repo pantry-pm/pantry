@@ -1,10 +1,10 @@
 {
   "description": "Linux artifacts whose ELF RPATH/RUNPATH lost $ORIGIN (scripts/audit-elf-rpaths.ts). method revision: repaired as a new build identity; method in-place: the artifact of oldBuild replaced under its own version (build-all-packages --repair-in-place), clients refetch on its sha256 change. inPlace records the in-place overwrite, also done backward for revision rows. next-release: left to its next upstream build, which the pipeline normalises. Driven by scripts/elf-loader-revisions.ts.",
   "summary": {
-    "verified": 132,
+    "verified": 133,
     "next-release": 479,
-    "pending": 4,
     "failed": 1,
+    "pending": 3,
     "skipped": 1
   },
   "packages": [
@@ -22,7 +22,7 @@
       "note": "the original case (bin/zstd RPATH /../lib loaded the host libzstd), repaired by revision 1.5.7.2 before this ledger existed",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "published",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1415,7 +1415,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "published",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1850,7 +1850,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "published",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1867,7 +1867,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "published",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1884,7 +1884,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -1948,7 +1948,13 @@
         "linux-x86-64"
       ],
       "batch": 6,
-      "status": "pending"
+      "status": "verified",
+      "method": "revision",
+      "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
+      "inPlace": {
+        "status": "pending",
+        "since": "2026-11-24T05:58:06Z"
+      }
     },
     {
       "domain": "google.com/woff2",
@@ -1980,7 +1986,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -1997,7 +2003,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2014,7 +2020,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2044,7 +2050,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2061,7 +2067,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2078,7 +2084,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2094,7 +2100,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2111,7 +2117,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2128,7 +2134,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2188,7 +2194,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2205,7 +2211,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
@@ -2222,7 +2228,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T05:09:22Z"
       }
     },
