@@ -1805,7 +1805,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -1821,7 +1821,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "pending",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
@@ -2152,7 +2152,7 @@
       "method": "revision",
       "reason": "backward repair: overwrite the base build with the fixed one so exact pins and older locks get correct bytes",
       "inPlace": {
-        "status": "published",
+        "status": "verified",
         "since": "2026-11-24T04:46:01Z"
       }
     },
