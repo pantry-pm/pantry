@@ -2447,6 +2447,7 @@ async function main() {
       platform: { type: 'string' },
       package: { type: 'string', short: 'p' },
       force: { type: 'boolean', short: 'f', default: false },
+      'repair-in-place': { type: 'boolean', default: false },
       'multi-version': { type: 'boolean', default: false },
       'max-versions': { type: 'string', default: '5' },
       'popular-max-versions': { type: 'string', default: '20' },
@@ -3173,7 +3174,10 @@ Options:
   buildTargetPlatform = platform // enables darwin-only skip scoping in isVersionSkipped
   BUILD_IS_FOREIGN = platform !== detectedPlatform // cross-platform fanout target
   const batchSize = parseInt(values['batch-size'] || '50', 10)
-  const force = values.force || false
+  // Replacing a published artifact under its own version implies rebuilding
+  // what is already there; build-package.ts inherits the switch through env.
+  if (values['repair-in-place']) process.env.PANTRY_REPAIR_IN_PLACE = '1'
+  const force = values.force || values['repair-in-place'] || false
   let multiVersion = values['multi-version'] || false
   const maxVersions = parseInt(values['max-versions'] || '5', 10)
   POPULAR_MAX_VERSIONS = parseInt(values['popular-max-versions'] || '20', 10)

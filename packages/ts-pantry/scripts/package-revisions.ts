@@ -71,10 +71,26 @@ export function recipeBuildVersion(packageVersion: string, revisions?: PackageRe
   return { upstream: packageVersion, current: packageVersion }
 }
 
-/** Never rebuild a superseded identity using a newer recipe. */
-export function requireCurrentRecipeBuild(packageVersion: string, currentVersion: string): void {
-  if (packageVersion !== currentVersion)
-    throw new Error(`Recipe requires package build ${currentVersion}; refusing to replace ${packageVersion}`)
+/**
+ * `PANTRY_REPAIR_IN_PLACE=1` (build-all-packages `--repair-in-place`): replace
+ * a published artifact under its own version instead of publishing a build
+ * revision. The registry overwrites the platform record (sha256, size,
+ * uploadedAt) after scanning the new bytes, and clients compare that sha256
+ * with what they installed, so exact pins and older locks get the repair too.
+ */
+export function repairInPlace(env: Record<string, string | undefined> = process.env): boolean {
+  return env.PANTRY_REPAIR_IN_PLACE === '1'
+}
+
+/**
+ * Never rebuild a superseded identity using a newer recipe, except the
+ * upstream release itself under an in-place repair: that is the same source,
+ * repackaged, with the revision's fix.
+ */
+export function requireCurrentRecipeBuild(packageVersion: string, currentVersion: string, upstreamVersion?: string, inPlace = repairInPlace()): void {
+  if (packageVersion === currentVersion) return
+  if (inPlace && upstreamVersion !== undefined && packageVersion === upstreamVersion) return
+  throw new Error(`Recipe requires package build ${currentVersion}; refusing to replace ${packageVersion}`)
 }
 
 /**
@@ -145,7 +161,7 @@ export function selectRevisionVersions(versions: readonly string[], revisions: P
 
 /** Vendor prebuilts cannot contain a Pantry packaging repair, except a loader-path or archive one. */
 export function recipeAllowsMirror(packageVersion: string, identity: { upstream: string, current: string }, requiresRecipeBuild = false, reason?: RevisionReason): boolean {
-  requireCurrentRecipeBuild(packageVersion, identity.current)
+  requireCurrentRecipeBuild(packageVersion, identity.current, identity.upstream)
   if (identity.upstream === packageVersion) return !requiresRecipeBuild
   return reason !== undefined && mirrorableReasons.has(reason)
 }

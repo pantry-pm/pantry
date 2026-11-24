@@ -1420,7 +1420,7 @@ async function buildPackage(options: BuildOptions): Promise<void> {
   const { loadRecipe } = await import('./recipe-loader')
   const loaded = await loadRecipe(pkgName, platform, packageVersion)
   const { requireCurrentRecipeBuild } = await import('./package-revisions')
-  requireCurrentRecipeBuild(packageVersion, loaded.publicationVersion ?? packageVersion)
+  requireCurrentRecipeBuild(packageVersion, loaded.publicationVersion ?? packageVersion, loaded.upstreamVersion)
   const version = loaded.upstreamVersion ?? packageVersion
   console.log(`Build recipe: ${loaded.yamlPath || 'native TS recipe'} (source: ${loaded.source})`)
 

@@ -299,3 +299,20 @@ test('the publish pipeline selects a prerelease loader-path revision on Linux an
   expect(allows('3.15.0rc1.pantry1', recipeBuildVersion('3.15.0rc1.pantry1', revisions), false, 'elf-loader-paths')).toBe(true)
   expect(recipeBuildVersion('3.15.0rc1.pantry1', revisions).upstream).toBe('3.15.0rc1')
 })
+
+test('an in-place repair rebuilds the upstream release under its own version, and nothing else', () => {
+  const revisions = { '1.5.7': 2 }
+  const base = recipeBuildVersion('1.5.7', revisions)
+  // Without the switch the base identity is superseded and refused.
+  expect(() => requireCurrentRecipeBuild('1.5.7', base.current, base.upstream, false)).toThrow('refusing to replace')
+  expect(() => requireCurrentRecipeBuild('1.5.7', base.current, base.upstream, true)).not.toThrow()
+  // An older revision is never an in-place target: only the upstream release is.
+  const older = recipeBuildVersion('1.5.7.1', revisions)
+  expect(() => requireCurrentRecipeBuild('1.5.7.1', older.current, older.upstream, true)).toThrow('refusing to replace')
+})
+
+test('PANTRY_REPAIR_IN_PLACE turns the in-place repair on', async () => {
+  const { repairInPlace } = await import('../scripts/package-revisions')
+  expect(repairInPlace({ PANTRY_REPAIR_IN_PLACE: '1' })).toBe(true)
+  expect(repairInPlace({})).toBe(false)
+})

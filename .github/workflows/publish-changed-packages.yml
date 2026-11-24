@@ -53,6 +53,11 @@ on:
         required: false
         default: false
         type: boolean
+      repair-in-place:
+        description: 'Rebuild each requested domain@version and replace its published artifact under the same version (new bytes are scanned; clients refetch on a sha256 change). Use for packaging repairs, e.g. ELF loader paths.'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   # Different catalog requests publish independently. Duplicate dispatches of
@@ -146,6 +151,9 @@ jobs:
           # identity; already-published identities remain no-op skips.
           REBUILD=false
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.rebuild-existing }}" = "true" ]; then
+            REBUILD=true
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.repair-in-place }}" = "true" ]; then
             REBUILD=true
           fi
           echo "Explicitly rebuild accepted versions: $REBUILD"
@@ -306,6 +314,10 @@ jobs:
             echo "Version bump only: leaving versions already in S3 alone."
           fi
           COMMON="-b $S3_BUCKET -r $S3_REGION --platform ${{ matrix.platform.name }} -p $PKGS --multi-version --max-versions $MAXV --popular-max-versions $POPULAR_MAXV $FORCE"
+          if [ "${{ github.event.inputs.repair-in-place }}" = "true" ]; then
+            COMMON="$COMMON --repair-in-place"
+            echo "In-place repair: replacing the requested versions' published artifacts."
+          fi
           echo "Publishing (download-first) $PKGS -> ${{ matrix.platform.name }}"
           bun scripts/build-all-packages.ts $COMMON --pkgx-mirror
 
@@ -400,6 +412,9 @@ jobs:
           FORCE_ARGS=()
           if [ "${{ needs.detect.outputs.rebuild_existing }}" != "false" ]; then
             FORCE_ARGS+=(--force)
+          fi
+          if [ "${{ github.event.inputs.repair-in-place }}" = "true" ]; then
+            FORCE_ARGS+=(--repair-in-place)
           fi
           echo "Native darwin-arm64 build + publish: $PKGS"
           bun scripts/build-all-packages.ts \
