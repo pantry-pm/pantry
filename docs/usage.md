@@ -848,6 +848,52 @@ After installation, pantry provides instructions for making zsh your default she
 chsh -s /path/to/installed/zsh
 ```
 
+## Publishing to the Pantry registry
+
+`pantry publish` without `--npm` publishes to the Pantry registry. Give it
+package directories or globs to publish a whole workspace at once:
+
+```bash
+# Every package in the workspace, 16 at a time (the default)
+pantry publish --ignore-scripts './packages/*'
+
+# Leave some out, or change how many upload at once
+pantry publish --skip docs,playground --concurrency 32 './packages/*'
+```
+
+A bulk release is where this differs most from npm. npm makes every package
+wait for its upload and then again for the version to become readable, and a
+package cannot go out before the packages it depends on are readable, so a
+workspace publishes in dependency layers, one wait per layer. The Pantry
+registry answers a publish with the version already installable, so every
+package uploads in parallel and nothing waits on anything else: the 89
+packages of the Stacks framework publish in about ten seconds. A version the
+registry already holds is skipped, so a rerun after a failure publishes only
+what is still missing.
+
+Publishing needs a token with publish rights to the names
+(`PANTRY_REGISTRY_TOKEN`, or `pantry token set`). The registry has no OIDC
+exchange yet.
+
+### Installing Pantry-published packages with Bun or npm
+
+`GET /npm/{name}` serves an npm packument, so any npm-protocol client can
+install from Pantry. Point a scope at it:
+
+```toml
+# bunfig.toml
+[install.scopes]
+"@my-org" = "https://registry.pantry.dev/npm/"
+```
+
+```ini
+# .npmrc
+@my-org:registry=https://registry.pantry.dev/npm/
+```
+
+A name with no versions on Pantry is answered with npm's own packument, so a
+scope that also has packages on npm keeps resolving them.
+
 ## Publishing to npm
 
 `pantry publish --npm` publishes to npm without the npm CLI. In a package

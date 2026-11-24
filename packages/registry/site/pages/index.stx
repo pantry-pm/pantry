@@ -140,6 +140,30 @@
   </div>
 </section>
 
+<!-- Bulk releases: npm vs Pantry, with the Releaser runs that measured it -->
+<section class="px-6 pb-16">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-xs uppercase tracking-widest font-medium mb-3 text-center" style="color: var(--fg-subtle);">Built For Bulk Releases</h2>
+    <p class="max-w-2xl mx-auto mb-8 text-center" style="font-size: 0.875rem; color: var(--fg-muted);">
+      A monorepo release on npm waits twice per package: for the upload, then for the version to become readable. A package cannot go out before the packages it depends on are readable, so the workspace publishes one dependency layer at a time. The Pantry registry answers a publish with the version already installable, so <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">pantry publish './packages/*'</code> uploads every package at once, and a rerun skips what is already out.
+    </p>
+    <div class="grid gap-4" style="grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));">
+      <div class="bg-[var(--bg-subtle)] border border-[var(--border)] rounded-lg p-6">
+        <p class="text-xs uppercase tracking-widest mb-3" style="color: var(--fg-subtle);">Before: Stacks on npm</p>
+        <p class="text-3xl font-bold font-mono mb-1" style="color: var(--fg-muted);">17 min</p>
+        <p class="mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">to publish the 89 framework packages of v0.75.663: 8 minutes of layered uploads, then 9 more waiting for npm to serve the set to a clean install.</p>
+        <a href="https://github.com/stacksjs/stacks/actions/runs/45243300653" class="hvr-accent text-sm" style="color: var(--fg-subtle);" target="_blank" rel="noopener">view the npm release run &rarr;</a>
+      </div>
+      <div class="bg-[var(--bg-subtle)] border rounded-lg p-6" style="border-color: var(--accent);">
+        <p class="text-xs uppercase tracking-widest mb-3" style="color: var(--accent);">After: Stacks on Pantry</p>
+        <p class="text-3xl font-bold font-mono mb-1" style="color: var(--accent);">10 s</p>
+        <p class="mb-4" style="font-size: 0.8125rem; color: var(--fg-muted);">to publish the same 89 packages with one <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">pantry publish</code>, every package uploading in parallel and installable the moment it returns. Bun and npm install them from <code class="text-xs px-1 rounded bg-[var(--bg-muted)]">/npm/</code>.</p>
+        <a href="https://github.com/stacksjs/stacks/actions/workflows/release.yml" class="hvr-accent text-sm" style="color: var(--accent);" target="_blank" rel="noopener">view the Pantry release runs &rarr;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- For teams: what a plan buys -->
 <section class="px-6 pb-16">
   <div class="max-w-6xl mx-auto">
