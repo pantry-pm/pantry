@@ -66,6 +66,8 @@ export interface ArtifactResult extends ArtifactSelection {
   absoluteEntries: number
   /** Names under bin/ and sbin/, to compare with the programs the catalog declares. */
   executables?: string[]
+  /** ELF members under lib/ or lib64/: none means a binary has no private library to find. */
+  sharedLibraries?: number
   error?: string
 }
 
@@ -457,8 +459,10 @@ export async function auditArtifact(registry: string, selection: ArtifactSelecti
       if (match && (type === '0' || type === '7' || type === '2' || type === '1')) executables.add(match[1]!)
     }
     result.executables = []
+    result.sharedLibraries = 0
     await forEachElfMember(stream, (member, bytes) => {
       result.elfMembers++
+      if (/(?:^|\/)lib(?:64)?\//.test(member)) result.sharedLibraries!++
       let paths: ReturnType<typeof readElfLoaderPaths>
       try {
         paths = readElfLoaderPaths(bytes)
