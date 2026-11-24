@@ -147,10 +147,23 @@ pub const LockfileEntry = struct {
     peer_dependencies: ?std.StringHashMap([]const u8) = null,
     bin: ?std.StringHashMap([]const u8) = null,
     optional_peers: ?std.StringHashMap(bool) = null,
+    /// Registry binaries: the sha256 of the archive each platform installed
+    /// (`"linux-x86-64": "sha256:<hex>"`). A lock is shared across platforms
+    /// and every platform has its own artifact, so this is a map; an install
+    /// adds or updates only its own platform's key (install/artifact_refresh.zig).
+    artifacts: ?std.StringHashMap([]const u8) = null,
 
     pub fn deinit(self: *LockfileEntry, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
         allocator.free(self.version);
+        if (self.artifacts) |*a| {
+            var it = a.iterator();
+            while (it.next()) |entry| {
+                allocator.free(entry.key_ptr.*);
+                allocator.free(entry.value_ptr.*);
+            }
+            a.deinit();
+        }
         if (self.url) |u| allocator.free(u);
         if (self.resolved) |r| allocator.free(r);
         if (self.integrity) |i| allocator.free(i);

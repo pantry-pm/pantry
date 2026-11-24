@@ -11,6 +11,8 @@ const env_deps = @import("env_deps.zig");
 const workspace = @import("workspace.zig");
 const global = @import("global.zig");
 const artifacts = @import("artifacts.zig");
+const artifact_refresh = @import("../../../install/artifact_refresh.zig");
+const lockfile_writer_mod = @import("../../../packages/lockfile.zig");
 
 const lockfile_hooks = @import("lockfile_hooks.zig");
 const offline = @import("../../../install/offline.zig");
@@ -217,10 +219,6 @@ fn tryFastUpToDate(allocator: std.mem.Allocator, cwd: []const u8, start_time: i6
     var integrity_path_buf: [std.fs.max_path_bytes]u8 = undefined;
     while (pkg_it.next()) |entry| {
         const pkg = entry.value_ptr.*;
-        // A registry binary's integrity is the sha256 of the archive it came
-        // from, not a hash of its directory; install/artifact_refresh.zig
-        // compared it with the registry before this ran.
-        if (pkg.source == .pantry and std.mem.indexOfScalar(u8, pkg.name, '.') != null and pkg.name[0] != '@') continue;
         if (pkg.integrity) |expected_integrity| {
             const pkg_path = std.fmt.bufPrint(&integrity_path_buf, "{s}/{s}/{s}", .{ effective_dir, modules_dir, pkg.name }) catch continue;
             const valid = helpers.verifyPackageIntegrity(allocator, pkg_path, expected_integrity) catch {
@@ -640,8 +638,9 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
 
     // Likewise a tree whose installed artifact the registry rebuilt in place
     // under the same version: see install/artifact_refresh.zig. This runs
-    // under --frozen-lockfile too, where a lock hash the registry no longer
-    // serves fails the install instead of installing other bytes.
+    // under --frozen-lockfile too, where this platform's locked artifact hash
+    // the registry no longer serves fails the install instead of installing
+    // other bytes.
     if (try artifacts.refreshProject(allocator, options)) |failure| return failure;
 
     // Otherwise, normal install flow
@@ -1431,20 +1430,21 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                             !lockIntegrityMatches(&lock_file, clean_name, result.integrity))
                             frozen_lockfile_changed = true;
                     } else if (!options.no_save) {
-                        // The same version keeps a recorded integrity when
-                        // this install produced none (a copy that recorded
-                        // no artifact). Copied first: adding the entry frees
-                        // the previous one.
-                        var carried: ?[]const u8 = null;
-                        defer if (carried) |c| allocator.free(c);
+                        var moved = true;
                         if (lockfile_hooks.getLockedVersionForPackage(&lock_file, clean_name)) |previous| {
-                            if (!std.mem.eql(u8, previous.version, result.version))
-                                style.printLockPinMoved(clean_name, previous.version, result.version, false)
-                            else if (result.integrity == null) if (previous.integrity) |i| {
-                                carried = try allocator.dupe(u8, i);
-                            };
+                            moved = !std.mem.eql(u8, previous.version, result.version);
+                            if (moved)
+                                style.printLockPinMoved(clean_name, previous.version, result.version, false);
                         }
-                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, result.integrity orelse carried);
+                        try lockfile_hooks.addPackageToLockfile(&lock_file, clean_name, result.version, resolved_url, result.integrity);
+                        // A new or moved pin records this platform's artifact.
+                        // An unchanged one keeps exactly what it had (other
+                        // platforms' hashes included), so a converged install
+                        // on another platform leaves pantry.lock untouched.
+                        if (moved) if (result.artifact) |digest| {
+                            const text = artifact_refresh.formatIntegrity(digest);
+                            try lock_file.setArtifact(clean_name, result.version, artifact_refresh.currentPlatform(), &text);
+                        };
                     }
                 }
                 // Nothing of it is on disk to record below.
@@ -1704,6 +1704,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
         source: lib.packages.PackageSource,
         direct: bool,
         integrity: ?[]const u8 = null,
+        artifact: ?[32]u8 = null,
     }).empty;
     defer {
         for (installed_packages.items) |pkg| {
@@ -1949,6 +1950,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             .source = spec.source,
             .direct = !is_transitive_dep,
             .integrity = tracked_integrity,
+            .artifact = result.artifact,
         }) catch |err| {
             style.print("Warning: Failed to track installed package {s}: {}\n", .{ name, err });
             if (tracked_integrity) |ti| allocator.free(ti);
@@ -2011,12 +2013,22 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             var keys_to_remove = std.ArrayList([]const u8).empty;
             defer keys_to_remove.deinit(allocator);
 
+            // The same version keeps every platform's artifact hash as it
+            // was; a new or moved pin records this platform's.
+            var same_version = false;
+            var kept_artifacts: ?std.StringHashMap([]const u8) = null;
+            errdefer freeArtifacts(allocator, &kept_artifacts);
+
             var iter = lockfile.packages.iterator();
             while (iter.next()) |existing| {
                 const existing_key = existing.key_ptr.*;
                 // Check if this is the same package (starts with "name@")
                 if (std.mem.startsWith(u8, existing_key, pkg.name)) {
                     if (existing_key.len > pkg.name.len and existing_key[pkg.name.len] == '@') {
+                        if (!same_version and std.mem.eql(u8, existing.value_ptr.version, pkg.version)) {
+                            same_version = true;
+                            kept_artifacts = try lockfile_writer_mod.cloneStringMap(allocator, existing.value_ptr.artifacts);
+                        }
                         keys_to_remove.append(allocator, existing_key) catch continue;
                     }
                 }
@@ -2032,7 +2044,7 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
             }
 
             // Add the new version
-            const entry = lib.packages.LockfileEntry{
+            var entry = lib.packages.LockfileEntry{
                 .name = allocator.dupe(u8, pkg.name) catch continue,
                 .version = allocator.dupe(u8, pkg.version) catch continue,
                 .source = pkg.source,
@@ -2040,6 +2052,12 @@ pub fn installCommandWithOptions(allocator: std.mem.Allocator, args: []const []c
                 .resolved = null,
                 .integrity = if (pkg.integrity) |i| (allocator.dupe(u8, i) catch null) else null,
                 .dependencies = null,
+                .artifacts = kept_artifacts,
+            };
+            kept_artifacts = null;
+            if (!same_version) if (pkg.artifact) |digest| {
+                const text = artifact_refresh.formatIntegrity(digest);
+                try lockfile_writer_mod.putArtifact(allocator, &entry, artifact_refresh.currentPlatform(), &text);
             };
 
             const key = std.fmt.allocPrint(allocator, "{s}@{s}", .{ pkg.name, pkg.version }) catch continue;
@@ -2215,21 +2233,16 @@ fn mergeCompanionResult(allocator: std.mem.Allocator, final_result: *types.Comma
     }
 }
 
-/// A committed lock written before registry binaries recorded their artifact
-/// hash accepts the first one, as `lockIntegrityMatches` does for the
-/// single-project path: a frozen install over such a lock is not "out of
-/// date" merely because this install knows the hash. Drops those hashes from
-/// `generated` before the two are compared.
-fn acceptFirstArtifactHashes(allocator: std.mem.Allocator, committed: *const lib.packages.Lockfile, generated: *lib.packages.Lockfile) void {
-    var it = generated.packages.iterator();
-    while (it.next()) |entry| {
-        const pkg = entry.value_ptr;
-        if (pkg.source != .pantry or pkg.integrity == null) continue;
-        const locked = committed.packages.get(entry.key_ptr.*) orelse continue;
-        if (locked.source != .pantry or locked.integrity != null) continue;
-        allocator.free(pkg.integrity.?);
-        pkg.integrity = null;
+fn freeArtifacts(allocator: std.mem.Allocator, map: *?std.StringHashMap([]const u8)) void {
+    if (map.*) |*m| {
+        var it = m.iterator();
+        while (it.next()) |entry| {
+            allocator.free(entry.key_ptr.*);
+            allocator.free(entry.value_ptr.*);
+        }
+        m.deinit();
     }
+    map.* = null;
 }
 
 fn finalizeCombinedWorkspaceLock(allocator: std.mem.Allocator, project_root: []const u8, generated_path: []const u8, frozen: bool, result: *types.CommandResult) !void {
@@ -2243,7 +2256,6 @@ fn finalizeCombinedWorkspaceLock(allocator: std.mem.Allocator, project_root: []c
     defer if (committed) |*lockfile| lockfile.deinit(allocator);
     var generated = writer.readLockfile(allocator, generated_path) catch null;
     defer if (generated) |*lockfile| lockfile.deinit(allocator);
-    if (committed) |*existing| if (generated) |*candidate| acceptFirstArtifactHashes(allocator, existing, candidate);
     const matches = if (committed) |*existing|
         if (generated) |*candidate| writer.lockfilesEqual(existing, candidate) else false
     else
@@ -2455,7 +2467,6 @@ fn installCompanionDepsFile(
             &env_only_domains,
             options.frozen_lockfile and lockfile_path == null,
             lockfile_path,
-            options.frozen_lockfile,
         );
         if (options.frozen_lockfile and lockfile_path == null and lockfile_changed) {
             return .{
@@ -2478,9 +2489,6 @@ fn syncCompanionLockfile(
     env_only_domains: *const env_deps.DomainSet,
     frozen: bool,
     lockfile_path_override: ?[]const u8,
-    /// `--frozen-lockfile`, also when staging (where `frozen` is false
-    /// because the staged copy is compared afterwards instead).
-    frozen_integrity: bool,
 ) !bool {
     const lockfile_writer = @import("../../../packages/lockfile.zig");
     const owned_lockfile_path = if (lockfile_path_override == null)
@@ -2499,7 +2507,16 @@ fn syncCompanionLockfile(
         try lib.packages.Lockfile.init(allocator, "1.0.0");
     defer lockfile.deinit(allocator);
 
-    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results, env_only_domains, frozen_integrity);
+    // A staged lock holds only what the workspace step carried forward; the
+    // committed one still has every platform's artifact hashes to keep.
+    var committed: ?lib.packages.Lockfile = if (lockfile_path_override != null) blk: {
+        const committed_path = try std.fs.path.join(allocator, &.{ project_root, "pantry.lock" });
+        defer allocator.free(committed_path);
+        break :blk lockfile_writer.readLockfile(allocator, committed_path) catch null;
+    } else null;
+    defer if (committed) |*c| c.deinit(allocator);
+
+    try mergeCompanionLockfileEntries(allocator, &lockfile, deps, results, env_only_domains, if (committed) |*c| c else null);
 
     const changed = if (original) |*existing|
         !lockfile_writer.lockfilesEqual(existing, &lockfile)
@@ -2523,10 +2540,9 @@ fn mergeCompanionLockfileEntries(
     deps: []const @import("../../../deps/parser.zig").PackageDependency,
     results: []const @import("../../../install/pipeline.zig").PackageResult,
     env_only_domains: *const env_deps.DomainSet,
-    /// A frozen install keeps the integrity a same-version entry already has
-    /// (none included: a lock written before integrities were recorded
-    /// accepts the first, as `lockIntegrityMatches` does).
-    frozen: bool,
+    /// Where an entry's artifact hashes are found when `lockfile` itself does
+    /// not hold its version (a staged lock): the committed pantry.lock.
+    previous: ?*const lib.packages.Lockfile,
 ) !void {
     // Packages whose resolved version depends on which platform installs them,
     // so the sweep below can tell a stale pin from another platform's.
@@ -2594,18 +2610,19 @@ fn mergeCompanionLockfileEntries(
             keys_to_remove.deinit(allocator);
         }
 
-        // What the lock already records for this exact version, copied
-        // before the old entry is freed below.
-        var same_version_seen = false;
-        var same_version_integrity: ?[]const u8 = null;
-        defer if (same_version_integrity) |i| allocator.free(i);
+        // The same version keeps every platform's artifact hash exactly as
+        // it was (so a converged install on another platform changes
+        // nothing); a new or moved pin records this platform's.
+        var same_version = false;
+        var kept_artifacts: ?std.StringHashMap([]const u8) = null;
+        errdefer freeArtifacts(allocator, &kept_artifacts);
 
         var package_it = lockfile.packages.iterator();
         while (package_it.next()) |entry| {
             if (!std.mem.eql(u8, entry.value_ptr.name, clean_name)) continue;
-            if (std.mem.eql(u8, entry.value_ptr.version, result.version) and !same_version_seen) {
-                same_version_seen = true;
-                if (entry.value_ptr.integrity) |i| same_version_integrity = try allocator.dupe(u8, i);
+            if (!same_version and std.mem.eql(u8, entry.value_ptr.version, result.version)) {
+                same_version = true;
+                kept_artifacts = try lockfile_writer_mod.cloneStringMap(allocator, entry.value_ptr.artifacts);
             }
 
             // Unless it is another platform's pin of the same package.
@@ -2632,24 +2649,28 @@ fn mergeCompanionLockfileEntries(
             }
         }
 
-        const entry = lib.packages.LockfileEntry{
+        const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, result.version });
+        defer allocator.free(key);
+        if (!same_version) if (previous) |committed| if (committed.packages.getPtr(key)) |locked| {
+            same_version = true;
+            kept_artifacts = try lockfile_writer_mod.cloneStringMap(allocator, locked.artifacts);
+        };
+
+        var entry = lib.packages.LockfileEntry{
             .name = try allocator.dupe(u8, clean_name),
             .version = try allocator.dupe(u8, result.version),
             .source = if (std.mem.indexOfScalar(u8, clean_name, '.') != null) .pantry else .npm,
             .resolved = try std.fmt.allocPrint(allocator, "registry:{s}@{s}", .{ clean_name, result.version }),
-            // Set for pinned Pantry scopes and registry binaries (see
-            // pipeline.PackageResult). The same version keeps what it had
-            // when this install produced none, or when the lock is frozen.
-            .integrity = blk: {
-                const chosen: ?[]const u8 = if (frozen and same_version_seen)
-                    same_version_integrity
-                else
-                    result.integrity orelse same_version_integrity;
-                break :blk if (chosen) |i| try allocator.dupe(u8, i) else null;
-            },
+            // Set for pinned Pantry scopes (see pipeline.PackageResult).
+            .integrity = if (result.integrity) |i| try allocator.dupe(u8, i) else null,
+            .artifacts = kept_artifacts,
         };
-        const key = try std.fmt.allocPrint(allocator, "{s}@{s}", .{ clean_name, result.version });
-        defer allocator.free(key);
+        kept_artifacts = null;
+        errdefer entry.deinit(allocator);
+        if (!same_version) if (result.artifact) |digest| {
+            const text = artifact_refresh.formatIntegrity(digest);
+            try lockfile_writer_mod.putArtifact(allocator, &entry, artifact_refresh.currentPlatform(), &text);
+        };
         try lockfile.addEntry(allocator, key, entry);
     }
 }
@@ -2755,7 +2776,7 @@ test "companion deps replace stale system pins without dropping workspace packag
 
     var env_only = env_deps.DomainSet{ .allocator = allocator, .map = std.StringHashMap(void).init(allocator) };
     defer env_only.deinit();
-    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results, &env_only, false);
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results, &env_only, null);
 
     try t.expectEqualStrings("^1.3.14", lockfile.workspaces.get("").?.system.?.get("bun.sh").?);
     try t.expect(lockfile.packages.get("bun.sh@^1.3.4") == null);
@@ -2789,7 +2810,7 @@ test "a service inferred from .env stays out of the lock, with what it pulled in
 
     var env_only = try env_deps.inferredOnlyDomains(allocator, &inferred, &declared);
     defer env_only.deinit();
-    try mergeCompanionLockfileEntries(allocator, &lockfile, &declared, &results, &env_only, false);
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &declared, &results, &env_only, null);
 
     // The declared package is locked, as always.
     try t.expectEqualStrings("3.51.0", lockfile.packages.get("sqlite.org@3.51.0").?.version);
@@ -2888,4 +2909,59 @@ test "an unpinned 402 repeats what the registry said instead of a credential hin
     const generic = helpers.gatedLookupMessage(t.allocator, error.PaymentRequired, "@hq/platform", "1.4.0").?;
     defer t.allocator.free(generic);
     try t.expect(std.mem.indexOf(u8, generic, "is a paid package") != null);
+}
+
+test "companion locks keep another platform's artifact hash and record their own only for a new pin" {
+    const t = std.testing;
+    const allocator = t.allocator;
+    const parser = @import("../../../deps/parser.zig");
+    const pipeline = @import("../../../install/pipeline.zig");
+    const here = artifact_refresh.currentPlatform();
+    const elsewhere = if (std.mem.eql(u8, here, "darwin-arm64")) "linux-x86-64" else "darwin-arm64";
+
+    // Locked on the other platform: zlib.net@1.3.1 with only its hash.
+    var lockfile = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+    var locked = lib.packages.LockfileEntry{ .name = try allocator.dupe(u8, "zlib.net"), .version = try allocator.dupe(u8, "1.3.1"), .source = .pantry };
+    try lockfile_writer_mod.putArtifact(allocator, &locked, elsewhere, "sha256:aa");
+    try lockfile.addEntry(allocator, "zlib.net@1.3.1", locked);
+    var original = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer original.deinit(allocator);
+    var original_entry = lib.packages.LockfileEntry{ .name = try allocator.dupe(u8, "zlib.net"), .version = try allocator.dupe(u8, "1.3.1"), .source = .pantry };
+    try lockfile_writer_mod.putArtifact(allocator, &original_entry, elsewhere, "sha256:aa");
+    try original.addEntry(allocator, "zlib.net@1.3.1", original_entry);
+
+    var digest: [32]u8 = undefined;
+    std.crypto.hash.sha2.Sha256.hash("this platform's zlib", &digest, .{});
+    const deps = [_]parser.PackageDependency{
+        .{ .name = "zlib.net", .version = "^1.3.1" },
+        .{ .name = "openssl.org", .version = "^3.6.0" },
+    };
+    const results = [_]pipeline.PackageResult{
+        // Converged here: the same version, installed from this platform's artifact.
+        .{ .name = "zlib.net", .version = "1.3.1", .success = true, .artifact = digest },
+        // A new pin.
+        .{ .name = "openssl.org", .version = "3.6.0", .success = true, .artifact = digest },
+    };
+    var env_only = env_deps.DomainSet{ .allocator = allocator, .map = std.StringHashMap(void).init(allocator) };
+    defer env_only.deinit();
+    try mergeCompanionLockfileEntries(allocator, &lockfile, &deps, &results, &env_only, null);
+
+    // The converged entry is exactly as locked: a CI diff sees nothing.
+    const zlib = lockfile.packages.get("zlib.net@1.3.1").?;
+    try t.expectEqual(@as(usize, 1), zlib.artifacts.?.count());
+    try t.expectEqualStrings("sha256:aa", zlib.artifacts.?.get(elsewhere).?);
+    try t.expect(zlib.integrity == null);
+    // The new pin records this platform's hash, and nothing in `integrity`.
+    const openssl = lockfile.packages.get("openssl.org@3.6.0").?;
+    const text = artifact_refresh.formatIntegrity(digest);
+    try t.expectEqualStrings(&text, openssl.artifacts.?.get(here).?);
+    try t.expect(openssl.integrity == null);
+
+    // A staged lock without the entry takes its hashes from the committed one.
+    var staged = try lib.packages.Lockfile.init(allocator, "1.0.0");
+    defer staged.deinit(allocator);
+    try mergeCompanionLockfileEntries(allocator, &staged, deps[0..1], results[0..1], &env_only, &original);
+    try t.expectEqualStrings("sha256:aa", staged.packages.get("zlib.net@1.3.1").?.artifacts.?.get(elsewhere).?);
+    try t.expect(staged.packages.get("zlib.net@1.3.1").?.artifacts.?.get(here) == null);
 }

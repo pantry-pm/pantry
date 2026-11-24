@@ -327,10 +327,12 @@ pub const PackageResult = struct {
     /// is not reported as installed.
     lock_only: bool = false,
     /// The tarball's integrity, for the lockfile. Set for packages from a
-    /// pinned Pantry scope (registry checksum, else sha256 of the bytes), and
-    /// for registry binaries (the sha256 of the archive they were installed
-    /// from). Owned.
+    /// pinned Pantry scope (registry checksum, else sha256 of the bytes).
+    /// Owned.
     integrity: ?[]const u8 = null,
+    /// Registry binaries: the sha256 of the archive installed on this
+    /// platform, for this platform's key in the lock entry's `artifacts`.
+    artifact: ?[32]u8 = null,
 };
 
 pub const PipelineResult = struct {
@@ -1048,9 +1050,7 @@ const DownloadThreadCtx = struct {
                         .version = alloc.dupe(u8, ir.version) catch owned_version,
                         .success = true,
                         .from_cache = ir.from_cache,
-                        // The registry archive this copy came from
-                        // (install/artifact_refresh.zig), for pantry.lock.
-                        .integrity = if (ir.integrity) |integrity| (alloc.dupe(u8, integrity) catch null) else null,
+                        .artifact = ir.artifact,
                     };
                     if (ctx.verbose) {
                         std.debug.print("[verbose:pipeline:download] pantry-source installed: {s} @ {s}\n", .{ pkg.name, ir.version });

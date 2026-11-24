@@ -1659,6 +1659,11 @@ pub fn installWorkspaceCommandWithOptions(
             .peer_dependencies = pkg_peer_deps,
             .bin = pkg_bin,
             .optional_peers = pkg_optional_peers,
+            // Every platform's artifact hash of this same version stays.
+            .artifacts = if (compatible_existing_entry) |previous|
+                if (std.mem.eql(u8, previous.version, entry_version)) try lib.packages.lockfile.cloneStringMap(allocator, previous.artifacts) else null
+            else
+                null,
         };
 
         // Use resolved version in key if available

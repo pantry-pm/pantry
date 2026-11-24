@@ -540,9 +540,9 @@ pub fn build(b: *std.Build) void {
     const build_revision_reconcile_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{"build revisions:"} });
     build_revision_step.dependOn(&b.addRunArtifact(build_revision_reconcile_tests).step);
     const artifact_refresh_step = b.step("test:artifact-refresh", "Reinstall registry binaries whose artifact the registry rebuilt in place");
-    const artifact_refresh_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{"artifact refresh:"} });
+    const artifact_refresh_tests = b.addTest(.{ .root_module = install_test_mod, .filters = &.{ "artifact refresh:", "companion locks keep another platform's artifact hash" } });
     artifact_refresh_step.dependOn(&b.addRunArtifact(artifact_refresh_tests).step);
-    const artifact_metadata_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "registry metadata is kept per package", "native archive resume: registry selection" } });
+    const artifact_metadata_tests = b.addTest(.{ .root_module = lib_mod, .filters = &.{ "registry metadata is kept per package", "native archive resume: registry selection", "a same-version pin keeps every platform's artifact hash", "lock entries keep each platform's artifact hash" } });
     artifact_refresh_step.dependOn(&b.addRunArtifact(artifact_metadata_tests).step);
     const zig_publish_step = b.step("test:zig-publish", "Publish build.zig.zon packages exactly as the action's publish: zig did");
     zig_publish_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = install_test_mod, .filters = &.{"zig publish:"} })).step);

@@ -11,23 +11,42 @@
 //!
 //! Now every registry binary records the sha256 of the archive it was
 //! installed from: a `.pantry-artifact` file in its version directory holding
-//! `sha256:<hex>`, and the same string as the `integrity` of its pantry.lock
-//! entry (the `sha256:<hex>` form lock integrities already use, see
-//! registry/scopes.zig). `reconcile` runs before the install proper: for every
-//! locked or installed registry binary it asks the registry for the sha256 of
-//! that exact version on this platform (one metadata.json per package, kept
-//! for the run by the downloader) and, when it differs from what is installed
-//! or locked, reinstalls that version from fresh bytes and rewrites the lock.
-//! A matching hash costs that one metadata read and nothing else.
+//! `sha256:<hex>`, and, in its pantry.lock entry, the same string under this
+//! platform's key of `artifacts` (`"linux-x86-64": "sha256:<hex>"`). The lock
+//! is shared by every platform and each has its own artifact, so it is a map,
+//! and an install only ever adds or updates its own key. `integrity` keeps its
+//! meaning (a tarball checksum, for pinned Pantry scopes).
+//!
+//! `reconcile` runs before the install proper: for every locked or installed
+//! registry binary it asks the registry for the sha256 of that exact version
+//! on this platform (one metadata.json per package, kept for the run by the
+//! downloader) and, when it differs from what is installed or from this
+//! platform's locked hash, reinstalls that version from fresh bytes and
+//! rewrites that key. A matching hash costs that one metadata read and
+//! nothing else.
+//!
+//! A lock without this platform's key (written on another platform, or by an
+//! older client) has nothing to compare: the install goes ahead, frozen or
+//! not. The key is recorded when the lock is written anyway, never as the
+//! only change: a converged install must leave a committed pantry.lock byte
+//! for byte as it was on every platform (CI diffs it after `pantry install`).
 //!
 //! `--frozen-lockfile` never installs bytes other than the ones the lock names:
-//! a lock hash the registry no longer serves is reported, and nothing changes.
+//! this platform's locked hash, when the registry no longer serves it, is
+//! reported and nothing changes.
 
 const std = @import("std");
 const io_helper = @import("../io_helper.zig");
 const generated = @import("../packages/generated.zig");
 const lockfile_io = @import("../packages/lockfile.zig");
 const pkg_types = @import("../packages/types.zig");
+const platform_core = @import("../core/platform.zig");
+
+/// This machine's key in the binary registry and in a lock entry's
+/// `artifacts`: `darwin-arm64`, `linux-x86-64`, ...
+pub fn currentPlatform() []const u8 {
+    return platform_core.binaryRegistryKey(platform_core.Platform.current(), platform_core.Architecture.current());
+}
 
 /// The file, in an installed version directory, naming the archive it came from.
 pub const marker_name = ".pantry-artifact";
@@ -64,13 +83,6 @@ pub fn readMarker(dir: []const u8) ?Digest {
     var fba = std.heap.FixedBufferAllocator.init(&content_buf);
     const content = io_helper.readFileAlloc(fba.allocator(), path, content_buf.len) catch return null;
     return parseIntegrity(content);
-}
-
-/// `readMarker` as an owned `sha256:<hex>` string, for a lock entry.
-pub fn readMarkerIntegrity(allocator: std.mem.Allocator, dir: []const u8) ?[]const u8 {
-    const digest = readMarker(dir) orelse return null;
-    const text = formatIntegrity(digest);
-    return allocator.dupe(u8, &text) catch null;
 }
 
 /// Record that the version directory `dir` holds the archive `digest`.
@@ -133,6 +145,8 @@ pub const Options = struct {
     tree: []const u8,
     /// The project's pantry.lock; null for a global tree.
     lock_path: ?[]const u8 = null,
+    /// Whose key in a lock entry's `artifacts` is compared and written.
+    platform: []const u8 = "",
     frozen: bool = false,
     /// Write pantry.lock when a hash changed (`--no-save` turns it off).
     save_lockfile: bool = true,
@@ -198,7 +212,7 @@ const Candidate = struct {
     domain: []u8,
     version: []u8,
     lock_key: ?[]u8 = null,
-    /// The lock's digest, null when the entry records none we can read.
+    /// This platform's locked digest, null when the entry has none we can read.
     locked: ?Digest = null,
     installed: bool = false,
     /// The installed marker; null when installed without one.
@@ -335,6 +349,7 @@ fn eqlDigest(a: Digest, b: Digest) bool {
 /// report with `deinit`.
 pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !Report {
     if (options.offline) return .{};
+    const platform = if (options.platform.len > 0) options.platform else currentPlatform();
 
     var candidates: std.ArrayList(Candidate) = .empty;
     defer {
@@ -365,7 +380,7 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
                 .domain = owned_domain,
                 .version = owned_version,
                 .lock_key = key,
-                .locked = if (pkg.integrity) |i| parseIntegrity(i) else null,
+                .locked = if (pkg.artifacts) |a| (if (a.get(platform)) |i| parseIntegrity(i) else null) else null,
                 .installed = state.installed,
                 .marker = state.marker,
             });
@@ -417,8 +432,12 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
         // by an older client pick up a repaired artifact on its next
         // install, and from then on the marker makes this a hash compare.
         const stale = c.installed and (if (c.marker) |m| !eqlDigest(m, registry) else true);
-        const lock_moves = c.lock_key != null and (if (c.locked) |l| !eqlDigest(l, registry) else true);
-        if (!stale and !lock_moves) continue;
+        // This platform's locked hash moves only when it is there and wrong.
+        // A missing key is filled in below, in memory, and reaches disk only
+        // if the lock is written for a real change.
+        const lock_moves = c.lock_key != null and (if (c.locked) |l| !eqlDigest(l, registry) else false);
+        const lock_missing = c.lock_key != null and c.locked == null;
+        if (!stale and !lock_moves and !lock_missing) continue;
 
         if (stale) {
             hooks.reinstall(hooks.context, c.domain, c.version, registry) catch |err| {
@@ -431,15 +450,13 @@ pub fn reconcile(allocator: std.mem.Allocator, options: Options, hooks: Hooks) !
             };
         }
 
-        // Frozen: the lock is left as it is (it matches, or names no hash
-        // and accepts the first, as lockIntegrityMatches does).
-        if (lock_moves and !options.frozen) {
+        // Frozen: the lock is left as it is (it matches, or has no key for
+        // this platform and so nothing to hold this install to).
+        if ((lock_moves or lock_missing) and !options.frozen) {
             if (lock) |*l| if (l.packages.getPtr(c.lock_key.?)) |entry| {
                 const text = formatIntegrity(registry);
-                const owned = try allocator.dupe(u8, &text);
-                if (entry.integrity) |old| allocator.free(old);
-                entry.integrity = owned;
-                lock_changed = true;
+                try lockfile_io.putArtifact(allocator, entry, platform, &text);
+                if (lock_moves) lock_changed = true;
             };
         }
 
@@ -481,6 +498,9 @@ fn digestOf(text: []const u8) Digest {
 
 const old_bytes = "broken linux build";
 const new_bytes = "repaired linux build";
+const darwin_bytes = "the darwin-arm64 build";
+/// Tests run as this platform whatever machine runs them.
+const here = "linux-x86-64";
 
 const TestHooks = struct {
     root: []const u8,
@@ -522,6 +542,8 @@ const TestHooks = struct {
     }
 };
 
+/// A project that locks zlib.net@1.3.1 (with these per-platform hashes) and
+/// has it installed (with this marker), beside an npm package.
 const Fixture = struct {
     tmp: std.testing.TmpDir,
     buf: [std.fs.max_path_bytes]u8 = undefined,
@@ -529,19 +551,29 @@ const Fixture = struct {
     tree: []const u8 = "",
     lock_path: []const u8 = "",
 
-    fn init(self: *Fixture, lock_integrity: ?[]const u8, marker: ?Digest) !void {
+    const Locked = struct { linux: ?Digest = null, darwin: ?Digest = null };
+
+    fn init(self: *Fixture, hashes: Locked, marker: ?Digest) !void {
         self.tmp = std.testing.tmpDir(.{});
         const len = try self.tmp.dir.realPath(io_helper.io, &self.buf);
         self.root = self.buf[0..len];
         self.tree = try std.fmt.allocPrint(testing.allocator, "{s}/pantry", .{self.root});
         self.lock_path = try std.fmt.allocPrint(testing.allocator, "{s}/pantry.lock", .{self.root});
-        const integrity_field = if (lock_integrity) |i| try std.fmt.allocPrint(testing.allocator, ",\"integrity\":\"{s}\"", .{i}) else try testing.allocator.dupe(u8, "");
-        defer testing.allocator.free(integrity_field);
+
+        var field: std.ArrayList(u8) = .empty;
+        defer field.deinit(testing.allocator);
+        if (hashes.linux != null or hashes.darwin != null) {
+            try field.appendSlice(testing.allocator, ",\"artifacts\":{");
+            if (hashes.darwin) |d| try field.print(testing.allocator, "\"darwin-arm64\":\"{s}\"", .{&formatIntegrity(d)});
+            if (hashes.darwin != null and hashes.linux != null) try field.append(testing.allocator, ',');
+            if (hashes.linux) |d| try field.print(testing.allocator, "\"" ++ here ++ "\":\"{s}\"", .{&formatIntegrity(d)});
+            try field.append(testing.allocator, '}');
+        }
         const lock = try std.fmt.allocPrint(testing.allocator,
             \\{{"version":"1.0.0","lockfileVersion":2,"packages":{{
             \\"zlib.net@1.3.1":{{"name":"zlib.net","version":"1.3.1","source":"pantry","resolved":"registry:zlib.net@1.3.1"{s}}},
             \\"zod@4.1.0":{{"name":"zod","version":"4.1.0","source":"npm"}}}}}}
-        , .{integrity_field});
+        , .{field.items});
         defer testing.allocator.free(lock);
         try self.tmp.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.lock", .data = lock });
         try self.tmp.dir.createDirPath(io_helper.io, "pantry/zlib.net/v1.3.1/bin");
@@ -560,11 +592,22 @@ const Fixture = struct {
         self.tmp.cleanup();
     }
 
-    fn lockedIntegrity(self: *Fixture) !?Digest {
+    fn reconcileWith(self: *Fixture, hooks: *TestHooks, frozen: bool) !Report {
+        return reconcile(testing.allocator, .{ .tree = self.tree, .lock_path = self.lock_path, .frozen = frozen, .platform = here }, hooks.hooks());
+    }
+
+    fn lockBytes(self: *Fixture) ![]u8 {
+        return self.tmp.dir.readFileAlloc(io_helper.io, "pantry.lock", testing.allocator, .unlimited);
+    }
+
+    fn locked(self: *Fixture, platform: []const u8) !?Digest {
         var lock = try lockfile_io.readLockfile(testing.allocator, self.lock_path);
         defer lock.deinit(testing.allocator);
         const entry = lock.packages.get("zlib.net@1.3.1") orelse return error.TestMissingLockEntry;
-        return if (entry.integrity) |i| parseIntegrity(i) else null;
+        // The tarball checksum field is never used for artifact hashes.
+        if (entry.integrity != null) return error.TestArtifactHashInIntegrity;
+        const map = entry.artifacts orelse return null;
+        return if (map.get(platform)) |i| parseIntegrity(i) else null;
     }
 
     fn installedMarker(self: *Fixture) ?Digest {
@@ -576,37 +619,35 @@ const Fixture = struct {
 
 test "artifact refresh: matching hashes leave the tree and the lock alone, without a download" {
     const served = digestOf(new_bytes);
-    const integrity = formatIntegrity(served);
     var f: Fixture = .{ .tmp = undefined };
-    try f.init(&integrity, served);
+    try f.init(.{ .linux = served, .darwin = digestOf(darwin_bytes) }, served);
     defer f.deinit();
-    const before = try f.tmp.dir.readFileAlloc(io_helper.io, "pantry.lock", testing.allocator, .unlimited);
+    const before = try f.lockBytes();
     defer testing.allocator.free(before);
 
     var hooks = TestHooks{ .root = f.root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, hooks.hooks());
+    const report = try f.reconcileWith(&hooks, false);
     defer report.deinit(testing.allocator);
 
     try testing.expectEqual(@as(usize, 0), report.changes.len);
     try testing.expectEqual(@as(usize, 0), hooks.installs.items.len);
     // One question about zlib.net; none about zod, an npm package.
     try testing.expectEqual(@as(usize, 1), hooks.lookups.load(.monotonic));
-    const after = try f.tmp.dir.readFileAlloc(io_helper.io, "pantry.lock", testing.allocator, .unlimited);
+    const after = try f.lockBytes();
     defer testing.allocator.free(after);
     try testing.expectEqualStrings(before, after);
 }
 
-test "artifact refresh: an artifact rebuilt in place is reinstalled and its lock hash rewritten" {
+test "artifact refresh: an artifact rebuilt in place is reinstalled and this platform's lock hash rewritten" {
     const old = digestOf(old_bytes);
-    const integrity = formatIntegrity(old);
     var f: Fixture = .{ .tmp = undefined };
-    try f.init(&integrity, old);
+    try f.init(.{ .linux = old, .darwin = digestOf(darwin_bytes) }, old);
     defer f.deinit();
 
     var hooks = TestHooks{ .root = f.root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, hooks.hooks());
+    const report = try f.reconcileWith(&hooks, false);
     defer report.deinit(testing.allocator);
 
     try testing.expectEqual(@as(usize, 1), report.changes.len);
@@ -618,112 +659,172 @@ test "artifact refresh: an artifact rebuilt in place is reinstalled and its lock
     try testing.expect(change.reinstalled);
     try testing.expectEqual(@as(usize, 1), hooks.installs.items.len);
     try testing.expectEqualStrings("zlib.net@1.3.1", hooks.installs.items[0]);
-    try testing.expect(eqlDigest((try f.lockedIntegrity()).?, digestOf(new_bytes)));
+    try testing.expect(eqlDigest((try f.locked(here)).?, digestOf(new_bytes)));
+    // Another platform's hash is never touched.
+    try testing.expect(eqlDigest((try f.locked("darwin-arm64")).?, digestOf(darwin_bytes)));
     try testing.expect(eqlDigest(f.installedMarker().?, digestOf(new_bytes)));
 
     // Converged: the next install compares hashes and does nothing else.
     var again = TestHooks{ .root = f.root };
     defer again.deinit();
-    const none = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, again.hooks());
+    const none = try f.reconcileWith(&again, false);
     defer none.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 0), none.changes.len);
     try testing.expectEqual(@as(usize, 0), again.installs.items.len);
 }
 
+test "artifact refresh: a lock from another platform installs here unchanged, frozen or not" {
+    // Written on a Mac: only darwin-arm64's hash. Installed on Linux, where
+    // the copy is current.
+    const served = digestOf(new_bytes);
+    var f: Fixture = .{ .tmp = undefined };
+    try f.init(.{ .darwin = digestOf(darwin_bytes) }, served);
+    defer f.deinit();
+    const before = try f.lockBytes();
+    defer testing.allocator.free(before);
+
+    for ([_]bool{ true, false }) |frozen| {
+        var hooks = TestHooks{ .root = f.root };
+        defer hooks.deinit();
+        const report = try f.reconcileWith(&hooks, frozen);
+        defer report.deinit(testing.allocator);
+        try testing.expectEqual(@as(usize, 0), report.mismatches.len);
+        try testing.expectEqual(@as(usize, 0), report.changes.len);
+        try testing.expectEqual(@as(usize, 0), hooks.installs.items.len);
+        // Recording the missing key alone is not a lock change: a CI job
+        // that diffs pantry.lock after `pantry install` sees none.
+        const after = try f.lockBytes();
+        defer testing.allocator.free(after);
+        try testing.expectEqualStrings(before, after);
+    }
+
+    // A stale copy under the same lock is replaced, frozen or not; the
+    // lock still has nothing for this platform to hold it to.
+    var g: Fixture = .{ .tmp = undefined };
+    try g.init(.{ .darwin = digestOf(darwin_bytes) }, digestOf(old_bytes));
+    defer g.deinit();
+    var frozen_hooks = TestHooks{ .root = g.root };
+    defer frozen_hooks.deinit();
+    const repaired = try g.reconcileWith(&frozen_hooks, true);
+    defer repaired.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 0), repaired.mismatches.len);
+    try testing.expectEqual(@as(usize, 1), frozen_hooks.installs.items.len);
+    try testing.expect((try g.locked(here)) == null);
+}
+
+test "artifact refresh: this platform's stale lock hash beside another platform's" {
+    const old = digestOf(old_bytes);
+    var f: Fixture = .{ .tmp = undefined };
+    try f.init(.{ .linux = old, .darwin = digestOf(darwin_bytes) }, digestOf(new_bytes));
+    defer f.deinit();
+
+    // Frozen: fails naming both hashes, and changes nothing.
+    var frozen = TestHooks{ .root = f.root };
+    defer frozen.deinit();
+    const failed = try f.reconcileWith(&frozen, true);
+    defer failed.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), failed.mismatches.len);
+    try testing.expect(eqlDigest(failed.mismatches[0].locked, old));
+    try testing.expect(eqlDigest(failed.mismatches[0].registry, digestOf(new_bytes)));
+    try testing.expect(eqlDigest((try f.locked(here)).?, old));
+
+    // Not frozen: only this platform's key moves (the copy was current).
+    var hooks = TestHooks{ .root = f.root };
+    defer hooks.deinit();
+    const report = try f.reconcileWith(&hooks, false);
+    defer report.deinit(testing.allocator);
+    try testing.expectEqual(@as(usize, 1), report.changes.len);
+    try testing.expect(!report.changes[0].reinstalled);
+    try testing.expectEqual(@as(usize, 0), hooks.installs.items.len);
+    try testing.expect(eqlDigest((try f.locked(here)).?, digestOf(new_bytes)));
+    try testing.expect(eqlDigest((try f.locked("darwin-arm64")).?, digestOf(darwin_bytes)));
+}
+
 test "artifact refresh: a copy an older client installed is fetched once to record its hash" {
     // No marker and no lock hash: everything an older client installed.
     var f: Fixture = .{ .tmp = undefined };
-    try f.init(null, null);
+    try f.init(.{}, null);
     defer f.deinit();
+    const before = try f.lockBytes();
+    defer testing.allocator.free(before);
 
     var hooks = TestHooks{ .root = f.root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, hooks.hooks());
+    const report = try f.reconcileWith(&hooks, false);
     defer report.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 1), hooks.installs.items.len);
     try testing.expectEqual(@as(usize, 1), report.changes.len);
     try testing.expect(report.changes[0].from == null);
-    try testing.expect(eqlDigest((try f.lockedIntegrity()).?, digestOf(new_bytes)));
     try testing.expect(eqlDigest(f.installedMarker().?, digestOf(new_bytes)));
-
-    // A marker but no lock hash (the lock was written before this client)
-    // only records the hash: nothing is downloaded and nothing is reported.
-    var g: Fixture = .{ .tmp = undefined };
-    try g.init(null, digestOf(new_bytes));
-    defer g.deinit();
-    var quiet = TestHooks{ .root = g.root };
-    defer quiet.deinit();
-    const recorded = try reconcile(testing.allocator, .{ .tree = g.tree, .lock_path = g.lock_path }, quiet.hooks());
-    defer recorded.deinit(testing.allocator);
-    try testing.expectEqual(@as(usize, 0), quiet.installs.items.len);
-    try testing.expectEqual(@as(usize, 0), recorded.changes.len);
-    try testing.expect(eqlDigest((try g.lockedIntegrity()).?, digestOf(new_bytes)));
+    // The tree took the marker; the lock had no key and still has none.
+    const after = try f.lockBytes();
+    defer testing.allocator.free(after);
+    try testing.expectEqualStrings(before, after);
 }
 
-test "artifact refresh: a frozen lock whose hash the registry no longer serves fails and changes nothing" {
-    const old = digestOf(old_bytes);
-    const integrity = formatIntegrity(old);
-    var f: Fixture = .{ .tmp = undefined };
-    try f.init(&integrity, old);
-    defer f.deinit();
+test "artifact refresh: a missing key is recorded when the lock is written anyway" {
+    // zlib.net has no key here; openssl.org's key is stale, so the lock is
+    // written, and zlib.net's key goes along with it.
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buf[0..try tmp.dir.realPath(io_helper.io, &buf)];
+    const stale = formatIntegrity(digestOf("an older openssl build"));
+    const lock = try std.fmt.allocPrint(testing.allocator,
+        \\{{"version":"1.0.0","lockfileVersion":2,"packages":{{
+        \\"zlib.net@1.3.1":{{"name":"zlib.net","version":"1.3.1","source":"pantry"}},
+        \\"openssl.org@3.6.0":{{"name":"openssl.org","version":"3.6.0","source":"pantry","artifacts":{{"{s}":"{s}"}}}}}}}}
+    , .{ here, &stale });
+    defer testing.allocator.free(lock);
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.lock", .data = lock });
+    const tree = try std.fmt.allocPrint(testing.allocator, "{s}/pantry", .{root});
+    defer testing.allocator.free(tree);
+    const lock_path = try std.fmt.allocPrint(testing.allocator, "{s}/pantry.lock", .{root});
+    defer testing.allocator.free(lock_path);
 
-    var hooks = TestHooks{ .root = f.root };
+    var hooks = TestHooks{ .root = root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path, .frozen = true }, hooks.hooks());
+    const report = try reconcile(testing.allocator, .{ .tree = tree, .lock_path = lock_path, .platform = here }, hooks.hooks());
     defer report.deinit(testing.allocator);
-    try testing.expectEqual(@as(usize, 1), report.mismatches.len);
-    try testing.expectEqualStrings("zlib.net", report.mismatches[0].domain);
-    try testing.expectEqualStrings("1.3.1", report.mismatches[0].version);
-    try testing.expect(eqlDigest(report.mismatches[0].locked, old));
-    try testing.expect(eqlDigest(report.mismatches[0].registry, digestOf(new_bytes)));
-    try testing.expectEqual(@as(usize, 0), hooks.installs.items.len);
-    try testing.expect(eqlDigest((try f.lockedIntegrity()).?, old));
-    try testing.expect(eqlDigest(f.installedMarker().?, old));
+    try testing.expectEqual(@as(usize, 1), report.changes.len);
+    try testing.expectEqualStrings("openssl.org", report.changes[0].domain);
 
-    // A frozen lock that names the served bytes over a stale copy brings the
-    // copy to the lock, and leaves the lock as it is.
-    const served = formatIntegrity(digestOf(new_bytes));
-    var g: Fixture = .{ .tmp = undefined };
-    try g.init(&served, old);
-    defer g.deinit();
-    var repair = TestHooks{ .root = g.root };
-    defer repair.deinit();
-    const repaired = try reconcile(testing.allocator, .{ .tree = g.tree, .lock_path = g.lock_path, .frozen = true }, repair.hooks());
-    defer repaired.deinit(testing.allocator);
-    try testing.expectEqual(@as(usize, 0), repaired.mismatches.len);
-    try testing.expectEqual(@as(usize, 1), repair.installs.items.len);
-    try testing.expect(eqlDigest(g.installedMarker().?, digestOf(new_bytes)));
+    var written = try lockfile_io.readLockfile(testing.allocator, lock_path);
+    defer written.deinit(testing.allocator);
+    const zlib = written.packages.get("zlib.net@1.3.1").?.artifacts.?.get(here).?;
+    try testing.expect(eqlDigest(parseIntegrity(zlib).?, digestOf(new_bytes)));
+    const openssl = written.packages.get("openssl.org@3.6.0").?.artifacts.?.get(here).?;
+    try testing.expect(eqlDigest(parseIntegrity(openssl).?, digestOf("openssl")));
 }
 
 test "artifact refresh: offline, unknown to the registry, or a failed reinstall changes nothing" {
     const old = digestOf(old_bytes);
-    const integrity = formatIntegrity(old);
     var f: Fixture = .{ .tmp = undefined };
-    try f.init(&integrity, old);
+    try f.init(.{ .linux = old }, old);
     defer f.deinit();
 
     var offline = TestHooks{ .root = f.root };
     defer offline.deinit();
-    const skipped = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path, .offline = true }, offline.hooks());
+    const skipped = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path, .offline = true, .platform = here }, offline.hooks());
     defer skipped.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 0), offline.lookups.load(.monotonic));
     try testing.expectEqual(@as(usize, 0), skipped.changes.len);
 
     var unknown = TestHooks{ .root = f.root, .served = false };
     defer unknown.deinit();
-    const none = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, unknown.hooks());
+    const none = try f.reconcileWith(&unknown, false);
     defer none.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 0), none.changes.len);
     try testing.expectEqual(@as(usize, 0), unknown.installs.items.len);
 
     var failing = TestHooks{ .root = f.root, .fail_install = true };
     defer failing.deinit();
-    const failed = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, failing.hooks());
+    const failed = try f.reconcileWith(&failing, false);
     defer failed.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 1), failed.failures.len);
     try testing.expectEqual(@as(usize, 0), failed.changes.len);
     // The lock keeps naming what is actually installed.
-    try testing.expect(eqlDigest((try f.lockedIntegrity()).?, old));
+    try testing.expect(eqlDigest((try f.locked(here)).?, old));
 }
 
 test "artifact refresh: a global tree without a lock, limited to the named packages" {
@@ -739,7 +840,7 @@ test "artifact refresh: a global tree without a lock, limited to the named packa
 
     var hooks = TestHooks{ .root = root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = tree, .only_domains = &.{"zlib.net"} }, hooks.hooks());
+    const report = try reconcile(testing.allocator, .{ .tree = tree, .only_domains = &.{"zlib.net"}, .platform = here }, hooks.hooks());
     defer report.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 1), hooks.installs.items.len);
     try testing.expectEqualStrings("zlib.net@1.3.1", hooks.installs.items[0]);
@@ -749,7 +850,7 @@ test "artifact refresh: a global tree without a lock, limited to the named packa
     try tmp.dir.createDirPath(io_helper.io, "pantry/github.com/google/brotli/v1.2.0/lib");
     var all = TestHooks{ .root = root };
     defer all.deinit();
-    const everything = try reconcile(testing.allocator, .{ .tree = tree }, all.hooks());
+    const everything = try reconcile(testing.allocator, .{ .tree = tree, .platform = here }, all.hooks());
     defer everything.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 3), all.lookups.load(.monotonic));
     // openssl.org had no marker; zlib.net now has the right one.
@@ -763,9 +864,12 @@ test "artifact refresh: a lock that names a package by an older name checks the 
     defer tmp.cleanup();
     var buf: [std.fs.max_path_bytes]u8 = undefined;
     const root = buf[0..try tmp.dir.realPath(io_helper.io, &buf)];
-    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.lock", .data =
-        \\{"version":"1.0","packages":{"bun.sh@1.4.3":{"name":"bun.sh","version":"1.4.3","resolved":"registry:bun.sh@1.4.3"}}}
-    });
+    const stale = formatIntegrity(digestOf("an older bun build"));
+    const lock = try std.fmt.allocPrint(testing.allocator,
+        \\{{"version":"1.0","packages":{{"bun.sh@1.4.3":{{"name":"bun.sh","version":"1.4.3","resolved":"registry:bun.sh@1.4.3","artifacts":{{"{s}":"{s}"}}}}}}}}
+    , .{ here, &stale });
+    defer testing.allocator.free(lock);
+    try tmp.dir.writeFile(io_helper.io, .{ .sub_path = "pantry.lock", .data = lock });
     try tmp.dir.createDirPath(io_helper.io, "pantry/bun.com/v1.4.3/bin");
     const tree = try std.fmt.allocPrint(testing.allocator, "{s}/pantry", .{root});
     defer testing.allocator.free(tree);
@@ -777,25 +881,25 @@ test "artifact refresh: a lock that names a package by an older name checks the 
 
     var hooks = TestHooks{ .root = root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = tree, .lock_path = lock_path }, hooks.hooks());
+    const report = try reconcile(testing.allocator, .{ .tree = tree, .lock_path = lock_path, .platform = here }, hooks.hooks());
     defer report.deinit(testing.allocator);
     // One lookup (bun.com, not bun.sh as well), nothing to replace, and the
-    // hash recorded under the lock's own key.
+    // hash rewritten under the lock's own key.
     try testing.expectEqual(@as(usize, 1), hooks.lookups.load(.monotonic));
     try testing.expectEqual(@as(usize, 0), hooks.installs.items.len);
-    var lock = try lockfile_io.readLockfile(testing.allocator, lock_path);
-    defer lock.deinit(testing.allocator);
-    try testing.expect(eqlDigest(parseIntegrity(lock.packages.get("bun.sh@1.4.3").?.integrity.?).?, digestOf("bun")));
+    var written = try lockfile_io.readLockfile(testing.allocator, lock_path);
+    defer written.deinit(testing.allocator);
+    const hash = written.packages.get("bun.sh@1.4.3").?.artifacts.?.get(here).?;
+    try testing.expect(eqlDigest(parseIntegrity(hash).?, digestOf("bun")));
 }
 
 test "artifact refresh: a copy without a marker under a locked hash is re-fetched, not reported as rebuilt" {
-    const served = formatIntegrity(digestOf(new_bytes));
     var f: Fixture = .{ .tmp = undefined };
-    try f.init(&served, null);
+    try f.init(.{ .linux = digestOf(new_bytes) }, null);
     defer f.deinit();
     var hooks = TestHooks{ .root = f.root };
     defer hooks.deinit();
-    const report = try reconcile(testing.allocator, .{ .tree = f.tree, .lock_path = f.lock_path }, hooks.hooks());
+    const report = try f.reconcileWith(&hooks, false);
     defer report.deinit(testing.allocator);
     try testing.expectEqual(@as(usize, 1), hooks.installs.items.len);
     try testing.expectEqual(@as(usize, 1), report.changes.len);

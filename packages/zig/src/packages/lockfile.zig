@@ -30,6 +30,85 @@ fn optionalPeersEqual(a: ?std.StringHashMap(bool), b: ?std.StringHashMap(bool)) 
     return b == null;
 }
 
+/// An owned copy of a string map (keys and values duplicated), or null.
+pub fn cloneStringMap(allocator: std.mem.Allocator, map: ?std.StringHashMap([]const u8)) !?std.StringHashMap([]const u8) {
+    const source = map orelse return null;
+    var copy = std.StringHashMap([]const u8).init(allocator);
+    errdefer {
+        var it = copy.iterator();
+        while (it.next()) |entry| {
+            allocator.free(entry.key_ptr.*);
+            allocator.free(entry.value_ptr.*);
+        }
+        copy.deinit();
+    }
+    var it = source.iterator();
+    while (it.next()) |entry| {
+        const key = try allocator.dupe(u8, entry.key_ptr.*);
+        errdefer allocator.free(key);
+        const value = try allocator.dupe(u8, entry.value_ptr.*);
+        errdefer allocator.free(value);
+        try copy.put(key, value);
+    }
+    return copy;
+}
+
+/// Set `platform`'s artifact hash on a lock entry, keeping every other
+/// platform's.
+pub fn putArtifact(allocator: std.mem.Allocator, entry: *types.LockfileEntry, platform: []const u8, integrity: []const u8) !void {
+    if (entry.artifacts == null) entry.artifacts = std.StringHashMap([]const u8).init(allocator);
+    var map = &entry.artifacts.?;
+    const value = try allocator.dupe(u8, integrity);
+    errdefer allocator.free(value);
+    if (map.getPtr(platform)) |existing| {
+        allocator.free(existing.*);
+        existing.* = value;
+        return;
+    }
+    const key = try allocator.dupe(u8, platform);
+    errdefer allocator.free(key);
+    try map.put(key, value);
+}
+
+test "lock entries keep each platform's artifact hash through a write and read" {
+    const allocator = std.testing.allocator;
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buf[0..try tmp.dir.realPath(io_helper.io, &buf)];
+    const path = try std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{root});
+    defer allocator.free(path);
+
+    var lockfile = try types.Lockfile.init(allocator, "1.0.0");
+    defer lockfile.deinit(allocator);
+    var entry = types.LockfileEntry{ .name = try allocator.dupe(u8, "zlib.net"), .version = try allocator.dupe(u8, "1.3.1"), .source = .pantry };
+    try putArtifact(allocator, &entry, "darwin-arm64", "sha256:aa");
+    try putArtifact(allocator, &entry, "linux-x86-64", "sha256:bb");
+    try putArtifact(allocator, &entry, "linux-x86-64", "sha256:cc");
+    try lockfile.addEntry(allocator, "zlib.net@1.3.1", entry);
+    try writeLockfile(allocator, &lockfile, path);
+
+    var read = try readLockfile(allocator, path);
+    defer read.deinit(allocator);
+    const artifacts = read.packages.get("zlib.net@1.3.1").?.artifacts.?;
+    try std.testing.expectEqual(@as(usize, 2), artifacts.count());
+    try std.testing.expectEqualStrings("sha256:aa", artifacts.get("darwin-arm64").?);
+    try std.testing.expectEqualStrings("sha256:cc", artifacts.get("linux-x86-64").?);
+    try std.testing.expect(lockfilesEqual(&lockfile, &read));
+
+    var copy = (try cloneStringMap(allocator, artifacts)).?;
+    defer {
+        var it = copy.iterator();
+        while (it.next()) |e| {
+            allocator.free(e.key_ptr.*);
+            allocator.free(e.value_ptr.*);
+        }
+        copy.deinit();
+    }
+    try std.testing.expectEqualStrings("sha256:aa", copy.get("darwin-arm64").?);
+    try std.testing.expect(read.packages.getPtr("zlib.net@1.3.1").?.integrity == null);
+}
+
 /// Compare two lockfiles, ignoring the generatedAt field
 /// Returns true if lockfiles are equal (excluding generatedAt)
 pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
@@ -95,6 +174,7 @@ pub fn lockfilesEqual(a: *const types.Lockfile, b: *const types.Lockfile) bool {
         if (!stringMapsEqual(a_pkg.dependencies, b_pkg.dependencies)) return false;
         if (!stringMapsEqual(a_pkg.peer_dependencies, b_pkg.peer_dependencies)) return false;
         if (!stringMapsEqual(a_pkg.bin, b_pkg.bin)) return false;
+        if (!stringMapsEqual(a_pkg.artifacts, b_pkg.artifacts)) return false;
     }
 
     return true;
@@ -357,6 +437,14 @@ fn writeLockfileForce(allocator: std.mem.Allocator, lockfile: *const types.Lockf
             try buf.appendSlice(allocator, "\"");
         }
 
+        // Per-platform artifact hashes of a registry binary
+        if (pkg.artifacts) |*artifacts| {
+            if (artifacts.count() > 0) {
+                try buf.appendSlice(allocator, ",\n      \"artifacts\": ");
+                try writeJsonStringMap(&buf, allocator, artifacts, "      ");
+            }
+        }
+
         // Write dependencies
         if (pkg.dependencies) |*deps| {
             if (deps.count() > 0) {
@@ -575,11 +663,13 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
             var dependencies: ?std.StringHashMap([]const u8) = null;
             var peer_dependencies: ?std.StringHashMap([]const u8) = null;
             var bin: ?std.StringHashMap([]const u8) = null;
+            var artifacts: ?std.StringHashMap([]const u8) = null;
 
             inline for (.{
                 .{ "dependencies", &dependencies },
                 .{ "peerDependencies", &peer_dependencies },
                 .{ "bin", &bin },
+                .{ "artifacts", &artifacts },
             }) |pair| {
                 if (pkg_value.object.get(pair[0])) |deps_value| {
                     if (deps_value == .object) {
@@ -611,6 +701,7 @@ pub fn readLockfile(allocator: std.mem.Allocator, file_path: []const u8) !types.
                 .peer_dependencies = peer_dependencies,
                 .bin = bin,
                 .optional_peers = optional_peers,
+                .artifacts = artifacts,
             };
 
             try lockfile.packages.put(try allocator.dupe(u8, pkg_key), lock_entry);

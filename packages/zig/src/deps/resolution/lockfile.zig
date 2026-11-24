@@ -19,6 +19,9 @@ pub const LockedPackage = struct {
     resolved: []const u8, // URL or registry identifier
     integrity: ?[]const u8 = null, // SHA-512 hash
     dependencies: std.StringHashMap([]const u8),
+    /// Registry binaries: each platform's artifact sha256
+    /// (`"darwin-arm64": "sha256:<hex>"`), see packages/types.zig.
+    artifacts: std.StringHashMap([]const u8),
     dev: bool = false,
     optional: bool = false,
     allocator: std.mem.Allocator,
@@ -29,11 +32,18 @@ pub const LockedPackage = struct {
             .version = "",
             .resolved = "",
             .dependencies = std.StringHashMap([]const u8).init(allocator),
+            .artifacts = std.StringHashMap([]const u8).init(allocator),
             .allocator = allocator,
         };
     }
 
     pub fn deinit(self: *LockedPackage) void {
+        var artifact_it = self.artifacts.iterator();
+        while (artifact_it.next()) |entry| {
+            self.allocator.free(entry.key_ptr.*);
+            self.allocator.free(entry.value_ptr.*);
+        }
+        self.artifacts.deinit();
         self.allocator.free(self.name);
         self.allocator.free(self.version);
         self.allocator.free(self.resolved);
@@ -155,19 +165,24 @@ pub const LockFile = struct {
                 try stale_keys.append(self.allocator, try self.allocator.dupe(u8, entry.key_ptr.*));
         }
 
+        var pkg = LockedPackage.init(self.allocator);
+        errdefer pkg.deinit();
+
         for (stale_keys.items) |stale_key| {
             if (self.packages.fetchRemove(stale_key)) |removed| {
                 self.allocator.free(removed.key);
                 var stale_package = removed.value;
+                // The same version keeps every platform's artifact hash:
+                // they describe these exact bytes, whoever recorded them.
+                if (std.mem.eql(u8, stale_package.version, version) and pkg.artifacts.count() == 0) {
+                    std.mem.swap(std.StringHashMap([]const u8), &pkg.artifacts, &stale_package.artifacts);
+                }
                 stale_package.deinit();
             }
         }
 
         const key = try self.createKey(name, version);
         errdefer self.allocator.free(key);
-
-        var pkg = LockedPackage.init(self.allocator);
-        errdefer pkg.deinit();
         pkg.name = try self.allocator.dupe(u8, name);
         pkg.version = try self.allocator.dupe(u8, version);
         pkg.resolved = try self.allocator.dupe(u8, resolved);
@@ -179,6 +194,22 @@ pub const LockFile = struct {
         // The index is an optimization; linear lookup remains a safe fallback
         // if allocation fails while updating it.
         self.name_index.put(pkg.name, key) catch {};
+    }
+
+    /// Record `platform`'s artifact hash on the locked `name@version`,
+    /// keeping every other platform's. Does nothing when it is not locked.
+    pub fn setArtifact(self: *LockFile, name: []const u8, version: []const u8, platform: []const u8, integrity: []const u8) !void {
+        const pkg = self.getPackage(name, version) orelse return;
+        const value = try self.allocator.dupe(u8, integrity);
+        errdefer self.allocator.free(value);
+        if (pkg.artifacts.getPtr(platform)) |existing| {
+            self.allocator.free(existing.*);
+            existing.* = value;
+            return;
+        }
+        const key = try self.allocator.dupe(u8, platform);
+        errdefer self.allocator.free(key);
+        try pkg.artifacts.put(key, value);
     }
 
     /// Get a locked package
@@ -228,6 +259,20 @@ pub const LockFile = struct {
             if (pkg.integrity) |integrity| {
                 try output.appendSlice(self.allocator, ",\n      \"integrity\": ");
                 try appendJsonString(&output, self.allocator, integrity);
+            }
+
+            if (pkg.artifacts.count() > 0) {
+                try output.appendSlice(self.allocator, ",\n      \"artifacts\": {\n");
+                const artifact_keys = try sortedMapKeys(self.allocator, &pkg.artifacts);
+                defer self.allocator.free(artifact_keys);
+                for (artifact_keys, 0..) |artifact_key, artifact_index| {
+                    if (artifact_index > 0) try output.appendSlice(self.allocator, ",\n");
+                    try output.appendSlice(self.allocator, "        ");
+                    try appendJsonString(&output, self.allocator, artifact_key);
+                    try output.appendSlice(self.allocator, ": ");
+                    try appendJsonString(&output, self.allocator, pkg.artifacts.get(artifact_key).?);
+                }
+                try output.appendSlice(self.allocator, "\n      }");
             }
 
             if (pkg.dev) try output.appendSlice(self.allocator, ",\n      \"dev\": true");
@@ -340,6 +385,20 @@ pub const LockFile = struct {
                 if (pkg_val.object.get("optional")) |optional| {
                     if (optional == .bool) {
                         pkg.optional = optional.bool;
+                    }
+                }
+
+                if (pkg_val.object.get("artifacts")) |artifacts| {
+                    if (artifacts == .object) {
+                        var artifact_it = artifacts.object.iterator();
+                        while (artifact_it.next()) |artifact| {
+                            if (artifact.value_ptr.* != .string) continue;
+                            const artifact_key = try allocator.dupe(u8, artifact.key_ptr.*);
+                            errdefer allocator.free(artifact_key);
+                            const artifact_value = try allocator.dupe(u8, artifact.value_ptr.string);
+                            errdefer allocator.free(artifact_value);
+                            try pkg.artifacts.put(artifact_key, artifact_value);
+                        }
                     }
                 }
 
@@ -761,4 +820,35 @@ test "LockFile.write is the same bytes whatever order packages were added in" {
     var read_back = try LockFile.read(allocator, first_path);
     defer read_back.deinit();
     try std.testing.expectEqual(@as(usize, names.len), read_back.packages.count());
+}
+
+test "a same-version pin keeps every platform's artifact hash, and a moved pin starts afresh" {
+    const allocator = std.testing.allocator;
+    var lock = LockFile.init(allocator);
+    defer lock.deinit();
+    try lock.addPackage("zlib.net", "1.3.1", "registry:zlib.net@1.3.1", null);
+    try lock.setArtifact("zlib.net", "1.3.1", "darwin-arm64", "sha256:aa");
+    try lock.setArtifact("zlib.net", "1.3.1", "linux-x86-64", "sha256:bb");
+
+    // Rewriting the same version (any install on any platform) keeps both.
+    try lock.addPackage("zlib.net", "1.3.1", "registry:zlib.net@1.3.1", null);
+    const same = lock.getPackage("zlib.net", "1.3.1").?;
+    try std.testing.expectEqual(@as(usize, 2), same.artifacts.count());
+    try std.testing.expectEqualStrings("sha256:aa", same.artifacts.get("darwin-arm64").?);
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const root = buf[0..try tmp.dir.realPath(io_helper.io, &buf)];
+    const path = try std.fmt.allocPrint(allocator, "{s}/pantry.lock", .{root});
+    defer allocator.free(path);
+    try lock.write(path);
+    var read = try LockFile.read(allocator, path);
+    defer read.deinit();
+    try std.testing.expectEqualStrings("sha256:bb", read.getPackage("zlib.net", "1.3.1").?.artifacts.get("linux-x86-64").?);
+    try std.testing.expect(read.getPackage("zlib.net", "1.3.1").?.integrity == null);
+
+    // Another version's hashes describe other bytes.
+    try lock.addPackage("zlib.net", "1.3.2", "registry:zlib.net@1.3.2", null);
+    try std.testing.expectEqual(@as(usize, 0), lock.getPackage("zlib.net", "1.3.2").?.artifacts.count());
 }

@@ -94,6 +94,9 @@ pub const InstallResult = struct {
     /// returned struct; freed in `deinit`. `null` when the source didn't
     /// provide an integrity value.
     integrity: ?[]const u8 = null,
+    /// Registry binaries: the sha256 of the archive this copy was installed
+    /// from (its `.pantry-artifact` marker), null when none is recorded.
+    artifact: ?[32]u8 = null,
 
     pub fn deinit(self: *InstallResult, allocator: std.mem.Allocator) void {
         allocator.free(self.name);
@@ -1065,8 +1068,9 @@ pub const Installer = struct {
             .install_path = install_path,
             .from_cache = used_cache,
             .install_time_ms = @intCast(end_time - start_time),
-            // The archive this copy was installed from, for pantry.lock.
-            .integrity = if (install_path.len > 0) artifact_refresh.readMarkerIntegrity(self.allocator, install_path) else null,
+            // The archive this copy was installed from, for this
+            // platform's key in the lock entry's `artifacts`.
+            .artifact = if (install_path.len > 0) artifact_refresh.readMarker(install_path) else null,
         };
     }
 
