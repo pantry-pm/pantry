@@ -49,6 +49,10 @@ export const recipe: Recipe = {
         '--disable-pci',
         '--disable-libxml2',
       ],
+      // Pantry's ncurses keeps terminfo in its own library (--with-termlib), so
+      // -lncursesw alone fails hwloc's termcap probe; it then links -ltinfo and
+      // lstopo-no-graphics misses wrefresh. Name both wide libraries up front.
+      LIBS: '-lncursesw -ltinfow',
     },
   },
 }
