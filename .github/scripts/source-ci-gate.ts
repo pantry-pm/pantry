@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
+import { createGitHubApi } from './github-api'
 
 export const requiredSourceJobs = [
   'lint', 'typecheck', 'test', 'sdk-consumers', 'source-cli-integrations', 'zig-tests', 'windows-native-runtime',
@@ -107,16 +108,13 @@ export async function waitForSourceCi(options: GateOptions): Promise<CiGateRecei
 if (import.meta.main) {
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN
   if (!token) throw new Error('A GitHub token with actions:read is required')
+  const api = createGitHubApi({ token })
   const receipt = await waitForSourceCi({
     repository: process.env.GITHUB_REPOSITORY ?? '', sha: process.env.GITHUB_SHA ?? '',
-    read: async (path, timeoutMs) => {
-      const response = await fetch(`https://api.github.com/${path}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
-        signal: AbortSignal.timeout(timeoutMs),
-      })
-      if (!response.ok) throw new Error(`Source CI read-back HTTP ${response.status}`)
-      return response.json()
-    },
+    // Through the shared client, which retries a 5xx, 429 or rate limit with
+    // backoff: one HTTP 500 from GitHub used to fail the whole gate (v0.11.231)
+    // while the CI it was waiting for went on to pass.
+    read: (path, timeoutMs) => api(path, {}, timeoutMs),
   })
   const file = process.argv[2] || 'artifacts/source-ci-gate.json'
   await mkdir(dirname(file), { recursive: true })
