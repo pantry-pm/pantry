@@ -20,5 +20,5 @@ test('libunistring repairs its unrecorded bundled iconv through a new source ide
     expect(loaded.requiresRecipeBuild).toBe(true)
     expect(loaded.recipe.test?.required).toBe(true)
   }
-  expect(gnuorglibunistringPackage.versions[0]).toBe('1.4.2.2')
+  expect(gnuorglibunistringPackage.versions as readonly string[]).toContain('1.4.2.2')
 })

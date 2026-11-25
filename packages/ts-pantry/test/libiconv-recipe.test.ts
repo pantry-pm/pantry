@@ -17,5 +17,5 @@ test('libiconv runtime ownership uses a new immutable source build with required
     expect(loaded.recipe.distributable?.url).toContain('libiconv-{{version.marketing}}.tar.gz')
     expect(loaded.recipe.test?.required).toBe(true)
   }
-  expect(gnuorglibiconvPackage.versions[0]).toBe('1.19.0.2')
+  expect(gnuorglibiconvPackage.versions as readonly string[]).toContain('1.19.0.2')
 })

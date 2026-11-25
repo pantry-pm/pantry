@@ -73,8 +73,8 @@ describe('curl recipe dependencies', () => {
     // need glibc 2.43; revision 3 is the same recipe built at the 2.39 floor.
     expect(curlPackage.versions).toContain('8.23.0.2')
     expect(curlsessl3Package.versions).toContain('8.23.0.2')
-    expect(curlPackage.versions[0]).toBe('8.23.0.3')
-    expect(curlsessl3Package.versions[0]).toBe('8.23.0.3')
+    expect(curlPackage.versions as readonly string[]).toContain('8.23.0.3')
+    expect(curlsessl3Package.versions as readonly string[]).toContain('8.23.0.3')
   })
 
   it('requires the corrected IDN runtime rather than silently selecting the unrecorded older artifact', () => {

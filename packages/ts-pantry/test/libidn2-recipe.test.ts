@@ -23,6 +23,6 @@ test('libidn2 repairs native runtime ownership under a new immutable identity', 
     expect(loaded.recipe.distributable?.url).toContain('libidn2-{{ version.raw }}.tar.gz')
     expect(loaded.recipe.test?.required).toBe(true)
   }
-  expect(libidn2Package.versions[0]).toBe('2.3.8.2')
+  expect(libidn2Package.versions as readonly string[]).toContain('2.3.8.2')
   expect(libidn2Package.versions).toContain('2.3.8.1')
 })

@@ -48,7 +48,8 @@ test('the LLVM runtime repair executes its owned recipe and retains the vendor s
     expect(versionSatisfies('6.6.0', constraint)).toBe(false)
     expect(versionSatisfies('6.6.0.1', constraint)).toBe(true)
   }
-  expect(llvmorgPackage.versions[0]).toBe('23.1.5.2')
+  // Present, not newest: later LLVM releases land ahead of the revision.
+  expect(llvmorgPackage.versions as readonly string[]).toContain('23.1.5.2')
   expect(llvmorgPackage.dependencies).toContain('invisible-island.net/ncurses^6.6.0.1')
 })
 

@@ -42,7 +42,7 @@ test('the alias repair retains its real upstream Git version and gets a new pack
     expect(loaded.publicationVersion).toBe('2.56.1.1')
     expect(loaded.recipe.test?.required).toBe(true)
   }
-  expect(gitscmorgPackage.versions[0]).toBe('2.56.1.1')
+  expect(gitscmorgPackage.versions as readonly string[]).toContain('2.56.1.1')
 })
 
 

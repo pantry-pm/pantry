@@ -15,7 +15,9 @@ test('ffmpeg 9.0.2 is republished as a recipe build, never the mirrored archive'
     expect(loaded.publicationVersion).toBe('9.0.2.1')
     expect(loaded.requiresRecipeBuild).toBe(true)
   }
-  expect(ffmpegorgPackage.versions[0]).toBe('9.0.2.1')
+  // Present, not newest: the package updater adds later upstream releases
+  // ahead of it, and a pin on versions[0] blocked every such update.
+  expect(ffmpegorgPackage.versions as readonly string[]).toContain('9.0.2.1')
   // The published identity stays readable; it is superseded, not replaced.
   expect(ffmpegorgPackage.versions).toContain('9.0.2')
 })
