@@ -1,3 +1,23 @@
+[Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.230...v0.11.231)
+
+## 🐛 Bug Fixes
+
+- **publish**: stamp every archive entry with npm's fixed date ([2d858e4](https://github.com/pantry-pm/pantry/commit/2d858e4)) _(by Chris <chrisbreuer93@gmail.com>)_
+
+## 📝 Documentation
+
+- **elf-repair**: elizaOS unblocked from libatomic, held at the registry's scan of its 2.2 GB artifact ([c58767b](https://github.com/pantry-pm/pantry/commit/c58767b)) _(by Chris Breuer <chrisbreuer93@gmail.com>)_
+
+## 🔧 Chores
+
+- release v0.11.231 ([aa0734f](https://github.com/pantry-pm/pantry/commit/aa0734f)) _(by Chris <chrisbreuer93@gmail.com>)_
+- update craft to 0.0.540 ([d218605](https://github.com/pantry-pm/pantry/commit/d218605)) _(by [github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>](https://github.com/github-actions[bot]))_
+
+## Contributors
+
+- _Chris <chrisbreuer93@gmail.com>_
+- _Chris Breuer <chrisbreuer93@gmail.com>_
+
 [Compare changes](https://github.com/pantry-pm/pantry/compare/v0.11.229...v0.11.230)
 
 ## 🔧 Chores
