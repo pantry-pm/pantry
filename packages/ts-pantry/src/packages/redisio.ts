@@ -3,7 +3,7 @@
  *
  * @domain `redis.io`
  * @programs `redis-server`, `redis-cli`, `redis-benchmark`
- * @version `8.10.3` (76 versions available)
+ * @version `8.12.0` (77 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install redis.io`
@@ -23,7 +23,7 @@
  * console.log(pkg.name)        // "redis"
  * console.log(pkg.description) // "Redis is an in-memory database that persists on..."
  * console.log(pkg.programs)    // ["redis-server", "redis-cli", ...]
- * console.log(pkg.versions[0]) // "8.10.3" (latest)
+ * console.log(pkg.versions[0]) // "8.12.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/redis-io.md
@@ -74,6 +74,7 @@ export const redisPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '8.12.0',
     '8.10.3',
     '8.10.2',
     '8.10.1',

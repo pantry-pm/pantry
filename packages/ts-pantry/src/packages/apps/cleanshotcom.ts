@@ -3,7 +3,7 @@
  *
  * @domain `cleanshot.com`
  * @programs `cleanshot`
- * @version `5.0.2` (22 versions available)
+ * @version `5.0.4` (24 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install cleanshot.com`
@@ -22,6 +22,8 @@ export const cleanshotcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '5.0.4',
+    '5.0.3',
     '5.0.2',
     '5.0.1',
     '5.0',

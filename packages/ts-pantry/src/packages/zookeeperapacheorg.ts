@@ -37,6 +37,7 @@ export const zookeeperapacheorgPackage = {
   ] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.10.0',
     '3.9.7',
     '3.9.6',
     '3.9.5',

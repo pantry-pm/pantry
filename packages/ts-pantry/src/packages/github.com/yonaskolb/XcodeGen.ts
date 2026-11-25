@@ -3,7 +3,7 @@
  *
  * @domain `github.com/yonaskolb/XcodeGen`
  * @programs `xcodegen`
- * @version `2.45.3` (18 versions available)
+ * @version `2.49.0` (54 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/yonaskolb/XcodeGen`
@@ -16,7 +16,7 @@
  * console.log(pkg.name)        // "xcodegen"
  * console.log(pkg.description) // "Generate your Xcode project from a spec file an..."
  * console.log(pkg.programs)    // ["xcodegen"]
- * console.log(pkg.versions[0]) // "2.45.3" (latest)
+ * console.log(pkg.versions[0]) // "2.49.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/github-com/yonaskolb/XcodeGen.md
@@ -59,6 +59,9 @@ export const xcodegenPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.49.0',
+    '2.48.0',
+    '2.47.0',
     '2.46.0',
     '2.45.4',
     '2.45.3',

@@ -3,7 +3,7 @@
  *
  * @domain `code.visualstudio.com`
  * @programs `code`
- * @version `1.146.0` (28 versions available)
+ * @version `1.148.0` (30 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install code.visualstudio.com`
@@ -22,6 +22,8 @@ export const codevisualstudiocomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '1.148.0',
+    '1.147.0',
     '1.146.0',
     '1.145.3',
     '1.145.2',

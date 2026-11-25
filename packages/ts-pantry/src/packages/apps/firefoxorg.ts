@@ -3,7 +3,7 @@
  *
  * @domain `firefox.org`
  * @programs `firefox`
- * @version `160.0` (5 versions available)
+ * @version `161.0` (6 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install firefox.org`
@@ -22,6 +22,7 @@ export const firefoxorgPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '161.0',
     '160.0',
     '159.0.1',
     '134.0.2',

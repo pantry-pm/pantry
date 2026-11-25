@@ -3,7 +3,7 @@
  *
  * @domain `bruno.app`
  * @programs `bruno`
- * @version `4.3.0` (22 versions available)
+ * @version `4.4.0` (23 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install bruno.app`
@@ -22,6 +22,7 @@ export const brunoappPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '4.4.0',
     '4.3.0',
     '4.2.1',
     '4.2.0',

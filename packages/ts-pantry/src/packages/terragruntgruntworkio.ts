@@ -3,7 +3,7 @@
  *
  * @domain `terragrunt.gruntwork.io`
  * @programs `terragrunt`
- * @version `1.2.2` (42 versions available)
+ * @version `1.2.3` (43 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install terragrunt.gruntwork.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "terragrunt"
  * console.log(pkg.description) // "Terragrunt is a flexible orchestration tool tha..."
  * console.log(pkg.programs)    // ["terragrunt"]
- * console.log(pkg.versions[0]) // "1.2.2" (latest)
+ * console.log(pkg.versions[0]) // "1.2.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/terragrunt-gruntwork-io.md
@@ -74,6 +74,7 @@ export const terragruntgruntworkioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.2.3',
     '1.2.2',
     '1.2.1',
     '1.2.0',

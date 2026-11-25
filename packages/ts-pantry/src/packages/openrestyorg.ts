@@ -3,7 +3,7 @@
  *
  * @domain `openresty.org`
  * @programs `nginx-xml2pod`, `opm`, `resty`, `restydoc`, `restydoc-index`
- * @version `1.27.1.2` (3 versions available)
+ * @version `1.31.9.1` (17 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install openresty.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "openresty"
  * console.log(pkg.description) // "High Performance Web Platform Based on Nginx an..."
  * console.log(pkg.programs)    // ["nginx-xml2pod", "opm", ...]
- * console.log(pkg.versions[0]) // "1.27.1.2" (latest)
+ * console.log(pkg.versions[0]) // "1.31.9.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/openresty-org.md
@@ -82,6 +82,7 @@ export const openrestyorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.31.9.1',
     '1.27.1.2',
     '1.27.1.1',
     '1.25.3.2',

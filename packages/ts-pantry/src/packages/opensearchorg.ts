@@ -3,7 +3,7 @@
  *
  * @domain `opensearch.org`
  * @programs `opensearch`, `opensearch-keystore`, `opensearch-plugin`, `opensearch-shard`
- * @version `3.9.0` (57 versions available)
+ * @version `3.10.1` (60 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install opensearch.org`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "opensearch"
  * console.log(pkg.description) // "🔎 Open source distributed and RESTful search e..."
  * console.log(pkg.programs)    // ["opensearch", "opensearch-keystore", ...]
- * console.log(pkg.versions[0]) // "3.9.0" (latest)
+ * console.log(pkg.versions[0]) // "3.10.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/opensearch-org.md
@@ -82,6 +82,8 @@ export const opensearchorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.10.1',
+    '3.10.0',
     '3.9.0',
     '3.8.0',
     '3.7.0',
@@ -96,6 +98,7 @@ export const opensearchorgPackage = {
     '3.0.0',
     '3.0.0-beta1',
     '3.0.0-alpha1',
+    '2.19.8',
     '2.19.7',
     '2.19.6',
     '2.19.5',

@@ -16,7 +16,7 @@
  *
  * const pkg = pantry.valhalla
  * console.log(pkg.name)        // "valhalla"
- * console.log(pkg.versions[0]) // "3.9.2" (latest)
+ * console.log(pkg.versions[0]) // "3.9.3" (latest)
  * ```
  */
 export const valhallaPackage = {
@@ -89,6 +89,7 @@ export const valhallaPackage = {
   * Available versions from newest to oldest.
   */
   versions: [
+    '3.9.3',
     '3.9.2',
     '3.9.1',
     '3.9.0',

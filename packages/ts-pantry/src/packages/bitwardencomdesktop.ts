@@ -6,6 +6,7 @@ export const bitwardencomdesktopPackage = {
   installCommand: 'pantry install bitwarden-desktop' as const,
   programs: [] as const, companions: [] as const, dependencies: [] as const, buildDependencies: [] as const,
   versions: [
+    '2026.11.0',
     '2026.10.4',
     '2026.10.3',
     '2026.10.2',

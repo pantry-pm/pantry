@@ -2,7 +2,7 @@
  * **tea/cli** - Run Anything
  *
  * @domain `tea.xyz`
- * @version `0.39.6` (143 versions available)
+ * @version `2.11.1` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install tea.xyz`
@@ -16,7 +16,7 @@
  * const pkg = pantry.teaxyz
  * console.log(pkg.name)        // "tea/cli"
  * console.log(pkg.description) // "Run Anything"
- * console.log(pkg.versions[0]) // "0.39.6" (latest)
+ * console.log(pkg.versions[0]) // "2.11.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/tea-xyz.md
@@ -59,6 +59,7 @@ export const teaxyzPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.1',
     '2.11.0',
     '2.10.3',
     '2.10.2',

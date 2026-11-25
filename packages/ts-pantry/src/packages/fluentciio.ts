@@ -3,7 +3,7 @@
  *
  * @domain `fluentci.io`
  * @programs `fluentci`
- * @version `0.17.7` (58 versions available)
+ * @version `0.17.9` (60 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install fluentci.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "fluentci"
  * console.log(pkg.description) // "Set up and run your CI locally or in any CI Pro..."
  * console.log(pkg.programs)    // ["fluentci"]
- * console.log(pkg.versions[0]) // "0.17.7" (latest)
+ * console.log(pkg.versions[0]) // "0.17.9" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/fluentci-io.md
@@ -69,6 +69,8 @@ export const fluentciioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '0.17.9',
+    '0.17.8',
     '0.17.7',
     '0.17.6',
     '0.17.5',

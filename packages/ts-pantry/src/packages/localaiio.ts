@@ -3,7 +3,7 @@
  *
  * @domain `localai.io`
  * @programs `local-ai`
- * @version `4.12.1` (92 versions available)
+ * @version `5.0.1` (94 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install localai.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "LocalAI"
  * console.log(pkg.description) // ":robot: The free, Open Source alternative to Op..."
  * console.log(pkg.programs)    // ["local-ai"]
- * console.log(pkg.versions[0]) // "4.12.1" (latest)
+ * console.log(pkg.versions[0]) // "5.0.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/localai-io.md
@@ -83,6 +83,8 @@ export const localaiioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '5.0.1',
+    '5.0.0',
     '4.12.1',
     '4.12.0',
     '4.11.0',

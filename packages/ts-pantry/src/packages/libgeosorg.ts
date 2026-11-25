@@ -3,7 +3,7 @@
  *
  * @domain `libgeos.org`
  * @programs `geos-config`
- * @version `3.15.0` (26 versions available)
+ * @version `3.15.1` (28 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install libgeos.org`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "geos-config"
  * console.log(pkg.description) // "Geometry Engine, Open Source"
  * console.log(pkg.programs)    // ["geos-config"]
- * console.log(pkg.versions[0]) // "3.15.0" (latest)
+ * console.log(pkg.versions[0]) // "3.15.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/libgeos-org.md
@@ -67,12 +67,13 @@ export const libgeosorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.15.1',
     '3.15.0',
     '3.15.0rc1.pantry1',
-    '3.15.0rc1',
     '3.15.0beta3',
     '3.15.0beta2',
     '3.15.0beta1',
+    '3.15.0rc1',
     '3.14.1',
     '3.14.0',
     '3.13.1',

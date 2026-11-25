@@ -3,7 +3,7 @@
  *
  * @domain `1password.com`
  * @programs `1password`
- * @version `8.12.44` (23 versions available)
+ * @version `8.12.46` (24 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install 1password.com`
@@ -22,6 +22,7 @@ export const _1passwordcomPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '8.12.46',
     '8.12.44',
     '8.12.42',
     '8.12.40',

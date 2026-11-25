@@ -2,7 +2,7 @@
  * **webkitgtk** - WebKit rendering engine for GTK, providing the webkit2gtk-4.1 API
  *
  * @domain `webkitgtk.org`
- * @version `2.54.2` (3 versions available)
+ * @version `2.54.3` (4 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install webkitgtk.org`
@@ -17,7 +17,7 @@
  * const pkg = pantry.webkitgtkorg
  * console.log(pkg.name)        // "webkitgtk"
  * console.log(pkg.description) // "WebKit rendering engine for GTK, providing the ..."
- * console.log(pkg.versions[0]) // "2.54.2" (latest)
+ * console.log(pkg.versions[0]) // "2.54.3" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/webkitgtk-org.md
@@ -87,6 +87,7 @@ export const webkitgtkorgPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.54.3',
     '2.54.2',
     '2.54.1',
     '2.54.0',

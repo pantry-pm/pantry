@@ -3,7 +3,7 @@
  *
  * @domain `pkgx.sh`
  * @programs `pkgx`
- * @version `2.9.0` (36 versions available)
+ * @version `2.11.1` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install pkgx.sh`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "pkgx"
  * console.log(pkg.description) // "Standalone binary that can run anything"
  * console.log(pkg.programs)    // ["pkgx"]
- * console.log(pkg.versions[0]) // "2.9.0" (latest)
+ * console.log(pkg.versions[0]) // "2.11.1" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/pkgx-sh.md
@@ -68,6 +68,7 @@ export const pkgxshPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '2.11.1',
     '2.11.0',
     '2.10.3',
     '2.10.2',

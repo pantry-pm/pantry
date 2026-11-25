@@ -3,7 +3,7 @@
  *
  * @domain `werf.io`
  * @programs `werf`
- * @version `3.12.1` (117 versions available)
+ * @version `3.12.2` (118 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install werf.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "werf"
  * console.log(pkg.description) // "A solution for implementing efficient and consi..."
  * console.log(pkg.programs)    // ["werf"]
- * console.log(pkg.versions[0]) // "3.12.1" (latest)
+ * console.log(pkg.versions[0]) // "3.12.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/werf-io.md
@@ -70,6 +70,7 @@ export const werfioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.12.2',
     '3.12.1',
     '3.12.0',
     '3.11.0',

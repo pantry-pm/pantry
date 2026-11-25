@@ -3,7 +3,7 @@
  *
  * @domain `atlasgo.io`
  * @programs `atlas`
- * @version `1.1.0` (27 versions available)
+ * @version `1.4.0` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install atlasgo.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "atlas"
  * console.log(pkg.description) // "Manage your database schema as code"
  * console.log(pkg.programs)    // ["atlas"]
- * console.log(pkg.versions[0]) // "1.1.0" (latest)
+ * console.log(pkg.versions[0]) // "1.4.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/atlasgo-io.md
@@ -67,6 +67,7 @@ export const atlasgoioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.4.0',
     '1.3.0',
     '1.2.0',
     '1.1.0',
