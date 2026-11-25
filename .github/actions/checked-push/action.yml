@@ -99,19 +99,44 @@ runs:
           CHECKED_SHA="$SHA" CHECKED_BRANCH="$BRANCH" \
             bun "$CHECKED_PUSH_ACTION_PATH/../../scripts/checked-push-ci.ts" || exit 1
 
-          if git push origin "HEAD:refs/heads/${BASE}"; then
+          # The branch rule reads statuses a moment behind their creation: a
+          # push 1.6s after the last status was declined GH013 ("4 of 4
+          # required status checks are expected") while one 3.3s after landed.
+          # Wait until the combined status shows every check, then push, and
+          # retry a declined push while the base has not moved.
+          for _ in $(seq 1 12); do
+            seen="$(gh api "repos/${REPO}/commits/${SHA}/status" --jq '[.statuses[] | select(.state == "success") | .context] | join(",")' 2>/dev/null)"
+            missing=0
+            for check in ${CHECKS//,/ }; do
+              case ",${seen}," in *",${check},"*) ;; *) missing=1 ;; esac
+            done
+            [ "$missing" -eq 0 ] && break
+            sleep 5
+          done
+
+          pushed=false
+          for push_attempt in 1 2 3 4 5 6; do
+            if git push origin "HEAD:refs/heads/${BASE}"; then
+              pushed=true
+              break
+            fi
+            if ! git fetch origin "$BASE"; then
+              echo "::error::could not read ${BASE} after the rejected push"
+              exit 1
+            fi
+            # The base moved: rebase and check again, below.
+            git merge-base --is-ancestor "origin/${BASE}" HEAD || break
+            echo "Push ${push_attempt} declined although ${BASE} has not moved; retrying while the rule catches up"
+            sleep 10
+          done
+          if [ "$pushed" = true ]; then
             echo "landed=true" >> "$GITHUB_OUTPUT"
             git push origin --delete "$BRANCH" >/dev/null 2>&1
             echo "Landed ${SHA} on ${BASE}"
             exit 0
           fi
-
-          if ! git fetch origin "$BASE"; then
-            echo "::error::could not read ${BASE} after the rejected push"
-            exit 1
-          fi
           if git merge-base --is-ancestor "origin/${BASE}" HEAD; then
-            echo "::error::push rejected although ${BASE} has not moved; inspect the repository rule evaluation"
+            echo "::error::push declined six times although ${BASE} has not moved; inspect the repository rule evaluation"
             exit 1
           fi
           echo "${BASE} moved while the checks ran; rebasing and checking again"

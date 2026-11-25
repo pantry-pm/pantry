@@ -10,6 +10,7 @@ interface CiRun {
   conclusion: string | null
   html_url: string
   head_repository: { full_name: string }
+  run_attempt?: number
 }
 
 interface CiJob { name: string, status: string, conclusion: string | null, html_url: string }
@@ -26,6 +27,13 @@ interface CheckedCiOptions {
   now?: () => number
   sleep?: (ms: number) => Promise<void>
   budgetMs?: number
+  /**
+   * Re-run a failed run's failed jobs. Called at most `reruns` times (default
+   * once): one flaky job (DynamoDB Local timing out at startup in
+   * action-native-services) used to sink a whole package update.
+   */
+  rerun?: (runId: number, budgetMs: number) => Promise<void>
+  reruns?: number
 }
 
 /** Only attest results from the CI run dispatched for this staging attempt. */
@@ -45,13 +53,27 @@ export async function verifyCheckedPushCi(options: CheckedCiOptions): Promise<nu
     if (now() >= deadline) throw new Error(`CI verification timed out for ${sha}`)
   }
   const remaining = (): number => Math.min(30_000, Math.max(1, deadline - now()))
+  const maxReruns = options.rerun ? Math.max(0, options.reruns ?? 1) : 0
+  let reruns = 0
+  // After asking for a re-run, the run still reads as the failed attempt for a
+  // moment; only a later attempt's result counts.
+  let staleAttempt = 0
   while (now() < deadline) {
     const response = await read(`repos/${repository}/actions/workflows/${workflow}/runs?branch=${encodeURIComponent(branch)}&event=workflow_dispatch&head_sha=${sha}&per_page=100`, remaining()) as { workflow_runs: CiRun[] }
     const run = response.workflow_runs.filter(run => run.id > afterRunId
       && run.head_sha === sha && run.head_branch === branch && run.event === 'workflow_dispatch'
       && run.path === `.github/workflows/${workflow}` && run.head_repository.full_name === repository)
       .sort((a, b) => b.id - a.id)[0]
-    if (run?.status === 'completed') {
+    if (run?.status === 'completed' && (run.run_attempt ?? 1) > staleAttempt) {
+      if (run.conclusion === 'failure' && reruns < maxReruns) {
+        await options.rerun!(run.id, remaining())
+        reruns++
+        staleAttempt = run.run_attempt ?? 1
+        console.log(`Staged CI failed (${run.html_url}); re-running its failed jobs (${reruns} of ${maxReruns})`)
+        withinBudget()
+        await sleep(Math.min(15_000, Math.max(0, deadline - now())))
+        continue
+      }
       if (run.conclusion !== 'success') throw new Error(`Staged CI concluded ${run.conclusion}: ${run.html_url}`)
       const jobs: CiJob[] = []
       for (let page = 1; page <= 10; page++) {
@@ -96,6 +118,9 @@ if (import.meta.main) {
     checks: (process.env.CHECKS ?? '').split(',').map(check => check.trim()),
     budgetMs: Number(process.env.TIMEOUT_MIN) * 60_000,
     read: (path, budgetMs) => api(path, {}, budgetMs),
+    rerun: async (runId, budgetMs) => {
+      await api(`repos/${repository}/actions/runs/${runId}/rerun-failed-jobs`, { method: 'POST' }, budgetMs)
+    },
     report: async (sha, check, url, budgetMs) => {
       await api(`repos/${repository}/statuses/${sha}`, { method: 'POST', body: JSON.stringify({
         state: 'success', context: check, target_url: url, description: 'Passed in verified staged CI',

@@ -117,4 +117,39 @@ describe('checked push CI attestation', () => {
     const updater = Bun.YAML.parse(readFileSync(new URL('update-packages.yml', root), 'utf8')) as any
     expect(updater.concurrency['cancel-in-progress']).toBe(false)
   })
+
+  test('re-runs a failed staged run once and attests the passing attempt', async () => {
+    let attempt = 1
+    let staleReads = 0
+    const reruns: number[] = []
+    const f = fixture({ read: async (path) => {
+      if (path.includes('/jobs?')) return { total_count: jobs.length, jobs }
+      // The first read after the re-run request still shows the failed attempt.
+      if (attempt === 2 && staleReads++ === 0) return { workflow_runs: [{ ...run, run_attempt: 1, conclusion: 'failure' }] }
+      return { workflow_runs: [{ ...run, run_attempt: attempt, conclusion: attempt === 1 ? 'failure' : 'success' }] }
+    } })
+    const options = { ...f.options, budgetMs: 120_000, rerun: async (id: number) => { reruns.push(id); attempt = 2 } }
+    expect(await verifyCheckedPushCi(options)).toBe(101)
+    expect(reruns).toEqual([101])
+    expect(f.reports.map(report => report[1])).toEqual(checks)
+  })
+
+  test('gives up when the re-run fails too, without a second re-run', async () => {
+    let attempt = 1
+    const reruns: number[] = []
+    const f = fixture({ runs: [], read: async path => path.includes('/jobs?')
+      ? { total_count: jobs.length, jobs }
+      : { workflow_runs: [{ ...run, run_attempt: attempt, conclusion: 'failure' }] } })
+    const options = { ...f.options, budgetMs: 120_000, rerun: async (id: number) => { reruns.push(id); attempt = 2 } }
+    await expect(verifyCheckedPushCi(options)).rejects.toThrow('Staged CI concluded failure')
+    expect(reruns).toEqual([101])
+    expect(f.reports).toEqual([])
+  })
+
+  test('does not re-run a cancelled run', async () => {
+    const reruns: number[] = []
+    const f = fixture({ runs: [{ ...run, conclusion: 'cancelled' }] })
+    await expect(verifyCheckedPushCi({ ...f.options, rerun: async (id: number) => { reruns.push(id) } })).rejects.toThrow('concluded cancelled')
+    expect(reruns).toEqual([])
+  })
 })
