@@ -2978,6 +2978,28 @@ fn createTarball(
 /// entries (as npm's own tarballs do), with extended attributes off and
 /// AppleDouble disabled. A tar too minimal for those flags (BusyBox) gets the
 /// plain command, which on those systems has nothing to add anyway.
+/// npm's archive date for every entry (1985-10-26T08:15:00Z, what `npm pack`
+/// writes), so an archive depends on file contents alone.
+const npm_archive_mtime_seconds: i96 = 499162500;
+
+/// Stamp every staged file with `npm_archive_mtime_seconds` before `tar`
+/// reads it. Staged files are copies, and their times say when the copy was
+/// made: a root LICENSE copied into a package a minute apart for the Pantry
+/// and npm publishes of one release gave the two archives different headers
+/// and so different integrities for identical contents (stacks 0.75.683).
+/// Best effort: a file whose time cannot be set keeps it.
+fn normalizeStagedTimes(staging_base: []const u8, files: []const []const u8) void {
+    var base = std.Io.Dir.cwd().openDir(io_helper.io, staging_base, .{}) catch return;
+    defer base.close(io_helper.io);
+    const stamp: std.Io.Timestamp = .{ .nanoseconds = npm_archive_mtime_seconds * std.time.ns_per_s };
+    for (files) |file| {
+        base.setTimestamps(io_helper.io, file, .{
+            .access_timestamp = .{ .new = stamp },
+            .modify_timestamp = .{ .new = stamp },
+        }) catch {};
+    }
+}
+
 fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_path: []const u8) !void {
     if (comptime @import("builtin").os.tag == .windows) {
         const manifest = try std.fs.path.join(allocator, &.{ staging_base, "package", "package.json" });
@@ -3010,6 +3032,8 @@ fn packStaged(allocator: std.mem.Allocator, staging_base: []const u8, tarball_pa
                 return std.mem.lessThan(u8, a, b);
             }
         }.lessThan);
+
+        normalizeStagedTimes(staging_base, files.items);
 
         var list: std.ArrayList(u8) = .empty;
         defer list.deinit(allocator);
