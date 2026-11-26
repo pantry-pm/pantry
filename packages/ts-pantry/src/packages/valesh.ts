@@ -3,7 +3,7 @@
  *
  * @domain `vale.sh`
  * @programs `vale`
- * @version `3.28.1` (70 versions available)
+ * @version `3.29.0` (71 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install vale.sh`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "vale"
  * console.log(pkg.description) // ":pencil: A markup-aware linter for prose built ..."
  * console.log(pkg.programs)    // ["vale"]
- * console.log(pkg.versions[0]) // "3.28.1" (latest)
+ * console.log(pkg.versions[0]) // "3.29.0" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/vale-sh.md
@@ -67,6 +67,7 @@ export const valeshPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '3.29.0',
     '3.28.1',
     '3.28.0',
     '3.27.0',

@@ -3,7 +3,7 @@
  *
  * @domain `github.com/desktop`
  * @programs `github-desktop`
- * @version `3.7.0` (5 versions available)
+ * @version `3.7.1` (6 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install github.com/desktop`
@@ -22,6 +22,7 @@ export const githubcomdesktopPackage = {
   dependencies: [] as const,
   buildDependencies: [] as const,
   versions: [
+    '3.7.1',
     '3.7.0',
     '3.6.11',
     '3.6.10',
