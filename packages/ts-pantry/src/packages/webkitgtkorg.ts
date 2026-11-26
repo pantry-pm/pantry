@@ -7,7 +7,7 @@
  *
  * @install `pantry install webkitgtk.org`
  * @homepage https://webkitgtk.org
- * @dependencies `gtk.org/gtk3^3.24`, `gnome.org/glib^2`, `libsoup.org^3`, ... (+26 more)
+ * @dependencies `gtk.org/gtk3^3.24`, `gnome.org/glib^2`, `libsoup.org^3`, ... (+27 more)
  * @buildDependencies `cmake.org^3`, `ninja-build.org`, `freedesktop.org/pkg-config`, ... (+4 more) - required only when building from source
  *
  * @example
@@ -72,6 +72,7 @@ export const webkitgtkorgPackage = {
     'gnupg.org/libgcrypt',
     'littlecms.com',
     'gnome.org/atk',
+    'freedesktop.org/at-spi2-core/libatspi^2.38',
     'gnome.org/gdk-pixbuf',
     'github.com/anholt/libepoxy',
     'gnome.org/libsecret',

@@ -74,6 +74,8 @@ export const recipe: Recipe = {
     'gnupg.org/libgcrypt': '*',
     'littlecms.com': '*',
     'gnome.org/atk': '*',
+    // GTK WebKit enables AT-SPI and the GTK3 bridge requires atspi-2.pc.
+    'freedesktop.org/at-spi2-core/libatspi': '^2.38',
     'gnome.org/gdk-pixbuf': '*',
     'github.com/anholt/libepoxy': '*',
     'gnome.org/libsecret': '*',
