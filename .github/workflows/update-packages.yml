@@ -29,7 +29,9 @@ on:
     # The fallback for packages that cannot notify us. Not the fast path —
     # `drain-release-queue.yml` dispatches this workflow within minutes of a
     # release, because a dispatch is not subject to the throttling below.
-    - cron: '0 * * * *'
+    # Off the hour: GitHub delays or drops scheduled runs most at :00, when
+    # every hourly cron fires (none started 00:08-04:19 on 2026-11-26).
+    - cron: '23 * * * *'
   workflow_dispatch:
     inputs:
       domain:
