@@ -31,6 +31,8 @@ import { ALL_PLATFORMS as BUILD_PLATFORMS } from './platforms'
 const CUSTOM_BUILD_DOMAINS = new Set<string>([
   'php.net',
   'postgresql.org',
+  // The pkgx archive omits the presets XcodeGen reads beside its binary.
+  'github.com/yonaskolb/XcodeGen',
   // Pantry owns curl's source-built release path and links it against OpenSSL 3.
   // Never replace a missing Pantry artifact with a differently linked pkgx build.
   'curl.se',

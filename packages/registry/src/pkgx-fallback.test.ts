@@ -48,6 +48,7 @@ describe('pkgx repackaging tar', () => {
 describe('pkgx metadata augmentation cache', () => {
   it('never falls back to pkgx for Pantry custom builds', () => {
     expect(isCustomBuildDomain('curl.se')).toBe(true)
+    expect(isCustomBuildDomain('github.com/yonaskolb/XcodeGen')).toBe(true)
     expect(isCustomBuildDomain('bun.com')).toBe(false)
   })
 

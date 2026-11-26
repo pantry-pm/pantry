@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { CUSTOM_BUILD_DOMAINS } from '../scripts/build-all-packages'
 import { recipe } from '../src/recipes/github.com/yonaskolb/XcodeGen'
 
 describe('XcodeGen recipe', () => {
@@ -8,6 +9,10 @@ describe('XcodeGen recipe', () => {
     expect(recipe.build.script).toContain('install -m755 xcodegen/bin/xcodegen {{prefix}}/bin/xcodegen')
     expect(recipe.build.script).toContain('cp -R xcodegen/share/xcodegen {{prefix}}/share/xcodegen')
     expect(recipe.test?.script).toContain('test -f {{prefix}}/share/xcodegen/SettingPresets/base.yml')
+  })
+
+  it('uses the native recipe even when pkgx publishes the same upstream release', () => {
+    expect(CUSTOM_BUILD_DOMAINS.has(recipe.domain)).toBe(true)
   })
 
   it('is macOS only', () => {

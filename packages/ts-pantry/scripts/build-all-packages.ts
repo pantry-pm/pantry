@@ -1670,6 +1670,7 @@ let BUILD_IS_FOREIGN = false
 // from pkgx's vanilla build (custom configure flags / extensions / patches).
 export const CUSTOM_BUILD_DOMAINS: ReadonlySet<string> = new Set<string>([
   'android.com/cmdline-tools', // preserve corrected launcher quoting and actual Java health checks
+  'github.com/yonaskolb/XcodeGen', // the pkgx archive omits the required setting presets
   'tukaani.org/xz', // build against the declared gettext rather than stale bundled copies
   'kernel.org/keyutils', // compile the exact upstream libkeyutils client ABI
   'invisible-island.net/ncurses', // publish real narrow and wide ABI libraries
