@@ -43,6 +43,7 @@ import { publicationResultAnnotation } from './changed-package-domains'
 import { recipeAllowsMirror, revisionAppliesTo, revisionReason, selectRevisionVersions } from './package-revisions'
 import { missingCatalogProgram } from './catalog-programs'
 import { loadRecipe, loadRecipeRevisionReasons, loadRecipeRevisions } from './recipe-loader'
+import { removeTree } from './remove-tree'
 // package-overrides.ts removed — all build logic now in src/recipes/*.ts
 const packageOverrides: Record<string, any> = {}
 
@@ -1312,11 +1313,10 @@ async function tryBuildVersion(
   bucket: string,
   region: string,
 ): Promise<void> {
-  // Cleanup from previous attempt
-  try { execSync(`rm -rf "${buildDir}"`, { stdio: 'pipe' }) }
-  catch (e) { console.warn(`Warning: cleanup failed for ${buildDir}: ${(e as Error).message}`) }
-  try { execSync(`rm -rf "${installDir}"`, { stdio: 'pipe' }) }
-  catch (e) { console.warn(`Warning: cleanup failed for ${installDir}: ${(e as Error).message}`) }
+  // Cleanup from previous attempt. A version must never build on top of the
+  // previous one's files, so a tree that cannot be removed fails this build.
+  removeTree(buildDir)
+  removeTree(installDir)
   mkdirSync(buildDir, { recursive: true })
   mkdirSync(installDir, { recursive: true })
 
@@ -2342,11 +2342,11 @@ catch (error: any) {
 
   if (lastError) {
     const elapsed = Math.round((Date.now() - pkgStartTime) / 1000)
-    try { execSync(`rm -rf "${buildDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(buildDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
-    try { execSync(`rm -rf "${installDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(installDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
-    try { execSync(`rm -rf "${depsDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(depsDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
 
     // Phantom version: every attempted candidate 404'd / had no upstream source.
@@ -2402,16 +2402,16 @@ catch (error: any) {
     }))
 
     // Cleanup
-    try { execSync(`rm -rf "${buildDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(buildDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
-    try { execSync(`rm -rf "${installDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(installDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
-    try { execSync(`rm -rf "${artifactDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(artifactDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
     // depsDir holds the downloaded (often multi-GB) dependency tree for this
     // package. It was never cleaned, so it accumulated across every package and
     // pass until the box hit 0 bytes free. Remove it once the build is done.
-    try { execSync(`rm -rf "${depsDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(depsDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
 
     const elapsed = Math.round((Date.now() - pkgStartTime) / 1000)
@@ -2424,14 +2424,14 @@ catch (error: any) {
     // instant, which is why the cost had to be reconstructed from timestamps.
     console.error(`   ❌ Failed packaging/upload after ${Math.round((Date.now() - pkgStartTime) / 1000)}s: ${error.message}`)
     reportBuild(domain, usedVersion || version, platform, 'failed', { error: error.message })
-    try { execSync(`rm -rf "${buildDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(buildDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
-    try { execSync(`rm -rf "${installDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(installDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
     // Also clean artifacts to prevent stale tarballs leaking to next iteration
     try { execSync(`rm -rf "${artifactsDir}"/*`, { stdio: 'pipe' }) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
-    try { execSync(`rm -rf "${depsDir}"`, { stdio: 'pipe' }) }
+    try { removeTree(depsDir) }
     catch (e) { console.warn(`Warning: cleanup failed: ${(e as Error).message}`) }
     return { status: 'failed', error: error.message }
   }
