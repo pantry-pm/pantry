@@ -21,18 +21,25 @@ export const recipe: Recipe = {
     ref: 'v{{version}}',
   },
   dependencies: {
-    // grpc vendors the abseil 20250512 LTS line (third_party/abseil-cpp submodule +
-    // bazel/grpc_deps.bzl), so build against that line. Bound it by line, not by
-    // patch: only the newest patch of an LTS line is published (20250512.2), and
-    // an exact `20250512.1` pin has no binary on any platform, which fails
-    // dependency resolution before the build starts. Patch releases of one LTS
-    // line share the same inline namespace and SONAME, so they are ABI-equal.
-    'abseil.io': '^20250512',
     'c-ares.org': '*',
     'openssl.org': '^1.1',
     'github.com/google/re2': '*',
     'zlib.net': '*',
+    'darwin': {
+      // darwin publishes pkgx's prebuilt where pkgx ships one, and pkgx links
+      // grpc 1.85 against the abseil 20260526 LTS line
+      // (@rpath/abseil.io/v20260526/lib/...). Declaring 20250512 left those
+      // libraries without a provider. protobuf is built in-tree here.
+      'abseil.io': '^20260526',
+    },
     'linux': {
+      // grpc vendors the abseil 20250512 LTS line (third_party/abseil-cpp submodule +
+      // bazel/grpc_deps.bzl), so build against that line. Bound it by line, not by
+      // patch: only the newest patch of an LTS line is published (20250512.2), and
+      // an exact `20250512.1` pin has no binary on any platform, which fails
+      // dependency resolution before the build starts. Patch releases of one LTS
+      // line share the same inline namespace and SONAME, so they are ABI-equal.
+      'abseil.io': '^20250512',
       'gnu.org/gcc/libstdcxx': '14',
       // linux links the packaged protobuf (gRPC_PROTOBUF_PROVIDER=package).
       // This is a floor, not a pin: protobuf 30.0.0 was never published, and

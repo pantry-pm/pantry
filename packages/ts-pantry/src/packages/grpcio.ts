@@ -2,14 +2,14 @@
  * **grpc** - The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)
  *
  * @domain `grpc.io`
- * @programs `grpc_csharp_plugin`, `grpc_node_plugin`, `grpc_cpp_plugin`, `grpc_python_plugin`, `grpc_objective_c_plugin`, ... (+3 more)
+ * @programs `grpc_csharp_plugin`, `grpc_node_plugin`, `grpc_cpp_plugin`, `grpc_python_plugin`, `grpc_objective_c_plugin`, ... (+2 more)
  * @version `1.85.4` (53 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install grpc.io`
  * @homepage https://grpc.io/
- * @dependencies `abseil.io^20250127`, `c-ares.org`, `openssl.org^1.1`, ... (+4 more) (includes OS-specific dependencies with `os:package` format)
- * @buildDependencies `gnu.org/autoconf`, `gnu.org/automake`, `gnu.org/libtool`, ... (+2 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
+ * @dependencies `c-ares.org`, `openssl.org^1.1`, `github.com/google/re2`, ... (+5 more) (includes platform-specific dependencies)
+ * @buildDependencies `gnu.org/autoconf`, `gnu.org/automake`, `gnu.org/libtool`, ... (+3 more) (includes platform-specific dependencies) - required only when building from source
  *
  * @example
  * ```typescript
@@ -59,34 +59,35 @@ export const grpcioPackage = {
     'grpc_objective_c_plugin',
     'grpc_ruby_plugin',
     'grpc_php_plugin',
-    'grpc_cli',
   ] as const,
   companions: [] as const,
   /**
   * Runtime dependencies for this package.
   * These are required when running the package.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:freetype.org`).
   */
   dependencies: [
-    'abseil.io^20250127',
     'c-ares.org',
     'openssl.org^1.1',
     'github.com/google/re2',
     'zlib.net',
-    'linux:gnu.org/gcc/libstdcxx',
-    'linux:protobuf.dev^30.0.0',
+    'darwin:abseil.io^20260526',
+    'linux:abseil.io^20250512',
+    'linux:gnu.org/gcc/libstdcxx@14',
+    'linux:protobuf.dev>=30',
   ] as const,
   /**
   * Build dependencies for this package.
   * These are only required when building the package from source.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:gnu.org/gcc`).
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:gnu.org/gcc`).
   */
   buildDependencies: [
     'gnu.org/autoconf',
     'gnu.org/automake',
     'gnu.org/libtool',
+    'cmake.org^3',
+    'git-scm.org^2',
     'darwin:gnu.org/patch',
-    'cmake.org@^3',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -148,6 +149,12 @@ export const grpcioPackage = {
     '1.58.3',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
+  platformPrograms: {
+    darwin: [
+      'grpc_cli',
+    ] as const,
+  },
 }
 
 export type GrpcioPackage = typeof grpcioPackage

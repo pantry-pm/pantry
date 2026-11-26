@@ -11176,9 +11176,9 @@ pub const packages = [_]PackageInfo{ .{
     .kind = .cli,
     .description = "The C based gRPC (C++, Python, Ruby, Objective-C, PHP, C#)",
     .homepage_url = "https://grpc.io/",
-    .programs = &[_][]const u8{ "grpc_csharp_plugin", "grpc_node_plugin", "grpc_cpp_plugin", "grpc_python_plugin", "grpc_objective_c_plugin", "grpc_ruby_plugin", "grpc_php_plugin", "grpc_cli" },
-    .dependencies = &[_][]const u8{ "abseil.io^20250512", "c-ares.org", "openssl.org^1.1", "github.com/google/re2", "zlib.net", "linux:gnu.org/gcc/libstdcxx@14", "linux:protobuf.dev>=30" },
-    .build_dependencies = &[_][]const u8{ "gnu.org/autoconf", "gnu.org/automake", "gnu.org/libtool", "darwin:gnu.org/patch", "cmake.org@^3" },
+    .programs = if (@import("builtin").os.tag == .macos) &[_][]const u8{ "grpc_csharp_plugin", "grpc_node_plugin", "grpc_cpp_plugin", "grpc_python_plugin", "grpc_objective_c_plugin", "grpc_ruby_plugin", "grpc_php_plugin", "grpc_cli" } else &[_][]const u8{ "grpc_csharp_plugin", "grpc_node_plugin", "grpc_cpp_plugin", "grpc_python_plugin", "grpc_objective_c_plugin", "grpc_ruby_plugin", "grpc_php_plugin" },
+    .dependencies = &[_][]const u8{ "c-ares.org", "openssl.org^1.1", "github.com/google/re2", "zlib.net", "darwin:abseil.io^20260526", "linux:abseil.io^20250512", "linux:gnu.org/gcc/libstdcxx@14", "linux:protobuf.dev>=30" },
+    .build_dependencies = &[_][]const u8{ "gnu.org/autoconf", "gnu.org/automake", "gnu.org/libtool", "cmake.org^3", "git-scm.org^2", "darwin:gnu.org/patch" },
     .aliases = &[_][]const u8{},
     .versions = &[_][]const u8{ "1.85.4", "1.85.3", "1.85.2", "1.85.1", "1.85.0", "1.84.4", "1.84.3", "1.84.2", "1.84.1", "1.84.0", "1.83.2", "1.83.1", "1.83.0", "1.82.3", "1.82.2", "1.82.1", "1.82.0", "1.81.2", "1.81.1", "1.81.0", "1.80.1", "1.80.0", "1.78.2", "1.78.1", "1.78.0", "1.76.0", "1.75.1", "1.75.0", "1.74.1", "1.74.0", "1.73.1", "1.73.0", "1.72.2", "1.72.1", "1.72.0", "1.71.2", "1.71.1", "1.71.0", "1.70.2", "1.70.1", "1.70.0", "1.69.0", "1.68.2", "1.68.1", "1.68.0", "1.67.1", "1.67.0", "1.66.2", "1.66.1", "1.66.0", "1.65.5", "1.65.4", "1.58.3" },
 }, .{
