@@ -153,6 +153,52 @@ test.skipIf(process.platform !== 'darwin')('an older version of a library never 
   finally { rmSync(root, { recursive: true, force: true }) }
 })
 
+// grpc.io on darwin: the published re2 (pkgx layout) loads
+// `@rpath/abseil.io/v20250127/lib/libabsl_die_if_null.dylib` while grpc links
+// abseil 20250512 directly. Both lines ship libabsl_die_if_null.dylib, which
+// failed as "Conflicting declared runtime providers"; the pkgx path names one.
+test.skipIf(process.platform !== 'darwin')('a pkgx provider path selects the version it names', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pantry-link-pkgx-path-'))
+  const environment = { ...process.env }
+  for (const key of ['DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH', 'LD_LIBRARY_PATH', 'LD_PRELOAD']) delete environment[key]
+  const run = (command: string[]) => {
+    const child = Bun.spawnSync(command, { cwd: root, env: environment, stdout: 'pipe', stderr: 'pipe' })
+    expect(child.exitCode, child.stderr.toString()).toBe(0)
+    return child.stdout.toString().trim()
+  }
+  try {
+    const older = join(root, 'deps/example.org/absl/20250127.2')
+    const newer = join(root, 'deps/example.org/absl/20250512.2')
+    const regex = join(root, 'deps/example.org/re/2025.11.5')
+    const stage = join(root, 'artifact')
+    for (const path of [join(older, 'lib'), join(newer, 'lib'), join(regex, 'lib'), join(stage, 'bin')]) mkdirSync(path, { recursive: true })
+    writeFileSync(join(root, 'old.c'), 'int absl_old(void) { return 20; }')
+    writeFileSync(join(root, 'new.c'), 'int absl_new(void) { return 20; }')
+    writeFileSync(join(root, 're.c'), 'extern int absl_old(void); int re(void) { return absl_old() + 1; }')
+    writeFileSync(join(root, 'main.c'), '#include <stdio.h>\nextern int absl_new(void); extern int re(void); int main(void) { printf("%d\\n", absl_new() + re() + 1); return 0; }')
+    const dylib = (source: string, output: string, id: string, ...extra: string[]) =>
+      run(['xcrun', 'clang', '-dynamiclib', join(root, source), ...extra, '-Wl,-headerpad_max_install_names', '-install_name', id, '-o', output])
+    dylib('old.c', join(older, 'lib/libfixtureabsl.2501.0.0.dylib'), '@rpath/libfixtureabsl.2501.0.0.dylib')
+    symlinkSync('libfixtureabsl.2501.0.0.dylib', join(older, 'lib/libfixtureabsl.dylib'))
+    dylib('new.c', join(newer, 'lib/libfixtureabsl.2505.0.0.dylib'), '@rpath/libfixtureabsl.2505.0.0.dylib')
+    symlinkSync('libfixtureabsl.2505.0.0.dylib', join(newer, 'lib/libfixtureabsl.dylib'))
+    dylib('re.c', join(regex, 'lib/libfixturere.11.dylib'), '@rpath/libfixturere.11.dylib', join(older, 'lib/libfixtureabsl.2501.0.0.dylib'))
+    run(['install_name_tool', '-change', '@rpath/libfixtureabsl.2501.0.0.dylib', '@rpath/example.org/absl/v20250127/lib/libfixtureabsl.dylib', join(regex, 'lib/libfixturere.11.dylib')])
+    symlinkSync('libfixturere.11.dylib', join(regex, 'lib/libfixturere.dylib'))
+    run(['xcrun', 'clang', join(root, 'main.c'), `-L${regex}/lib`, '-lfixturere', join(newer, 'lib/libfixtureabsl.2505.0.0.dylib'), '-Wl,-headerpad_max_install_names', '-o', join(stage, 'bin/fixture')])
+
+    await fixUp(stage, 'darwin-arm64', [], [
+      { domain: 'example.org/absl', version: '20250512.2', prefix: newer },
+      { domain: 'example.org/re', version: '2025.11.5', prefix: regex },
+      { domain: 'example.org/absl', version: '20250127.2', prefix: older },
+    ])
+    rmSync(join(root, 'deps'), { recursive: true, force: true })
+    expect(run([join(stage, 'bin/fixture')])).toBe('42')
+    expect(readdirSync(join(stage, 'lib')).filter(name => name.startsWith('libfixtureabsl')).sort()).toEqual(['libfixtureabsl.2501.0.0.dylib', 'libfixtureabsl.2505.0.0.dylib'])
+  }
+  finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 // php.net on darwin: thrysoee.dk/editline's libedit carries the
 // libncursesw.6.dylib it was linked against (tgetent included), and the
 // declared ncurses keeps tgetent in libtinfow instead. Taking ncurses' file

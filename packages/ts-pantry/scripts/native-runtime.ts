@@ -316,6 +316,19 @@ export function bundleRuntimeLibraries(
         missing.add(`Undeclared or missing runtime library ${dependencyName} required by ${relative(root, file)}`)
         continue
       }
+      // A pkgx-built library loads its dependencies through
+      // `@rpath/<domain>/v<version>/lib/<name>`, a path that names its
+      // provider. re2 reaches abseil 20250127's libabsl_*.dylib that way while
+      // grpc links abseil 20250512's, and both LTS lines ship the same
+      // unversioned name; their install names and inline namespaces differ, so
+      // each client keeps the line it names.
+      const pkgxProvider = /^@rpath\/(.+)\/v([^/]+)\/lib\/[^/]+$/.exec(dependencyName)
+      if (pkgxProvider && candidates.length > 1) {
+        const [, domain, version] = pkgxProvider
+        const named = candidates.filter(candidate => candidate.dependency?.domain === domain
+          && (candidate.dependency.version === version || candidate.dependency.version.startsWith(`${version}.`)))
+        if (named.length) candidates = named
+      }
       // Two versions of one library can both be declared (libxml2 2.13.9 for
       // a pkgx-built dependency beside php's 2.15.4) and both answer to the
       // link-time name. dyld loads a library only if its current version is
