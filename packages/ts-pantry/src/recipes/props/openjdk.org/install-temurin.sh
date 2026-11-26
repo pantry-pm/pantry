@@ -43,13 +43,17 @@ printf '%s  temurin-jdk.tar.gz\n' "$expected" | sha256sum --check --status
 tar -xzf temurin-jdk.tar.gz --strip-components="$strip" -C "$prefix"
 
 # Read the vendor's release record as data; never source an archive's shell text.
+# JAVA_RUNTIME_VERSION is newer than some releases: Temurin 19.0.2+7 records
+# only FULL_VERSION, which carries the same runtime identity.
 actual=''
+full=''
 while IFS='=' read -r key value; do
-  if [[ $key == JAVA_RUNTIME_VERSION ]]; then
-    actual=${value#\"}
-    actual=${actual%\"}
-  fi
+  value=${value#\"}
+  value=${value%\"}
+  if [[ $key == JAVA_RUNTIME_VERSION ]]; then actual=$value; fi
+  if [[ $key == FULL_VERSION ]]; then full=$value; fi
 done < "$prefix/release"
+if [[ -z $actual ]]; then actual=$full; fi
 if [[ $actual != "$runtime" && $actual != "$runtime-LTS" ]]; then
   echo "JDK runtime identity mismatch: requested $runtime, archive reports $actual" >&2
   exit 1

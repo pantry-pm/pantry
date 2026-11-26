@@ -6,13 +6,13 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { recipe } from '../src/recipes/openjdk.org'
 
-function install(requested: string, runtime: string, platform = 'linux', wrongChecksum = false) {
+function install(requested: string, runtime: string, platform = 'linux', wrongChecksum = false, releaseRecord = `JAVA_RUNTIME_VERSION="${runtime}"\n`) {
   const root = mkdtempSync(join(tmpdir(), 'pantry exact JDK '))
   const payload = join(root, 'payload')
   const home = join(payload, platform === 'darwin' ? 'jdk.jdk/Contents/Home' : 'jdk')
   const prefix = join(root, 'installed'), bin = join(root, 'bin')
   mkdirSync(home, { recursive: true }); mkdirSync(prefix); mkdirSync(bin)
-  writeFileSync(join(home, 'release'), `JAVA_RUNTIME_VERSION="${runtime}"\n`)
+  writeFileSync(join(home, 'release'), releaseRecord)
   const archive = join(root, 'vendor.tar.gz')
   const packed = spawnSync('tar', ['-czf', archive, '-C', payload, platform === 'darwin' ? 'jdk.jdk' : 'jdk'])
   if (packed.status !== 0) throw new Error(packed.stderr.toString())
@@ -61,6 +61,22 @@ test('an archive from a different JDK update cannot satisfy the requested packag
     expect(fixture.result.stderr).toContain('JDK runtime identity mismatch')
   }
   finally { rmSync(fixture.root, { recursive: true, force: true }) }
+})
+
+test('a release record without JAVA_RUNTIME_VERSION is identified by its FULL_VERSION', () => {
+  // Temurin 19.0.2+7 predates JAVA_RUNTIME_VERSION in its release file.
+  const matching = install('19.0.2.7', '19.0.2+7', 'linux', false, 'IMPLEMENTOR="Eclipse Adoptium"\nJAVA_VERSION="19.0.2"\nFULL_VERSION="19.0.2+7"\n')
+  try {
+    expect(matching.result.status, matching.result.stderr).toBe(0)
+    expect(readFileSync(join(matching.prefix, 'share/pantry/java-runtime-version.txt'), 'utf8').trim()).toBe('19.0.2+7')
+  }
+  finally { rmSync(matching.root, { recursive: true, force: true }) }
+  const other = install('19.0.2.7', '19.0.1+10', 'linux', false, 'FULL_VERSION="19.0.1+10"\n')
+  try {
+    expect(other.result.status).toBe(1)
+    expect(other.result.stderr).toContain('JDK runtime identity mismatch')
+  }
+  finally { rmSync(other.root, { recursive: true, force: true }) }
 })
 
 test('checksum failure refuses extraction and incomplete pins never request latest', () => {
