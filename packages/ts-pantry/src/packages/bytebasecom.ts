@@ -8,8 +8,7 @@
  *
  * @install `pantry install bytebase.com`
  * @homepage https://www.bytebase.com
- * @dependencies `nodejs.org~24.1`
- * @buildDependencies `go.dev@~1.24.2`, `pnpm.io`, `linux:kerberos.org@1`, ... (+2 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
+ * @buildDependencies `go.dev>=1.27.3`, `nodejs.org>=24.15`, `pnpm.io>=12`, ... (+2 more) (includes platform-specific dependencies) - required only when building from source
  *
  * @example
  * ```typescript
@@ -55,24 +54,18 @@ export const bytebasecomPackage = {
     'bytebase',
   ] as const,
   companions: [] as const,
-  /**
-  * Runtime dependencies for this package.
-  * These are required when running the package.
-  */
-  dependencies: [
-    'nodejs.org~24.1',
-  ] as const,
+  dependencies: [] as const,
   /**
   * Build dependencies for this package.
   * These are only required when building the package from source.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:gnu.org/gcc`).
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:gnu.org/gcc`).
   */
   buildDependencies: [
-    'go.dev@~1.24.2',
-    'pnpm.io',
+    'go.dev>=1.27.3',
+    'nodejs.org>=24.15',
+    'pnpm.io>=12',
+    'git-scm.org^2',
     'linux:kerberos.org@1',
-    'linux:gnu.org/gcc',
-    'linux:python.org@~3.10',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -149,6 +142,7 @@ export const bytebasecomPackage = {
     '2.15.0',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type BytebasecomPackage = typeof bytebasecomPackage

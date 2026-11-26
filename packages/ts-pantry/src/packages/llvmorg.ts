@@ -9,7 +9,7 @@
  * @install `pantry install llvm.org`
  * @homepage http://llvm.org
  * @dependencies `zlib.net@1`, `facebook.com/zstd`, `invisible-island.net/ncurses^6.6.0.1`, ... (+2 more)
- * @buildDependencies `cmake.org>=3<3.29`, `ninja-build.org@1`, `crates.io/semverator` - required only when building from source
+ * @buildDependencies `cmake.org>=3<3.29`, `ninja-build.org@1`, `crates.io/semverator`, ... (+1 more) - required only when building from source
  *
  * @example
  * ```typescript
@@ -88,6 +88,7 @@ export const llvmorgPackage = {
     'cmake.org>=3<3.29',
     'ninja-build.org@1',
     'crates.io/semverator',
+    'swig.org^4',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -168,6 +169,7 @@ export const llvmorgPackage = {
     '12.0.1',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type LlvmorgPackage = typeof llvmorgPackage

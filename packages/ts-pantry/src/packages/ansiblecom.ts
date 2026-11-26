@@ -2,14 +2,14 @@
  * **ansible** - Ansible is a radically simple IT automation platform that makes your applications and systems easier to deploy and maintain. Automate everything from code deployment to network configuration to cloud management, in a language that approaches plain English, using SSH, with no agents to install on remote systems. https://docs.ansible.com.
  *
  * @domain `ansible.com`
- * @programs `ansible`, `ansible-config`, `ansible-connection`, `ansible-console`, `ansible-doc`, ... (+6 more)
+ * @programs `ansible`, `ansible-config`, `ansible-console`, `ansible-doc`, `ansible-galaxy`, ... (+5 more)
  * @version `2.22.1rc1` (188 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install ansible.com`
  * @homepage https://www.ansible.com/
  * @dependencies `pkgx.sh>=1`
- * @buildDependencies `python.org@>=3.12` - required only when building from source
+ * @buildDependencies `python.org>=3.12` - required only when building from source
  *
  * @example
  * ```typescript
@@ -54,7 +54,6 @@ export const ansiblecomPackage = {
   programs: [
     'ansible',
     'ansible-config',
-    'ansible-connection',
     'ansible-console',
     'ansible-doc',
     'ansible-galaxy',
@@ -77,7 +76,7 @@ export const ansiblecomPackage = {
   * These are only required when building the package from source.
   */
   buildDependencies: [
-    'python.org@>=3.12',
+    'python.org>=3.12',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -274,6 +273,7 @@ export const ansiblecomPackage = {
     '2.13.9',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type AnsiblecomPackage = typeof ansiblecomPackage

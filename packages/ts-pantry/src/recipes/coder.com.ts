@@ -13,9 +13,13 @@ export const recipe: Recipe = {
   },
   distributable: {
     url: 'git+https://github.com/coder/coder.git',
+    // Without a ref the clone is the default branch, not the release.
+    ref: 'v{{version}}',
   },
   buildDependencies: {
-    'go.dev': '~1.21',
+    // go.mod asks for go 1.26.10 and uses a `tool` block, which go before 1.24
+    // cannot even parse.
+    'go.dev': '>=1.26.10',
   },
 
   build: {

@@ -17,7 +17,9 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'openjdk.org': '^21', // since v3
-    'openmp.llvm.org': '^19',
+    // The registry never published openmp 19; libomp keeps its ABI and
+    // soname across majors, and k-NN only needs the library and omp.h.
+    'openmp.llvm.org': '>=19',
     // on mac we use the Accelerate framework instead, on linux this is linked statically
     linux: {
       'netlib.org/lapack': '*',

@@ -8,8 +8,8 @@
  *
  * @install `pantry install opensearch.org`
  * @homepage https://opensearch.org/docs/latest/opensearch/index/
- * @dependencies `openjdk.org^21`, `openmp.llvm.org^19`
- * @buildDependencies `cmake.org@3`, `gnu.org/wget`, `gnu.org/gcc@^11`, ... (+1 more) (includes OS-specific dependencies with `os:package` format) - required only when building from source
+ * @dependencies `openjdk.org^21`, `openmp.llvm.org>=19`, `linux:netlib.org/lapack` (includes platform-specific dependencies)
+ * @buildDependencies `cmake.org@3`, `git-scm.org`, `gnu.org/wget`, ... (+1 more) - required only when building from source
  *
  * @example
  * ```typescript
@@ -61,21 +61,22 @@ export const opensearchorgPackage = {
   /**
   * Runtime dependencies for this package.
   * These are required when running the package.
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:freetype.org`).
   */
   dependencies: [
     'openjdk.org^21',
-    'openmp.llvm.org^19',
+    'openmp.llvm.org>=19',
+    'linux:netlib.org/lapack',
   ] as const,
   /**
   * Build dependencies for this package.
   * These are only required when building the package from source.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:gnu.org/gcc`).
   */
   buildDependencies: [
     'cmake.org@3',
+    'git-scm.org',
     'gnu.org/wget',
-    'gnu.org/gcc@^11',
-    'linux:netlib.org/lapack',
+    'gnu.org/gcc^11',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -144,6 +145,7 @@ export const opensearchorgPackage = {
     '1.3.4',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type OpensearchorgPackage = typeof opensearchorgPackage

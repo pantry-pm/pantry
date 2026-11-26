@@ -8,7 +8,7 @@
  *
  * @install `pantry install coder.com`
  * @homepage https://coder.com
- * @buildDependencies `go.dev@~1.21` - required only when building from source
+ * @buildDependencies `go.dev>=1.26.10` - required only when building from source
  *
  * @example
  * ```typescript
@@ -60,7 +60,7 @@ export const codercomPackage = {
   * These are only required when building the package from source.
   */
   buildDependencies: [
-    'go.dev@~1.21',
+    'go.dev>=1.26.10',
   ] as const,
   /**
   * Available versions from newest to oldest.
@@ -234,6 +234,7 @@ export const codercomPackage = {
     '2.24.5',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type CodercomPackage = typeof codercomPackage

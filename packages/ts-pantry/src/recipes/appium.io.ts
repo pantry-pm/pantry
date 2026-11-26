@@ -18,14 +18,17 @@ export const recipe: Recipe = {
   },
   dependencies: {
     'npmjs.com': '*',
-    'nodejs.org': '^10.13.0 || ^12 || ^14 || ^16 || ^18 || ^20',
+    // appium 3 declares node ^20.19 || ^22.12 || >=24 and appium 4 narrows it
+    // to ^22.22.2 || ^24.15 || >=26; this range satisfies both.
+    'nodejs.org': '^22.22.2 || ^24.15 || >=26',
     'openjdk.org': '*',
   },
   buildDependencies: {},
 
   build: {
     script: [
-      'chmod +x lib/appium.js',
+      // The package bin is index.js (later 3.x releases dropped lib/appium.js); npm
+      // links it executable, so nothing needs a chmod.
       'EXTRA_PACKAGES="@appium/logger"',
       'npm install . $EXTRA_PACKAGES --global --prefix={{prefix}} --install-links',
     ],

@@ -8,7 +8,7 @@
  *
  * @install `pantry install appium.io`
  * @homepage https://appium.io/
- * @dependencies `npmjs.com`, `nodejs.org^10.13.0 || ^12 || ^14 || ^16 || ^18 || ^20`, `openjdk.org`
+ * @dependencies `npmjs.com`, `nodejs.org^22.22.2 || ^24.15 || >=26`, `openjdk.org`
  *
  * @example
  * ```typescript
@@ -60,7 +60,7 @@ export const appiumioPackage = {
   */
   dependencies: [
     'npmjs.com',
-    'nodejs.org^10.13.0 || ^12 || ^14 || ^16 || ^18 || ^20',
+    'nodejs.org^22.22.2 || ^24.15 || >=26',
     'openjdk.org',
   ] as const,
   buildDependencies: [] as const,
@@ -119,6 +119,7 @@ export const appiumioPackage = {
     '2.2.3',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type AppiumioPackage = typeof appiumioPackage

@@ -16,6 +16,14 @@ export const recipe: Recipe = {
   // large Boost/libevent/sqlite/BDB toolchain and was skipped on Darwin; the
   // upstream release tarballs are the canonical distributables users expect.
   distributable: null,
+  dependencies: {
+    // The linux tarball ships bitcoin-qt and libexec/bitcoin-gui, which
+    // link the system fontconfig and freetype (Qt itself is static).
+    linux: {
+      'freedesktop.org/fontconfig': '^2',
+      'freetype.org': '^2',
+    },
+  },
 
   build: {
     script: [

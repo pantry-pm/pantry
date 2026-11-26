@@ -8,6 +8,7 @@
  *
  * @install `pantry install bitcoin.org`
  * @homepage https://bitcoincore.org/
+ * @dependencies `linux:freedesktop.org/fontconfig^2`, `linux:freetype.org^2` (includes platform-specific dependencies)
  *
  * @example
  * ```typescript
@@ -60,14 +61,12 @@ export const bitcoinorgPackage = {
   /**
   * Runtime dependencies for this package.
   * These are required when running the package.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:freetype.org`).
+  * Platform-specific dependencies use `os:` or `os/arch:` prefixes (e.g., `linux:freetype.org`).
   */
-  dependencies: [] as const,
-  /**
-  * Build dependencies for this package.
-  * These are only required when building the package from source.
-  * OS-specific dependencies are prefixed with `os:` (e.g., `linux:gnu.org/gcc`).
-  */
+  dependencies: [
+    'linux:freedesktop.org/fontconfig^2',
+    'linux:freetype.org^2',
+  ] as const,
   buildDependencies: [] as const,
   /**
   * Available versions from newest to oldest.
@@ -155,6 +154,7 @@ export const bitcoinorgPackage = {
     '0.14.3',
   ] as const,
   aliases: [] as const,
+  runtimeEnvironment: undefined,
 }
 
 export type BitcoinorgPackage = typeof bitcoinorgPackage

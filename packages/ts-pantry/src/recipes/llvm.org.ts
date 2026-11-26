@@ -28,6 +28,10 @@ export const recipe: Recipe = {
     'cmake.org': '>=3<3.29',
     'ninja-build.org': '1',
     'crates.io/semverator': '*',
+    // LLDB looks for Python only after it finds SWIG 4; without it
+    // LLDB_ENABLE_PYTHON=ON fails configure. Linux runners happened to ship a
+    // system swig, macOS runners do not.
+    'swig.org': '^4',
   },
 
   build: {
