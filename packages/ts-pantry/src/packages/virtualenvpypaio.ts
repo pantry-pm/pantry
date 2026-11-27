@@ -3,7 +3,7 @@
  *
  * @domain `virtualenv.pypa.io`
  * @programs `virtualenv`
- * @version `21.15.13` (128 versions available)
+ * @version `21.15.14` (129 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install virtualenv.pypa.io`
@@ -19,7 +19,7 @@
  * console.log(pkg.name)        // "virtualenv"
  * console.log(pkg.description) // "Tool for creating isolated virtual python envir..."
  * console.log(pkg.programs)    // ["virtualenv"]
- * console.log(pkg.versions[0]) // "21.15.13" (latest)
+ * console.log(pkg.versions[0]) // "21.15.14" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/virtualenv-pypa-io.md
@@ -76,6 +76,7 @@ export const virtualenvpypaioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '21.15.14',
     '21.15.13',
     '21.15.12',
     '21.15.11',

@@ -1,0 +1,10 @@
+{
+  "id": "46083149466-1",
+  "domains": [
+    "github.com/ggerganov/llama.cpp",
+    "ollama.ai",
+    "rust-lang.org",
+    "virtualenv.pypa.io",
+    "ziglang.org"
+  ]
+}
