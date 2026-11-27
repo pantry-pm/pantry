@@ -2,7 +2,7 @@
  * **lxml.de** - The lxml XML toolkit for Python
  *
  * @domain `lxml.de`
- * @version `7.0.0a3` (41 versions available)
+ * @version `7.0.0a3` (42 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install lxml.de`
@@ -64,6 +64,7 @@ export const lxmldePackage = {
     '7.0.0a3',
     '7.0.0a2',
     '7.0.0a1',
+    '6.2.0',
     '6.1.3-1',
     '6.1.2-1',
     '6.1.1',

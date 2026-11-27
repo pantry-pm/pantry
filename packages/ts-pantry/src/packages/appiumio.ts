@@ -3,7 +3,7 @@
  *
  * @domain `appium.io`
  * @programs `appium`
- * @version `4.0.1` (48 versions available)
+ * @version `4.0.2` (49 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install appium.io`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "appium"
  * console.log(pkg.description) // "Cross-platform automation framework for all kin..."
  * console.log(pkg.programs)    // ["appium"]
- * console.log(pkg.versions[0]) // "4.0.1" (latest)
+ * console.log(pkg.versions[0]) // "4.0.2" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/appium-io.md
@@ -69,6 +69,7 @@ export const appiumioPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '4.0.2',
     '4.0.1',
     '4.0.0',
     '3.9.1',
