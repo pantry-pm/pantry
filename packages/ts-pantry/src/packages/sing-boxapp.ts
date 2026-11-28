@@ -3,7 +3,7 @@
  *
  * @domain `sing-box.app`
  * @programs `sing-box`
- * @version `1.14.5` (94 versions available)
+ * @version `1.14.6` (95 versions available)
  * @versions From newest version to oldest.
  *
  * @install `pantry install sing-box.app`
@@ -18,7 +18,7 @@
  * console.log(pkg.name)        // "sing-box"
  * console.log(pkg.description) // "The universal proxy platform"
  * console.log(pkg.programs)    // ["sing-box"]
- * console.log(pkg.versions[0]) // "1.14.5" (latest)
+ * console.log(pkg.versions[0]) // "1.14.6" (latest)
  * ```
  *
  * @see https://ts-pantry.netlify.app/packages/sing-box-app.md
@@ -67,6 +67,7 @@ export const singboxappPackage = {
   * @see https://ts-pantry.netlify.app/usage for installation instructions
   */
   versions: [
+    '1.14.6',
     '1.14.5',
     '1.14.4',
     '1.14.3',
