@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { spawnSync } from 'node:child_process'
+import { lstat, mkdir, mkdtemp, readFile, readlink, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
 import type { PackageRecipe } from '../scripts/buildkit'
 import { generateBuildScript } from '../scripts/buildkit'
 import { recipe as awsCliRecipe } from '../src/recipes/aws.amazon.com/cli'
@@ -58,4 +61,60 @@ describe('Python-backed package runtime wrappers', () => {
     expect(script).toContain('if [ -x "$SEARCH_DIR/.bin/python3" ]')
     expect(script).toContain('exec "$PYTHON_BIN" "$VENV_DIR/bin/%s" "$@"')
   })
+
+  test.skipIf(process.platform === 'win32')('mirrored AWS launches repair missing and stale runtimes concurrently', async () => {
+    const python = Bun.which('python3')
+    if (!python) throw new Error('python3 is required for the mirrored launcher test')
+    const selected = spawnSync(python, ['-c', 'import os, sys; print(os.path.realpath(sys.executable))'], { encoding: 'utf8' })
+    expect(selected.status).toBe(0)
+    const pythonTarget = selected.stdout.trim()
+    const directory = await mkdtemp(join(tmpdir(), 'pantry-aws-venv-'))
+    const launcher = resolve(import.meta.dir, '../../zig/src/install/aws_venv_launcher.py')
+    const entrypoint = '#!/old/build/location/venv/bin/python\nimport json, sys\nprint(json.dumps([sys.prefix, sys.argv[1:]]))\n'
+
+    try {
+      let pkg = join(directory, 'original package')
+      await mkdir(join(pkg, 'bin'), { recursive: true })
+      await mkdir(join(pkg, 'venv/bin'), { recursive: true })
+      await writeFile(join(pkg, 'bin/aws'), await readFile(launcher))
+      await writeFile(join(pkg, 'venv/bin/aws'), entrypoint)
+
+      const run = async () => {
+        const processes = Array.from({ length: 12 }, () => Bun.spawn(
+          [python, join(pkg, 'bin/aws'), 'a b', '--version'],
+          { stdout: 'pipe', stderr: 'pipe' },
+        ))
+        for (const child of processes) {
+          const [code, stdout, stderr] = await Promise.all([
+            child.exited,
+            new Response(child.stdout).text(),
+            new Response(child.stderr).text(),
+          ])
+          expect({ code, stderr }).toEqual({ code: 0, stderr: '' })
+          expect(JSON.parse(stdout)).toEqual([join(pkg, 'venv'), ['a b', '--version']])
+        }
+      }
+
+      pkg = await realpath(pkg)
+      await run()
+      const runtime = join(pkg, 'venv/bin/python')
+      const config = join(pkg, 'venv/pyvenv.cfg')
+      const warm = [(await lstat(runtime, { bigint: true })).ino, (await lstat(config, { bigint: true })).ino]
+      await run()
+      expect([(await lstat(runtime, { bigint: true })).ino, (await lstat(config, { bigint: true })).ino]).toEqual(warm)
+
+      await rm(runtime)
+      await symlink('/missing/python', runtime)
+      await writeFile(config, 'home = /old/build/location\n')
+      const moved = join(await realpath(directory), 'relocated package')
+      await rename(pkg, moved)
+      pkg = moved
+      await run()
+      expect(await readlink(join(pkg, 'venv/bin/python'))).toBe(pythonTarget)
+      expect(await readFile(join(pkg, 'venv/bin/aws'), 'utf8')).toBe(entrypoint)
+    }
+    finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  }, 20_000)
 })

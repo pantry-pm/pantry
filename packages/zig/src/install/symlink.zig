@@ -498,7 +498,7 @@ pub fn createPackageProgramActivation(allocator: std.mem.Allocator, domain: []co
 /// was invoked by (the full path, for a PATH lookup), so a target relative to
 /// `$d` is found wherever the tree is and however it was reached. Parameter
 /// expansion keeps the common case (no symlink) free of subprocesses.
-const shim_locate_self =
+pub const shim_locate_self =
     \\s=$0
     \\while [ -h "$s" ]; do
     \\  l=$(readlink "$s")

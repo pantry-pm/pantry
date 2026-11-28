@@ -24,6 +24,7 @@ const io_helper = @import("../io_helper.zig");
 const semver = @import("../packages/semver.zig");
 const generated = @import("../packages/generated.zig");
 const style = @import("../cli/style.zig");
+const symlink = @import("symlink.zig");
 
 /// A parsed pkgx shebang. Slices point into the line it was parsed from.
 pub const PkgxShebang = struct {
@@ -267,27 +268,71 @@ fn rewriteScript(allocator: std.mem.Allocator, path: []const u8, content: []cons
     defer allocator.free(first);
     const updated = try replaceFirstLine(allocator, content, first);
     defer allocator.free(updated);
+    try writeLauncher(allocator, path, updated);
+}
 
-    var tmp_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const tmp = try std.fmt.bufPrint(&tmp_buf, "{s}.pantry-shebang", .{path});
-    const file = try io_helper.createFileAbsolute(tmp, .{ .truncate = true });
-    io_helper.writeAllToFile(file, updated) catch |err| {
-        io_helper.closeFile(file);
-        io_helper.deleteFile(tmp) catch {};
-        return err;
-    };
-    io_helper.closeFile(file);
-
-    var zbuf: [std.fs.max_path_bytes:0]u8 = undefined;
-    if (tmp.len < zbuf.len) {
-        @memcpy(zbuf[0..tmp.len], tmp);
-        zbuf[tmp.len] = 0;
-        _ = std.c.chmod(&zbuf, 0o755);
+fn writeLauncher(allocator: std.mem.Allocator, path: []const u8, content: []const u8) !void {
+    var random: [8]u8 = undefined;
+    io_helper.randomBytes(&random);
+    const tmp = try std.fmt.allocPrint(allocator, "{s}.pantry-{s}.tmp", .{ path, std.fmt.bytesToHex(random, .lower) });
+    defer allocator.free(tmp);
+    {
+        const file = try io_helper.createFileAbsolute(tmp, .{ .exclusive = true });
+        errdefer io_helper.deleteFile(tmp) catch {};
+        defer io_helper.closeFile(file);
+        try io_helper.writeAllToFile(file, content);
+        try file.setPermissions(io_helper.io, io_helper.File.Permissions.fromMode(0o755));
     }
-    io_helper.rename(tmp, path) catch |err| {
-        io_helper.deleteFile(tmp) catch {};
-        return err;
-    };
+    defer io_helper.deleteFile(tmp) catch {};
+    try io_helper.rename(tmp, path);
+}
+
+const aws_domain = "aws.amazon.com/cli";
+const aws_venv_marker = "pyvenv_cfg_path = os.path.join(virtual_env, 'pyvenv.cfg')";
+const aws_symlink_marker = "os.symlink(python_path, python_symlink)";
+
+/// An installed mirrored launcher can already have an absolute shebang from
+/// an earlier Pantry. Its bundled awscli modules identify the required ABI.
+fn legacyAwsShebang(install_path: []const u8, constraint: []u8) ?PkgxShebang {
+    var lib_buf: [std.fs.max_path_bytes]u8 = undefined;
+    const lib = std.fmt.bufPrint(&lib_buf, "{s}/venv/lib", .{install_path}) catch return null;
+    var dir = io_helper.openDirAbsoluteForIteration(lib) catch return null;
+    defer dir.close();
+    var it = dir.iterate();
+    var found: ?[]const u8 = null;
+    directories: while (it.next() catch return null) |entry| {
+        if (!std.mem.startsWith(u8, entry.name, "python")) continue;
+        const abi = entry.name["python".len..];
+        const dot = std.mem.indexOfScalar(u8, abi, '.') orelse continue;
+        if (dot == 0 or dot + 1 == abi.len) continue;
+        for (abi, 0..) |ch, i| {
+            if (i != dot and !std.ascii.isDigit(ch)) continue :directories;
+        }
+        var module_buf: [std.fs.max_path_bytes]u8 = undefined;
+        const module = std.fmt.bufPrint(&module_buf, "{s}/{s}/site-packages/awscli/__init__.py", .{ lib, entry.name }) catch continue;
+        io_helper.accessAbsolute(module, .{}) catch continue;
+        if (found != null) return null;
+        found = std.fmt.bufPrint(constraint, "@{s}", .{abi}) catch return null;
+    }
+    return .{ .program = "python", .raw_constraint = found orelse return null, .args = "" };
+}
+
+fn rewriteAwsLauncher(allocator: std.mem.Allocator, root: []const u8, path: []const u8, interpreter: []const u8) !void {
+    const target = try symlink.treeLinkTarget(allocator, root, interpreter, path);
+    defer allocator.free(target);
+    // Python reads the shell prelude as a string. The shell resolves a
+    // symlinked entrypoint before it finds the Python in this install tree.
+    const shell_prefix = if (std.fs.path.isAbsolute(target)) "exec '" else "exec \"$d/\"'";
+    var content: std.ArrayList(u8) = .empty;
+    defer content.deinit(allocator);
+    try content.appendSlice(allocator, "#!/bin/sh\n'''true'\n" ++ symlink.shim_locate_self);
+    try content.appendSlice(allocator, shell_prefix);
+    for (target) |ch| {
+        if (ch == '\'') try content.appendSlice(allocator, "'\\''") else try content.append(allocator, ch);
+    }
+    try content.appendSlice(allocator, "' \"$s\" \"$@\"\n' '''\n");
+    try content.appendSlice(allocator, @embedFile("aws_venv_launcher.py"));
+    try writeLauncher(allocator, path, content.items);
 }
 
 /// Read up to the first `buf.len` bytes of the file at `path`.
@@ -330,24 +375,36 @@ pub fn fixInstalledPackage(installer: anytype, install_path: []const u8, domain:
             var head_buf: [1024]u8 = undefined;
             const head = readHead(path, &head_buf) orelse continue;
             if (!std.mem.startsWith(u8, head, "#!")) continue;
-            const shebang = parse(head) orelse continue;
+            const parsed = parse(head);
+            const maybe_mirrored_aws = std.mem.eql(u8, domain, aws_domain) and
+                std.mem.eql(u8, sub, "bin") and std.mem.eql(u8, entry.name, "aws") and
+                std.mem.indexOf(u8, head, aws_venv_marker) != null;
+            if (parsed == null and !maybe_mirrored_aws) continue;
+
+            const content = io_helper.readFileAllocAbsolute(allocator, path, 64 * 1024 * 1024) catch continue;
+            defer allocator.free(content);
+            const mirrored_aws = maybe_mirrored_aws and std.mem.indexOf(u8, content, aws_symlink_marker) != null;
+            var abi: [64]u8 = undefined;
+            const shebang = parsed orelse if (mirrored_aws) legacyAwsShebang(install_path, &abi) orelse continue else continue;
 
             var interp_buf: [std.fs.max_path_bytes]u8 = undefined;
-            const interpreter = resolveInterpreter(installer, root, domain, &shebang, options, &interp_buf) orelse {
+            const interpreter = resolveInterpreter(installer, root, domain, &shebang, options, &interp_buf, !mirrored_aws) orelse {
                 style.print("  ! {s}/{s}: no installed interpreter for `pkgx {s}{s}`, left as-is\n", .{ domain, entry.name, shebang.program, shebang.raw_constraint });
                 continue;
             };
 
-            const content = io_helper.readFileAllocAbsolute(allocator, path, 64 * 1024 * 1024) catch continue;
-            defer allocator.free(content);
-            rewriteScript(allocator, path, content, interpreter, shebang.args) catch |err| {
+            const rewrite = if (mirrored_aws and shebang.args.len == 0)
+                rewriteAwsLauncher(allocator, root, path, interpreter)
+            else
+                rewriteScript(allocator, path, content, interpreter, shebang.args);
+            rewrite catch |err| {
                 style.print("  ! {s}/{s}: could not rewrite its pkgx shebang: {}\n", .{ domain, entry.name, err });
             };
         }
     }
 }
 
-fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, shebang: *const PkgxShebang, options: anytype, out: []u8) ?[]const u8 {
+fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, shebang: *const PkgxShebang, options: anytype, out: []u8, allow_version_fallback: bool) ?[]const u8 {
     const program = shebang.program;
     var own_cbuf: [64]u8 = undefined;
     var wanted = shebang.constraint(&own_cbuf);
@@ -388,7 +445,7 @@ fn resolveInterpreter(installer: anytype, root: []const u8, owner: []const u8, s
         installQuietly(installer, interp_domain, wanted, options);
         pkg_dir = findInstalledVersion(root, interp_domain, wanted, &pkg_buf);
     }
-    if (pkg_dir == null and wanted.len > 0) {
+    if (pkg_dir == null and wanted.len > 0 and allow_version_fallback) {
         // Nothing satisfying could be installed. An interpreter of the wrong
         // version is still more use than `pkgx: No such file or directory`,
         // and says what it is.
@@ -563,6 +620,36 @@ test "fixInstalledPackage rewrites aws's wrapper to the installed python" {
     const again = try io_helper.readFileAllocAbsolute(a, aws, 1 << 20);
     defer a.free(again);
     try testing.expectEqualStrings(want, again);
+
+    // An upgrade can encounter either the original pkgx shebang or the
+    // absolute shebang that a previous Pantry already wrote.
+    const venv_modules = try std.fmt.allocPrint(a, "{s}/venv/lib/python3.11/site-packages/awscli", .{pkg});
+    defer a.free(venv_modules);
+    try io_helper.makePath(venv_modules);
+    const module = try std.fmt.bufPrint(&buf, "{s}/__init__.py", .{venv_modules});
+    io_helper.closeFile(try io_helper.createFileAbsolute(module, .{}));
+
+    const legacy_body = "\n" ++ aws_venv_marker ++ "\n" ++ aws_symlink_marker ++ "\n";
+    for ([_][]const u8{ "#!/usr/bin/env -S pkgx python@3.11", "#!/other/pantry/python.org/v3.14.8/bin/python" }) |header| {
+        {
+            const file = try io_helper.createFileAbsolute(aws, .{ .truncate = true });
+            defer io_helper.closeFile(file);
+            try io_helper.writeAllToFile(file, header);
+            try io_helper.writeAllToFile(file, legacy_body);
+        }
+        fixInstalledPackage(&fake, pkg, aws_domain, "2.34.15", {});
+        try testing.expectEqual(@as(usize, 0), fake.calls);
+        const patched = try io_helper.readFileAllocAbsolute(a, aws, 1 << 20);
+        defer a.free(patched);
+        try testing.expect(std.mem.startsWith(u8, patched, "#!/bin/sh\n"));
+        try testing.expect(std.mem.indexOf(u8, patched, "../../../../python.org/v3.11.15/bin/python") != null);
+        try testing.expect(std.mem.endsWith(u8, patched, @embedFile("aws_venv_launcher.py")));
+        try testing.expect(io_helper.isExecutable(aws));
+        fixInstalledPackage(&fake, pkg, aws_domain, "2.34.15", {});
+        const reused = try io_helper.readFileAllocAbsolute(a, aws, 1 << 20);
+        defer a.free(reused);
+        try testing.expectEqualStrings(patched, reused);
+    }
 }
 
 test "fixInstalledPackage installs the interpreter the shebang names when the tree has none" {
